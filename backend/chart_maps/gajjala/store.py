@@ -75,6 +75,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from . import constants as GC
+from . import si_ssr_names as SSN                                # ⛔🔒 the insert-only add marker (break_watch_docs)
 from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.store")
@@ -888,13 +889,16 @@ class GajjalaStore:
     # 🧠 plans (ONE find per refresh) and claims / settles / holds under its OWN keys — never `push` / `held`.
     def break_watch_docs(self, session) -> Optional[list]:
         """Today's tracker docs the ⚡ watch may follow: a 🧠 potential on its latest read (`last.state` forming, `last.kind`
-        armed / building), never break-claimed (`brk` absent), never first seen by a join pass, not on the 🪦 graveyard.
+        armed / building), never break-claimed (`brk` absent), never first seen by a join pass, not on the 🪦 graveyard,
+        never an ADDED ⛔🔒 name (`si_ssr_add` — 2026-11-25 review: an add failed GG's own scanner rule and is held from
+        every push, HIS CALL #6; it must neither ring ⚡ nor take a WATCH_MAX seat from GG's own plans).
         Projection {symbol, setup, frame, last}. None on a READ FAULT (no handle, or the find raised); [] = none."""
         c = self.coll(POTENTIALS)
         if c is None:
             return None
         q = {"date": _iso(session), "last.state": GC.POTENTIAL_STATE, "last.kind": {"$in": list(GC.POTENTIAL_KINDS)},
-             "brk": {"$exists": False}, "first_seen_mode": {"$ne": JOINED_MODE}, "graveyard_on": {"$exists": False}}
+             "brk": {"$exists": False}, "first_seen_mode": {"$ne": JOINED_MODE}, "graveyard_on": {"$exists": False},
+             SSN.TRACKER_ADD_FIELD: {"$ne": True}}
         try:
             return list(c.find(q, {"symbol": 1, "setup": 1, "frame": 1, "last": 1}))
         except Exception as exc:                                # noqa: BLE001

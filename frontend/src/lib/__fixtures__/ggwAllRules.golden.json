@@ -535,7 +535,9 @@
   "n": 3,
   "keep_sessions": 5,
   "text": null,
-  "not_seated_n": 1
+  "not_seated_n": 1,
+  "sissr_n": 0,
+  "sissr_not_eligible_n": 0
  },
  "broker": null,
  "pending_poll_sec": 5,

@@ -338,7 +338,8 @@ def test_cut_and_constants_are_the_house_ones():
     assert C.RUNNERS_STALE_SEC == 2 * GC.PASS_CADENCE_SEC
     assert RN.clock_words()["stale_min"] == C.RUNNERS_STALE_SEC // 60
     # RE-PINNED 2026-11-24 (spec watchall §3.1, HIS CALL #5) — ✅ "rules" appended LAST; "ran" still never a section
-    assert C.SECTION_KEYS == ("yours", "aplus", "auto", "rules") and "ran" not in C.SECTION_KEYS       # [D3]
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 "sissr" appended after "rules"
+    assert C.SECTION_KEYS == ("yours", "aplus", "auto", "rules", "sissr") and "ran" not in C.SECTION_KEYS   # [D3]
     assert C.API_RUNNERS_PATH == C.API_PATH + "/runners"
     assert "at" in C.RUNNERS_READ_FIELDS and "tile.bars5" in C.RUNNERS_READ_FIELDS
     assert C.RUNNERS_FOLD_AT_PHONE == 3 and C.PCT_SHOW_PLACES == 1

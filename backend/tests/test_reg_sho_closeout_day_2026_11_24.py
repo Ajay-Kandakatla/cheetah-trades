@@ -1095,7 +1095,11 @@ def test_the_pick_moves_with_the_rule_days(monkeypatch):
 # WIDENED 2026-11-24 (main session): the 🩳 High SI sub (main 2026-11-23) prints the SAME 🔒 tag on its cards and in its
 # push text — a display read with payload(kick=False). Those two files are the ONLY allowed readers; they never kick the
 # worker and never gate on it (they never import reg_sho_runs).
-DISPLAY_READERS = {"chart_maps/gajjala/high_si.py", "chart_maps/gajjala/high_si_cross.py"}
+# WIDENED 2026-11-24 (SPEC sissr §3.3, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly looking for"):
+# si_ssr_names.py reads the SAME payload(kick=False) to TAG names past their close-out date (a source of names GG's
+# rules read, HIS CALL #0) — it never kicks the worker, never reads the run engine and never gates on it.
+DISPLAY_READERS = {"chart_maps/gajjala/high_si.py", "chart_maps/gajjala/high_si_cross.py",
+                   "chart_maps/gajjala/si_ssr_names.py"}
 
 
 def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():

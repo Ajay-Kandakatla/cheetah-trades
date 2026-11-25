@@ -497,21 +497,32 @@ def test_the_cron_path_keeps_its_deps(monkeypatch):
     from short_interest import ssr as SSR
     # WIDENED 2026-11-24 (💧 Ajay "Can you send me notification of volume dried please.."): and the 💧 vol-dried push
     from chart_maps.gajjala import vol_dried as VD
+    # WIDENED 2026-11-24 (⛔🔒🩳 SPEC sissr §3.4, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly
+    # looking for many were so confident on SSR.."): and the SI / SSR / Reg SHO name source's stored reader
+    from chart_maps.gajjala import si_ssr_names as SSN
     assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross,
                                               divergence=DV.run_step, high_si_cross=HSX.run_step,
                                               record_high_si_status=RUN._record_high_si_status,
-                                              ssr=SSR.record_pass, vol_dried=VD.run_step)
+                                              ssr=SSR.record_pass, vol_dried=VD.run_step,
+                                              si_ssr_names=SSN.default_reader)
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross,
                                               divergence=DV.run_step, high_si_cross=HSX.run_step,
                                               record_high_si_status=RUN._record_high_si_status,
-                                              ssr=SSR.record_pass)                # NEGATIVE — the 💧 vol-dried step dropped
+                                              ssr=SSR.record_pass, vol_dried=VD.run_step)   # NEGATIVE — ⛔🔒🩳 dropped
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross,
                                               divergence=DV.run_step, high_si_cross=HSX.run_step,
                                               record_high_si_status=RUN._record_high_si_status,
-                                              vol_dried=VD.run_step)              # NEGATIVE — the SSR step dropped
+                                              ssr=SSR.record_pass,
+                                              si_ssr_names=SSN.default_reader)    # NEGATIVE — the 💧 vol-dried step dropped
+    assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
+                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross,
+                                              divergence=DV.run_step, high_si_cross=HSX.run_step,
+                                              record_high_si_status=RUN._record_high_si_status,
+                                              vol_dried=VD.run_step,
+                                              si_ssr_names=SSN.default_reader)    # NEGATIVE — the SSR step dropped
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross)   # NEGATIVE
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)

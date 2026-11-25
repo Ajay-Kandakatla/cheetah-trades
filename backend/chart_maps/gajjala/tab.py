@@ -2294,6 +2294,7 @@ def _track_row(doc: dict, entries: Optional[dict] = None, v=None, live: bool = F
         if held:
             push_text = (TN.TRADER_HOLD_TEXT if held[-1] in PT.TRADER_HELD          # 📌 A2 2026-10-27, verbatim
                          else PN.PROMO_HOLD_TEXT if held[-1] in PT.PROMO_HELD       # 🎪 2026-10-29, verbatim
+                         else PT.SI_SSR_HOLD_TEXT if held[-1] in PT.SI_SSR_HELD     # ⛔🔒 2026-11-24 (sissr C1), verbatim
                          else f"held: {hw[held[-1]]}")
     timeline = []
     for e in path:

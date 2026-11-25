@@ -96,9 +96,10 @@ def _dumps(out):
 
 # ── the constants this package codes against (be-engine owns them) ─────────────────────────────────────────────────
 def test_section_keys_and_seams():
-    assert C.SECTION_KEYS == ("yours", "aplus", "auto", "rules") and C.SECTION_ORDER == C.SECTION_KEYS
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 "sissr" appended after "rules" (folded too)
+    assert C.SECTION_KEYS == ("yours", "aplus", "auto", "rules", "sissr") and C.SECTION_ORDER == C.SECTION_KEYS
     assert PL.RULES_WHY == C.SECTION_KEYS[3] == "rules"                       # the FE reads `auto.why === 'rules'`
-    assert C.SECTIONS_FOLDED_DEFAULT == (C.SECTION_KEYS[3],)
+    assert C.SECTIONS_FOLDED_DEFAULT == (C.SECTION_KEYS[3], C.SECTION_KEYS[4])
     assert PL.RULES_STATES[:2] == PL.AUTO_STATES and PL.RULES_MODULE == "chart_maps.gajjala_watch.allrules"
     assert importlib.import_module(PL.RULES_MODULE).read_doc is not None
 
@@ -159,8 +160,9 @@ def test_aplus_kind_words_in_the_title():
 def test_rules_board_key_and_section_folded_default():
     db = _state(_board_db([_rule("RON")]), not_eligible=["HUHU", "MRM", "huhu"])
     out = PL.build(FRI_IN, db=db)
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 the head gains sissr_n / sissr_not_eligible_n [C5]
     assert out["rules"] == {"state": "ok", "n": 1, "keep_sessions": C.RULES_KEEP_SESSIONS, "text": None,
-                            "not_seated_n": 2}
+                            "not_seated_n": 2, "sissr_n": 0, "sissr_not_eligible_n": 0}
     sec = {s["key"]: s for s in out["sections"]}
     assert sec["rules"]["folded_default"] is True
     assert all("folded_default" not in sec[k] for k in ("yours", "aplus", "auto"))
@@ -226,8 +228,10 @@ def test_NEGATIVE_unreadable_rules_doc_keeps_every_other_row(monkeypatch, how):
     out = PL.build(FRI_IN, db=db)
     assert out["state"] == "ok"
     assert _syms(out) == ["OMH", "NVDA", "AAA", "MMM", "ZZT"]
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 the head gains sissr_n / sissr_not_eligible_n [C5]
     assert out["rules"] == {"state": "unreadable", "n": 0, "keep_sessions": C.RULES_KEEP_SESSIONS,
-                            "text": PL.RULES_UNREADABLE_TEXT, "not_seated_n": 0}
+                            "text": PL.RULES_UNREADABLE_TEXT, "not_seated_n": 0, "sissr_n": 0,
+                            "sissr_not_eligible_n": 0}
     assert [s["key"] for s in out["sections"]] == ["yours", "aplus", "auto"]
 
 
@@ -249,8 +253,9 @@ def test_NEGATIVE_missing_rules_doc_is_ok_and_empty():
     db = _board_db()
     db[C.COLL_LIST].docs.pop(C.RULES_DOC_ID)
     out = PL.build(FRI_IN, db=db)
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 the head gains sissr_n / sissr_not_eligible_n [C5]
     assert out["rules"] == {"state": "ok", "n": 0, "keep_sessions": C.RULES_KEEP_SESSIONS, "text": None,
-                            "not_seated_n": 0}
+                            "not_seated_n": 0, "sissr_n": 0, "sissr_not_eligible_n": 0}
     assert [s["key"] for s in out["sections"]] == ["yours", "aplus", "auto"]
 
 

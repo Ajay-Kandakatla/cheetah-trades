@@ -107,9 +107,10 @@ def test_constants_are_the_named_ones():
     assert C.RULES_KINDS[0] == GC.POTENTIAL_KINDS[0]
     assert C.RULES_PUSH_MODE == C.AUTO_PUSH_MODES[0] == "off" and R.push_mode() == "off"
     assert C.RULES_DOC_ID not in (C.LIST_DOC_ID, C.AUTO_DOC_ID)
-    assert C.SECTION_KEYS == ("yours", "aplus", "auto", "rules") and C.SECTION_ORDER == C.SECTION_KEYS
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 "sissr" appended after "rules" (folded too)
+    assert C.SECTION_KEYS == ("yours", "aplus", "auto", "rules", "sissr") and C.SECTION_ORDER == C.SECTION_KEYS
     assert set(C.SECTION_WORDS) == set(C.SECTION_HINTS) == set(C.SECTION_KEYS)
-    assert C.SECTIONS_FOLDED_DEFAULT == ("rules",) and set(C.RULES_OUT_KEYS) >= {"backfilled", "not_eligible"}
+    assert C.SECTIONS_FOLDED_DEFAULT == ("rules", "sissr") and set(C.RULES_OUT_KEYS) >= {"backfilled", "not_eligible"}
     assert set(C.RULES_TRACKER_FIELDS) >= {"state_path", "last.session_volume", "setup", "symbol"}
     assert C.SECTION_HINTS["rules"].format(boards="🚩 5-min", floor=1, keep=1, not_seated="")
 

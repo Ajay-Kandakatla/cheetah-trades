@@ -24,6 +24,13 @@ the Watch list so I can keep tracking them later"): a FOURTH section "rules" ser
 🤖 entry and a ✅ all-rules entry (the payload drops his names and 🤖 seats first — one row per name) groups "rules";
 inside, newest-met first (`last_met_at`). `when` = "✅ all rules HH:MM" today / "MM-DD" earlier, + " · k sessions". The
 section block alone carries `folded_default: True` (C.SECTIONS_FOLDED_DEFAULT). Display only — UNMEASURED.
+
+⛔🩳🔒 2026-11-24 (spec sissr rev 2 §3.6 — Ajay, verbatim: "Then potentials to be alerts sooner - add them to watch list
+and give them a time stamp of the day" · "Days past little bit like AKAN is what I am mainly looking for"): a FIFTH
+section "sissr" after ✅. A ✅-engine entry of kind C.RULES_KINDS[2] groups "sissr"; armed / aplus stay "rules" (✅ wins
+[C3]). Inside, newest stamp first. `when` = C.SISSR_WHEN built from the entry's STORED stamp (`si_ssr`: glyphs, the ET
+day and clock of `first_at`, the setup) — never from `now`, so a later render serves the same text. Folded by default
+on the phone (C.SECTIONS_FOLDED_DEFAULT). Display only — UNMEASURED.
 """
 from __future__ import annotations
 
@@ -158,6 +165,53 @@ def rules_when_block(rule: dict, session: date) -> Optional[dict]:
     return {"bucket": None, "verb": None, "at_et": at, "date": t.date().isoformat(), "text": text, "title": title}
 
 
+def _sissr_glyphs(stamp: dict) -> str:
+    g = stamp.get("glyphs")
+    if isinstance(g, str) and g.strip():
+        return g
+    from chart_maps.gajjala import si_ssr_names as SSN    # lazy: the step's own glyph map (never retyped)
+    ks = [k for k in (stamp.get("keys") if isinstance(stamp.get("keys"), list) else []) if k in SSN.GLYPHS]
+    return "".join(dict.fromkeys(SSN.GLYPHS[k] for k in ks)) or "—"
+
+
+def sissr_words(rule: Optional[dict]) -> Optional[dict]:
+    """⛔🩳🔒 2026-11-24 (spec sissr §3.6) — {text, title, at_et, date, glyphs} of a si_ssr entry, ONLY from its stored
+    stamp (`si_ssr`: `first_at` stored UTC → the ET day / clock; glyphs; setup; lead; first_kind;
+    potential_first_seen_et). The 🧠-since clause is added only when the tracker's first 🧠 clock differs [C4]. None
+    without a stamp or a readable `first_at`."""
+    stamp = rule.get("si_ssr") if isinstance(rule, dict) else None
+    if not isinstance(stamp, dict):
+        return None
+    t0 = CO.stamp_utc(stamp.get("first_at"))
+    if t0 is None:
+        return None
+    t = _et(t0)
+    at, md = t.strftime("%H:%M"), t.strftime("%m-%d")
+    glyphs = _sissr_glyphs(stamp)
+    setup = stamp.get("setup") if isinstance(stamp.get("setup"), str) else rule.get("setup")
+    lead = next((x for x in (stamp.get("lead"), stamp.get("text")) if isinstance(x, str) and x.strip()), "—")
+    title = C.SISSR_WHEN_TITLE.format(lead=lead, md=md, at=at, kind=_rules_kind_word(stamp.get("first_kind")))
+    pot = stamp.get("potential_first_seen_et")
+    if isinstance(pot, str) and pot.strip() and pot != at:
+        title += C.SISSR_WHEN_SINCE.format(pot_at=pot)
+    return {"text": C.SISSR_WHEN.format(glyphs=glyphs, md=md, at=at, setup=_rules_setup_word(setup)),
+            "title": title, "at_et": at, "date": t.date().isoformat(), "glyphs": glyphs}
+
+
+def sissr_when_block(rule: dict) -> Optional[dict]:
+    """⛔🩳🔒 the "sissr" row's `when` — {bucket, verb, at_et, date, text, title} from `sissr_words`; None without one."""
+    w = sissr_words(rule)
+    if w is None:
+        return None
+    return {"bucket": None, "verb": None, "at_et": w["at_et"], "date": w["date"], "text": w["text"],
+            "title": w["title"]}
+
+
+def _stamp_ts(rule) -> Optional[float]:
+    st = rule.get("si_ssr") if isinstance(rule, dict) else None
+    return _ts(st.get("first_at")) if isinstance(st, dict) else None
+
+
 def setup_block(row: dict, entry: Optional[dict]) -> Optional[dict]:
     """{setup, label, state_label, source, text, title} — the tile's ONE setup chip (`text` = the label the FE prints,
     `title` = the state words on hover): today's 🚩 card setups (row.tags.setups), else the
@@ -200,6 +254,8 @@ def group_of(entry: Optional[dict], rule: Optional[dict] = None) -> str:
     """[D3] session-stable only: his name → "yours"; a 🎯 A+ seat → "aplus"; any other 🤖 entry → "auto"; ✅ 2026-11-24
     (spec watchall §3.5): no 🤖 entry and a ✅ all-rules entry → "rules" (a 🤖 seat wins over ✅ — one row per name)."""
     if entry is None:
+        if isinstance(rule, dict) and rule.get("kind") == C.RULES_KINDS[2]:
+            return C.SECTION_KEYS[4]                           # ⛔🩳🔒 2026-11-24 — a si_ssr entry (✅ wins [C3])
         return C.SECTION_KEYS[3] if isinstance(rule, dict) else C.SECTION_KEYS[0]
     if isinstance(entry, dict) and entry.get("why") == C.AUTO_APLUS_WHY:
         return C.SECTION_KEYS[1]
@@ -227,6 +283,9 @@ def order(rows: list, groups: dict, entries: dict, rules: Optional[dict] = None)
         elif g == C.SECTION_KEYS[3]:
             t = _ts((rules.get(sym) or {}).get("last_met_at"))
             inner = (0, -t) if t is not None else (1, 0.0)
+        elif g == C.SECTION_KEYS[4]:                           # ⛔🩳🔒 newest stamp first, unstamped last
+            t = _stamp_ts(rules.get(sym))
+            inner = (0, -t) if t is not None else (1, 0.0)
         elif g == C.SECTION_KEYS[1]:
             t = _ts(e.get("aplus_at"))
             t = t if t is not None else _ts(e.get("added_at"))
@@ -247,6 +306,12 @@ def rules_hint_fields(rules: Optional[dict]) -> dict:
     return {"boards": boards, "floor": int(C.RULES_MIN_VOLUME), "keep": C.RULES_KEEP_SESSIONS, "not_seated": ns}
 
 
+def sissr_not_seated(rules: Optional[dict]) -> str:
+    """⛔🩳🔒 the "sissr" hint's 🚫 sentence — the payload's served `not_seated_sissr` ("" when none)."""
+    v = rules.get("not_seated_sissr") if isinstance(rules, dict) else None
+    return v if isinstance(v, str) else ""
+
+
 def sections_block(rows: list, *, session: date, rules: Optional[dict] = None) -> list:
     """[{key, title, text, hint, n, symbols}] — the non-empty groups in SECTION_ORDER (rows already ordered). ✅
     2026-11-24: the "rules" hint is filled by `rules_hint_fields`; `folded_default: True` ONLY on a key in
@@ -262,6 +327,8 @@ def sections_block(rows: list, *, session: date, rules: Optional[dict] = None) -
         fields = {"date": prev.strftime("%m-%d")}
         if k == C.SECTION_KEYS[3]:
             fields.update(rules_hint_fields(rules))
+        elif k == C.SECTION_KEYS[4]:                           # ⛔🩳🔒 its own 🚫 sentence (never the ✅ one)
+            fields.update(rules_hint_fields(rules), not_seated=sissr_not_seated(rules))
         blk = {"key": k, "title": title, "text": C.SECTION_TEXT.format(title=title, n=len(syms)),
                "hint": C.SECTION_HINTS[k].format(**fields), "n": len(syms), "symbols": syms}
         if k in C.SECTIONS_FOLDED_DEFAULT:
@@ -312,10 +379,12 @@ def apply(rows: list, *, entries: dict, removed: list, his_added: dict, session:
     for r in ordered:
         sym = r["symbol"]
         e = entries.get(sym)
-        rule = rents.get(sym) if groups[sym] == C.SECTION_KEYS[3] else None
+        rule = rents.get(sym) if groups[sym] in (C.SECTION_KEYS[3], C.SECTION_KEYS[4]) else None
         org = {"group": groups[sym], "when": None, "setup": None, "ran": None, "past_winner": None}
         try:
-            if rule is not None:
+            if rule is not None and groups[sym] == C.SECTION_KEYS[4]:
+                org["when"] = sissr_when_block(rule)          # ⛔🩳🔒 the STORED stamp — never `now`
+            elif rule is not None:
                 org["when"] = rules_when_block(rule, session)
             elif e is not None:
                 org["when"] = when_block(e, None, session, _removed_at(removed, sym, _entry_time(e, session)))

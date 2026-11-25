@@ -182,6 +182,10 @@ SHORT_RUN = "%s %s %s · %s"                             # GLYPH, CLOSEOUT_WORD,
 SHORT_RUN_PAST = "%s %s passed %s · %s"                 # GLYPH, CLOSEOUT_WORD, date, RUN_DAY_PAST
 SHORT_RUN_OPEN = "%s %s passed · %s"                    # GLYPH, CLOSEOUT_WORD, RUN_DAY_OPEN
 LATE_ALT = " (%s if counted from each list's next open)"
+# the 🔒 source tag of a name STILL on its list after its close-out day (2026-11-24 sissr §3.2) — Ajay 2026-11-24:
+# "Days past little bit like AKAN is what I am mainly looking for". Day N is a backstop, a rule date only.
+PAST_CLOSEOUT_TEXT = "%s day %d past %s"                # GLYPH, days past day N, CLOSEOUT_WORD → 🔒 day 6 past close-out
+PAST_CLOSEOUT_OPEN_TEXT = "%s day %d+ past %s"          # the run's first day not known → 🔒 day 17+ past close-out
 RULE_SENTENCE = ("After day %d, %s makes a clearing firm buy shares to close out a fail to deliver it carried on every "
                  "one of those days")
 BUY_WINDOW = "; the buying may come from day %d (%s) and must start by the next open (%s)"
@@ -1124,6 +1128,31 @@ def _run_words(exchange: str, run: dict) -> tuple:
     title = (TITLE_RUN_UNKNOWN % (exchange, SR._md(run["missing"])) if run.get("missing")
              else TITLE_RUN_UNKNOWN_BARE)
     return RUN_UNKNOWN, None, RUN_UNKNOWN, title + " " + NOT_ADVICE
+
+
+def past_closeout_text(run) -> Optional[str]:
+    """"🔒 day 6 past close-out" for a run block (`reg_sho_runs.run_for`) still on its list past its close-out day:
+    the settlement days on the list beyond `RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS` (read at call time, by name).
+    `passed` → the exact form; `passed_open` (the run's first day not known) → the "+" form; anything else
+    (counting, reached, unknown, junk, no day past) → None. Never raises."""
+    try:
+        if not isinstance(run, dict):
+            return None
+        n = run.get("days")
+        if isinstance(n, bool) or not isinstance(n, int):
+            return None
+        over = n - RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS
+        if over <= 0:
+            return None
+        st = run.get("state")
+        if st == "passed":
+            return PAST_CLOSEOUT_TEXT % (GLYPH, over, CLOSEOUT_WORD)
+        if st == "passed_open":
+            return PAST_CLOSEOUT_OPEN_TEXT % (GLYPH, over, CLOSEOUT_WORD)
+        return None
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: past close-out words failed: %s", type(exc).__name__)
+        return None
 
 
 def tag_block(sym: str, mkt: str, exchange: str, as_of: str, stale: bool, run: Optional[dict] = None) -> dict:

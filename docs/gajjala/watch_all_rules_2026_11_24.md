@@ -103,3 +103,21 @@ after session 5 (winners only, cut at 10 sessions → a lower bound). No edge is
 13. 1-min page retired → GG1 armed names do not qualify while it is off.
 14. 🎯 A+ also enter ✅ (carry past the session), kind "aplus", no extra volume floor.
 15. Back-fill: only the session before the deploy is read; a full 5-session back-fill would re-seat names you removed.
+
+## 2026-11-24 — ⛔🩳🔒 SI / SSR / Reg SHO potentials ride the same engine (spec sissr rev 2 §3.6, WP be-watch)
+
+Ajay: "Then potentials to be alerts sooner - add them to watch list and give them a time stamp of the day" · "Days past
+little bit like AKAN is what I am mainly looking for many were so confident on SSR..". No second seating path:
+`allrules.step` reads a THIRD record kind, `C.RULES_KINDS[2] = "si_ssr"` — a 🧠 tracker doc carrying `potential.track`'s
+one-time `si_ssr` stamp (the first pass the name was tagged 🩳 / ⛔ / 🔒 AND a potential; `C.RULES_TRACKER_FIELDS` gains
+`si_ssr` and `si_ssr_add`). Same K11 floor (`skip` honoured for kinds 0 and 2), same × / 🚫 / keep window. Precedence
+aplus > armed > si_ssr: an entry never downgrades; a si_ssr entry that later arms or turns A+ becomes ✅ with the ✅
+records' met times; a si_ssr-only read never refreshes a ✅ entry. The entry keeps the EARLIEST stamp. [C2] A tracker of
+an ADDED ⛔🔒 name (`si_ssr_add`, `si_ssr_names.is_add`) is never an armed record (a fault in the add test fails closed);
+`auto.py` drops added names from 🎯 A+ arrivals, current-potential and tracker-only arrivals and from `aplus_now`
+(`skipped["si_ssr"]`, counted once per name; `SKIPPED_KEYS` appended), so they never take or evict a 🤖 / 🎯 seat. [C5]
+🚫 names whose records are all si_ssr are `not_eligible_sissr` (state doc `rules`, `C.RULES_OUT_KEYS` appended); the ✅
+`not_eligible` count is unchanged. Served: section "sissr" after ✅, folded, its chip text `C.SISSR_WHEN` from the STORED
+stamp (`sections.sissr_words`), the head `rules` gains `sissr_n` / `sissr_not_eligible_n` and `n` counts ✅ rows only.
+Display / tracking only — it rings nothing (`C.RULES_PUSH_MODE` "off"). UNMEASURED. Tests:
+`backend/tests/test_gajjala_watch_si_ssr_2026_11_24.py`; golden `frontend/src/lib/__fixtures__/ggwSiSsr.golden.json`.

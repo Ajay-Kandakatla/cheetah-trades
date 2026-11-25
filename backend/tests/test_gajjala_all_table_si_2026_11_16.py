@@ -364,8 +364,13 @@ def test_S10_no_rule_gate_or_alert_reads_short_interest():
     # 🩳 2026-11-23 (spec highsi §3.2 / §3.5, OWNER'S CALL — the tier is now a list and push input): high_si.py (the
     # 🩳 sub's ONE read) and high_si_cross.py (the 🩳 cross push, reads only via high_si.si_blocks) join the allowlist;
     # pinned by test_S10_high_si_modules_read_short_interest_only_through_the_one_reader. Nothing else may join.
+    # WIDENED 2026-11-24 (SPEC sissr §3.3, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly looking
+    # for many were so confident on SSR.."): si_ssr_names.py (the ⛔🔒🩳 name source) imports short_interest.ssr +
+    # short_interest.reg_sho and reads the 🩳 block only via high_si.si_blocks; pinned by
+    # test_S10_si_ssr_names_reads_short_interest_only_through_ssr_reg_sho_and_high_si. Nothing else may join.
     others = [p for p in sorted(gj.glob("*.py"))
-              if p.name not in ("all_table.py", "tab.py", "context.py", "high_si.py", "high_si_cross.py")]
+              if p.name not in ("all_table.py", "tab.py", "context.py", "high_si.py", "high_si_cross.py",
+                                "si_ssr_names.py")]
     others += [BACKEND / "trading" / n for n in ("gajjala_entry.py", "gajjala_stream.py", "gajjala_untraded.py")]
     others += [BACKEND / "push" / "hooks.py"]
     assert len(others) > 10
@@ -424,6 +429,36 @@ def test_S10_high_si_modules_read_short_interest_only_through_the_one_reader():
     froms = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module == "short_interest"
              for a in n.names}
     assert froms == {"reg_sho"}
+
+
+def test_S10_si_ssr_names_reads_short_interest_only_through_ssr_reg_sho_and_high_si():
+    # ⛔🔒🩳 2026-11-24 (SPEC sissr §3.3): the only short_interest modules si_ssr_names.py imports are ssr and reg_sho
+    # (lazy, inside functions); it never imports short_interest.read / client and never calls si_map — the 🩳 block
+    # comes through HS.si_blocks only.
+    src = _src("chart_maps/gajjala/si_ssr_names.py")
+    tree = ast.parse(src)
+    froms = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module == "short_interest"
+             for a in n.names}
+    assert froms == {"ssr", "reg_sho"}
+    mods = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
+    assert not [m for m in mods if m.startswith("short_interest.")]
+    top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+    assert not [n for n in top if "short_interest" in ast.dump(n)]                  # lazy only
+    for banned in ("si_map", "short_interest import read", "short_interest.read", "short_interest import client",
+                   "SIC."):
+        assert banned not in src, banned
+    assert not re.search(r"(?<![\w.])SR\.", src)                                     # HS.SR.* / SSR.* only
+    assert src.count("HS.si_blocks(") == 1
+
+
+def test_S10_NEGATIVE_a_direct_si_map_call_in_si_ssr_names_would_trip():
+    src = _src("chart_maps/gajjala/si_ssr_names.py")
+    planted = src + "\nfrom short_interest import read as SR\nSR.si_map([])\n"
+    tree = ast.parse(planted)
+    froms = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module == "short_interest"
+             for a in n.names}
+    assert froms != {"ssr", "reg_sho"} and "si_map" in planted
+    assert re.search(r"(?<![\w.])SR\.", planted) and not re.search(r"(?<![\w.])SR\.", "SSR.x HS.SR.y")
 
 
 def test_S10_tab_reads_short_interest_only_in_the_table_branch():

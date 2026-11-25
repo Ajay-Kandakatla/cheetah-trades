@@ -195,3 +195,12 @@ tracking them later".
   `ggwAllRules90.golden.json` (90 rows: 8 👤 + 2 🎯 + 10 🤖 + 70 ✅, so the live hub's refused tail past 80 is all ✅).
   To regenerate them, run `GGW_GOLDEN_WRITE=1` with `tests/test_gajjala_watch_allrules_payload_2026_11_24.py`.
 - Display only. The list rings nothing. UNMEASURED.
+
+## 2026-11-24 — a fifth section "sissr" (spec sissr rev 2 §3.6)
+
+`C.SECTION_KEYS` += "sissr" after "rules" (`SECTION_WORDS["sissr"] = "⛔🩳🔒 potentials"`, its hint in the ⓘ fold only,
+`SECTIONS_FOLDED_DEFAULT` += "sissr"). `group_of(None, rule)`: a ✅-engine entry of kind `si_ssr` → "sissr"; armed /
+aplus stay "rules" (✅ wins). Inside: newest stamp first (`si_ssr.first_at`), unstamped last. `org.when` = `sissr_when_block`
+→ "⛔ 11-24 14:31 ET · ➖ Horizontal Fade" (glyphs, `%m-%d`, ET clock, setup label) built from the STORED stamp, never from
+`now`; the hover adds "; 🧠 since HH:MM ET" only when the tracker's first 🧠 clock differs. The hint's 🚫 sentence is
+`C.SISSR_NOT_SEATED` (its own count). Display only — UNMEASURED.

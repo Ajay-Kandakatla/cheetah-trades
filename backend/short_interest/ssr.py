@@ -161,6 +161,16 @@ NEW_NOTE_TEXT = ("A plain time is the first regular-hours minute at or under the
                  "it from the trading day before; the new drop extends it a day.")     # rev 2 [C3b]: no "comes off" promise
 # the closing sentence of every title is RS.NOT_A_SIGNAL, by name
 
+# the names under it from a RECENT trigger day (2026-11-24 sissr §3.1) — Ajay 2026-11-24: "Days past little bit like
+# AKAN is what I am mainly looking for many were so confident on SSR.."
+SSR_RECENT_TRIGGER_DAYS = SSR_FOLLOWING_TRADING_DAYS   # market days kept after the trigger day — HIS CALL #1 (one constant)
+RECENT_KIND = "ssr_recent_triggers"
+RECENT_STATUSES = ("ok", "failed", "closed")
+RECENT_KEYS = ("kind", "status", "today", "days", "by_symbol", "faults")
+RECENT_ROW_KEYS = ("triggered_on", "day_n", "source", "exchange", "retriggered", "tag_text", "title")
+RECENT_TAG_TEXT = "%s %s %s · day %d"                  # GLYPH, TAG, M/D of the trigger day, day_n → ⛔ SSR 11/23 · day 2
+RECENT_TITLE_TEXT = "%s %s started %s (%s); today is day %d counting the trigger day. %s"   # …, row source_text, day_n, RS.NOT_A_SIGNAL
+
 _SPACES = re.compile(r" {2,}")
 _STAMP14 = re.compile(r"^\d{14}$")
 
@@ -1146,7 +1156,6 @@ def new_triggers(day, db=_DEFAULT, now=None, *, lists=None, corp=None) -> dict:
 
 
 def _new_triggers(D, db, now_et, lists, corp) -> dict:
-    from catalysts.medical.reaction import prev_market_day
     out = _new_base(D, now_et)
     out["status"] = "ok"
 
@@ -1164,6 +1173,34 @@ def _new_triggers(D, db, now_et, lists, corp) -> dict:
         out["status"] = "not_latest"
         out["status_text"] = NEW_NOT_LATEST_TEXT % _day_words(days[0])
         return out
+
+    # 3–8. the day's rows (`_rows_on`, shared with `recent_triggers`)
+    got = _rows_on(D, db, now_et, lists, corp)
+    out.update(got["update"])
+    rows, faults, computed, asof = got["rows"], got["faults"], got["computed"], got["asof"]
+    dw, n_comp, corp_checked = got["dw"], got["n_comp"], got["corp_checked"]
+
+    # 9. the honesty table, then the dividend / split sentence [C4]
+    if not rows and not computed["ok"]:
+        out["status"] = "not_read"
+        out["fault_text"] = NEW_NOT_READ_TEXT % (GLYPH, TAG, dw, asof)
+    elif not rows and not faults:                              # a faulted name is never "no name"
+        out["empty_text"] = NEW_EMPTY_TEXT % (dw, computed["text"])
+    parts = []
+    if rows and not computed["ok"]:
+        parts.append(NEW_PARTIAL_TEXT % computed["text"])
+    if n_comp > 0 and not corp_checked:
+        parts.append(NEW_CORP_UNREAD_TEXT % CORP_UNREAD_NOTE.strip())
+    out["partial_text"] = " ".join(parts) or None
+    return out
+
+
+def _rows_on(D, db, now_et, lists, corp) -> dict:
+    """Steps 3–8 of `_new_triggers`, moved verbatim (sissr 2026-11-24 §3.1): the names whose restriction STARTED on
+    market day `D`, read with the lists as of `D`'s OWN files. No status gate here (the callers own it). Returns
+    {"update": the `new_triggers` fields, "rows", "faults", "computed", "asof", "dw", "n_comp", "corp_checked"}.
+    Raises on an unreadable store; the callers fence it."""
+    from catalysts.medical.reaction import prev_market_day
 
     # 3. [C1] the prior market day, explicitly; the lists as of the list day's OWN files
     P = prev_market_day(D)
@@ -1253,28 +1290,105 @@ def _new_triggers(D, db, now_et, lists, corp) -> dict:
         wt += HALF_DAY_TEXT % (_day_words(w["through"]), w["rth_close"].strftime("%H:%M"))
     wparts = [NEW_WITHHELD_PART % (", ".join(withheld[r]), _why_text(r, {"T": D})) for r in NEW_WITHHELD
               if withheld[r]]
-    out.update({"prior_day": piso, "corp_checked": corp_checked, "rows": rows, "n": len(rows), "n_official": n_off,
-                "n_computed": n_comp, "n_retriggered": n_re,
-                "sources_text": (NEW_SOURCES_TEXT % (n_off, n_comp)) if rows else None,
-                "retriggered_text": (NEW_RETRIGGERED_TEXT % n_re) if n_re else None,
-                "withheld": withheld, "withheld_text": (NEW_WITHHELD_TEXT % "; ".join(wparts)) if wparts else None,
-                "faults": faults, "faults_text": (NEW_FAULTS_TEXT % len(faults)) if faults else None,
-                "through": w["through"].isoformat(), "off_from": w["off_from"].isoformat(),
-                "half_day": bool(w["half_day"]), "window_text": wt, "computed": computed, "sources": sources,
-                "asof_text": asof or None})
+    update = {"prior_day": piso, "corp_checked": corp_checked, "rows": rows, "n": len(rows), "n_official": n_off,
+              "n_computed": n_comp, "n_retriggered": n_re,
+              "sources_text": (NEW_SOURCES_TEXT % (n_off, n_comp)) if rows else None,
+              "retriggered_text": (NEW_RETRIGGERED_TEXT % n_re) if n_re else None,
+              "withheld": withheld, "withheld_text": (NEW_WITHHELD_TEXT % "; ".join(wparts)) if wparts else None,
+              "faults": faults, "faults_text": (NEW_FAULTS_TEXT % len(faults)) if faults else None,
+              "through": w["through"].isoformat(), "off_from": w["off_from"].isoformat(),
+              "half_day": bool(w["half_day"]), "window_text": wt, "computed": computed, "sources": sources,
+              "asof_text": asof or None}
+    return {"update": update, "rows": rows, "faults": faults, "computed": computed, "asof": asof, "dw": dw,
+            "n_comp": n_comp, "corp_checked": corp_checked}
 
-    # 9. the honesty table, then the dividend / split sentence [C4]
-    if not rows and not computed["ok"]:
-        out["status"] = "not_read"
-        out["fault_text"] = NEW_NOT_READ_TEXT % (GLYPH, TAG, dw, asof)
-    elif not rows and not faults:                              # a faulted name is never "no name"
-        out["empty_text"] = NEW_EMPTY_TEXT % (dw, computed["text"])
-    parts = []
-    if rows and not computed["ok"]:
-        parts.append(NEW_PARTIAL_TEXT % computed["text"])
-    if n_comp > 0 and not corp_checked:
-        parts.append(NEW_CORP_UNREAD_TEXT % CORP_UNREAD_NOTE.strip())
-    out["partial_text"] = " ".join(parts) or None
+
+# ───────────────────────────────────────────── the names under it from a RECENT trigger day (2026-11-24 sissr §3.1)
+def _recent_base(now_et) -> dict:
+    """Every RECENT_KEYS key with its not-evaluated value."""
+    out = {k: None for k in RECENT_KEYS}
+    out.update({"kind": RECENT_KIND, "days": [], "by_symbol": {}, "faults": []})
+    if isinstance(now_et, datetime):
+        out["today"] = now_et.date().isoformat()
+    return out
+
+
+def _recent_failed(now_et) -> dict:
+    """The `failed` shape — never raises."""
+    try:
+        out = _recent_base(now_et)
+    except Exception:                                          # noqa: BLE001
+        out = {k: None for k in RECENT_KEYS}
+        out.update({"kind": RECENT_KIND, "days": [], "by_symbol": {}, "faults": []})
+    out["status"] = "failed"
+    return out
+
+
+def recent_triggers(now, db=_DEFAULT, *, lists=None, corp=None) -> dict:
+    """The names whose restriction started TODAY or on one of the `SSR_RECENT_TRIGGER_DAYS` market days before it,
+    each with the market day it is on counting the trigger day (AKAN: triggered Mon 11/23 → "day 2" on Tue 11/24).
+    Every day is read by `_rows_on` — the rows `new_triggers` serves, no second computation of the line. The NEWEST
+    trigger wins (a re-trigger extends it, 242.201(b)(1)(ii)). Mongo reads only, never kicks, never writes, never
+    raises (→ `failed`). A closed day reads `closed` with nothing in it; before the regular-hours open nothing can
+    start today, so today is not read (`_rth_open_dt`, the `pre_open` rule of `new_triggers`)."""
+    now_et = None
+    try:
+        now_et = RS._to_et(now)
+        lists = _resolve_lists(lists)
+        corp = _resolve_corp(corp)
+        if db is _DEFAULT:
+            db = SIC._get_db()
+        if db is None:
+            return _recent_failed(now_et)
+        return _recent_triggers(now_et, db, lists, corp)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("ssr: the recent-trigger read failed: %s", type(exc).__name__)
+        return _recent_failed(now_et)
+
+
+def _recent_triggers(now_et, db, lists, corp) -> dict:
+    from catalysts.medical.reaction import is_market_day, prev_market_day
+    out = _recent_base(now_et)
+    today = now_et.date()
+    if not is_market_day(today):
+        out["status"] = "closed"
+        return out
+    span = [today]                                             # today, then SSR_RECENT_TRIGGER_DAYS market days back
+    d = today
+    for _ in range(SSR_RECENT_TRIGGER_DAYS):
+        d = prev_market_day(d)
+        span.append(d)
+    read = [T for T in span if not (T == today and now_et < _rth_open_dt(T))]
+    out["days"] = [T.isoformat() for T in read]
+    by, owner, faults, failed_days = {}, {}, [], []
+    for T in read:                                             # newest first — the newest trigger wins
+        iso = T.isoformat()
+        try:
+            got = _rows_on(T, db, now_et, lists, corp)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("ssr: one recent trigger day unread: %s", type(exc).__name__)
+            faults.append({"day": iso, "symbol": None})
+            failed_days.append(iso)
+            continue
+        faults.extend({"day": iso, "symbol": s} for s in got["faults"])
+        n = _finite(len([x for x in span if x >= T]))          # market days from the trigger day through today
+        if n is None:
+            continue
+        n = int(n)
+        for r in got["rows"]:
+            sym = r.get("symbol")
+            sp = _spellings(sym)
+            if any(k in owner for k in sp):                    # an older trigger of a name a newer day holds;
+                continue                                       # `retriggered` stays the newer row's own (`_on_block`)
+            owner.update({k: sym for k in sp})
+            by[sym] = {"triggered_on": iso, "day_n": n, "source": r.get("source"), "exchange": r.get("exchange"),
+                       "retriggered": bool(r.get("retriggered")),
+                       "tag_text": RECENT_TAG_TEXT % (GLYPH, TAG, SR._md(iso), n),
+                       "title": RECENT_TITLE_TEXT % (GLYPH, TAG, _day_words(T), r.get("source_text"), n,
+                                                     RS.NOT_A_SIGNAL)}
+    out["by_symbol"] = by
+    out["faults"] = faults
+    out["status"] = "failed" if read and len(failed_days) == len(read) else "ok"
     return out
 
 

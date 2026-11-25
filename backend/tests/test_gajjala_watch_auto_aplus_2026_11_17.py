@@ -119,7 +119,8 @@ def test_constants_and_append_only_tuples():
     # PIN MOVED 2026-11-19 (spec watchfid): REASONS += "not_eligible" (appended)
     assert A.REASONS[4:] == ("made_room", "made_room_aplus", "not_eligible")
     # PIN MOVED 2026-11-19 (spec watchfid): SKIPPED_KEYS += "not_eligible" (appended)
-    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed", "not_eligible")
+    # PIN MOVED 2026-11-24 (spec sissr §3.6 C2): SKIPPED_KEYS += "si_ssr" (appended)
+    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed", "not_eligible", "si_ssr")
     assert C.AUTO_VOLUME_SOURCES == ("scan", "tracker")                                       # [C1] no third source
     # PIN MOVED 2026-11-19 (spec watchfid): AUTO_OUT_KEYS += "not_eligible", "broker_fault" (appended)
     assert L.AUTO_OUT_KEYS[-2:] == ("not_eligible", "broker_fault") and L.AUTO_OUT_KEYS[:-2] == (

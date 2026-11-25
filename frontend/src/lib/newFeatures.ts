@@ -1089,6 +1089,23 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-24 ~23:20 ET, verbatim: "Make this new routine 1. Scan Short interest tabs sotkcs that become potentials
+  // also and also look for new SSR stocks 2. Then potentials to be alerts sooner - add them to watch list and give them a
+  // time stamp of the day" · ~23:35 ET "Days past little bit like AKAN is what I am mainly looking for many were so
+  // confident on SSR.." · 2026-11-25 ~00:25 ET "I do need a mention of High SI stock when alerting for potential though..".
+  // (His ~23:30 message is not quoted: it carries the b-word.) Spec sissr rev 2. BE chart_maps/gajjala/si_ssr_names.py
+  // (the THIRD add source, tags in ctx["si_ssr"]) + run.py (adds held from every push) + potential.py (the SAME 🧠
+  // classifier and gate; the stamp; title_lead — every tag in the 🧠 title, 🩳 tier + SI % included) +
+  // ssr.recent_triggers + reg_sho.past_closeout_text; the 👀 seat is the ✅ engine's (gajjala_watch/allrules.step, kind
+  // "si_ssr", section "sissr"). UNMEASURED. Pinned by scripts/contracts.mjs ("🩳⛔ SI/SSR potentials → alert + 👀 Watch
+  // (2026-11-24)"). PLACED HERE, right above the ✅ entry, not FIRST (2026-11-25, the 💧 / ✅ way): NEW_FEATURES[0..100]
+  // are pinned by index in ~40 vitest files; past index 100 no pin moves. Docs docs/gajjala/si_ssr_potentials_2026_11_24.md.
+  {
+    id: 'gajjala-si-ssr-potentials-watch-2026-11-24',
+    label: "⛔🩳🔒 SSR and short-interest names that turn 🧠 potential go on 👀 Watch with the day's time — you said: “Make this new routine 1. Scan Short interest tabs sotkcs that become potentials also and also look for new SSR stocks 2. Then potentials to be alerts sooner - add them to watch list and give them a time stamp of the day” · “Days past little bit like AKAN is what I am mainly looking for many were so confident on SSR..” · “I do need a mention of High SI stock when alerting for potential though..”. Every 5-minute 🚩 pass now also reads 🩳 High SI names, new ⛔ SSR names, names still under SSR from a past day (AKAN: ⛔ SSR 11/23 · day 2) and 🔒 names past their Reg SHO close-out date. GG's own five setups and the same 🧠 rules decide. The first time one is a 🧠 potential it is seated on 👀 Watch in its own ⛔🩳🔒 section with the date, time, source and setup, kept across sessions like ✅ All rules met. A 🧠 alert for a name on GG's list shows every source it carries right after the ticker and rings at the same minute as before; a 🩳 High SI name shows its tier and short-interest % in every 🧠 alert title, also beside ⛔ or 🔒 (🧠 AKAN · ⛔ SSR 11/23 · day 2 · 🩳 …). A name added from off his list is seated, never rung — your call; off-list adds are paused until you pick how many may be on at once. No gate loosened, nothing trades. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-24, verbatim: "Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep
   // tracking them later". Spec watchall rev 2 (§3, §4 main-session). BE chart_maps/gajjala_watch/allrules.py (the ✅ doc
   // "rules" of COLL_LIST — trigger-armed 🧠 cards at GG's K11 volume floor + every 🎯 A+, kept while met within

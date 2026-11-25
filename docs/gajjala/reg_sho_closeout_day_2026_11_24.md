@@ -464,3 +464,14 @@ Tests: `backend/tests/test_reg_sho_closeout_day_2026_11_24.py` (calendar, runs, 
 `frontend/src/components/GgHardToBorrow.closeout.test.tsx` (the six worked items through the real component).
 
 **MEASURED 2026-11-23 23:09 ET (worktree, in-memory store, real sources):** refresh_due 5 GETs (4.6 s); backfill round 1 = 40 GETs / 24 found / 0 confirmed / 0 holes (41.0 s), round 2 the same (42.3 s); 85 GETs, all 200 (Nasdaq 17, NYSE 51, Cboe 17); no 2026-11-11 URL asked; 12 zero-row NYSE main-market days (10-30 → 11-17) each still owe one confirm GET → a full backfill is about 150 GETs plus confirms. After two rounds SMTK reads `day 17+ · close-out day passed · still on` (the run is a floor until 10-26/10-27 are read in round 3). Card chip: 2 lines on a 430 px card; 📋 🩳 cell 154 → 203–242 px inside its own scroll.
+
+## 2026-11-24 (late) — `past_closeout_text`: the 🔒 words for a name still on its list past its close-out day
+
+Ajay 2026-11-24 ~23:35 ET: "Days past little bit like AKAN is what I am mainly looking for many were so confident on
+SSR..". NEW `reg_sho.past_closeout_text(run)` turns a `reg_sho_runs.run_for` block into the source tag the 🚩 pass
+(sissr WP be-pass) prints: `passed` → "🔒 day 6 past close-out" (19 settlement days on the list −
+`RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS`, read by name at call time); `passed_open` (the run's first day not known) →
+"🔒 day 17+ past close-out" (30 days read); counting / reached / unknown / junk / no day past → None. Never raises.
+The close-out day is a backstop of the rule, a rule date only — it says nothing about price. Tests:
+`backend/tests/test_reg_sho_past_closeout_2026_11_24.py` (the constant monkeypatched to 12 moves it to "day 7"; no bare
+rule number in the function; negatives marked `NEGATIVE`).

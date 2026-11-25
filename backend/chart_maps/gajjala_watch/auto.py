@@ -110,9 +110,11 @@ STEP_REASONS = ("list_unreadable", "boards_unreadable", "closed", "write_failed"
 STATES_DISMISS = ("dismissed", "absent", "error")
 SKIPPED_KEYS = ("volume_unknown", "under_floor", "full",                 # "full" appended 2026-11-17 12:55
                 "failed",                                                  # "failed" appended (Amendment A4) — APPEND only
-                "not_eligible")                                            # 🚫 2026-11-19 (spec watchfid) — on his broker list
+                "not_eligible",                                            # 🚫 2026-11-19 (spec watchfid) — on his broker list
+                "si_ssr")                                                  # ⛔🔒 2026-11-24 (spec sissr C2) — an ADDED name
 _TRACKER_FIELDS = {"symbol": 1, "setup": 1, "date": 1, "first_seen": 1, "first_kind": 1, "last.at": 1,
-                   "last.state": 1, "last.session_volume": 1}             # the ONE projected tracker find per store
+                   "last.state": 1, "last.session_volume": 1,             # the ONE projected tracker find per store
+                   "si_ssr_add": 1}                                       # ⛔🔒 2026-11-24 — the insert-only add marker
 _FAR = datetime.max.replace(tzinfo=timezone.utc)
 _READ = object()                                                          # shared_sets: "read the trackers yourself"
 BY_LOOP = "loop"
@@ -643,6 +645,26 @@ def _changed(doc, iso: str, entries, removed, dismissed) -> bool:
     return bool(entries or removed or dismissed or any(stored))
 
 
+def _si_ssr_adds(read_docs, tracker_docs) -> set:
+    """⛔🔒 2026-11-24 (spec sissr §3.6, C2) — {FOLD} of the ADDED ⛔ / 🔒 names (si_ssr_names.is_add: a read doc whose
+    ctx tag carries the add flag, or a 🧠 tracker doc with the insert-only `si_ssr_add`) across {source: docs} maps
+    (None entries skipped). Such a name failed GG's own scanner rule: it never takes a 🤖 / 🎯 seat and never evicts —
+    it can only sit in the ✅ engine's "sissr" section. The module is imported LAZILY; a fault → set() and one log line
+    (the add flag is then not read — the pass's own push hold is unchanged)."""
+    try:
+        from chart_maps.gajjala import si_ssr_names as SSN
+        out = set()
+        for docs in (read_docs, tracker_docs):
+            for ds in (docs or {}).values() if isinstance(docs, dict) else []:
+                for d in ds or []:
+                    if SSN.is_add(d) and isinstance(d.get("symbol"), str) and d["symbol"].strip():
+                        out.add(CO.fold(d["symbol"]))
+        return out
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch 🤖: the ⛔🔒 add read failed: %s", type(exc).__name__)
+        return set()
+
+
 def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     iso = _iso(session)
     entries, removed, dismissed = _lists(doc, iso)
@@ -664,6 +686,12 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     sets = potential_sets(session, shared=shared, stores=stores, docs=rdocs)
     # 🎯 2026-11-17 (spec ggwaplus2): the A+ set — in window only (out of window: no add, no promote, no refresh)
     aps = aplus_sets(session, docs=rdocs, stores=stores) if in_window else None
+    # ⛔🔒 2026-11-24 (spec sissr C2): the ADDED names — a current potential / A+ by its read doc's add flag; a
+    # tracker-only arrival by the read flag OR its tracker's insert-only flag (an add that later made GG's list keeps
+    # the tracker flag, so only its current-potential arrival — read doc, no add flag — can seat it)
+    ss_read = _si_ssr_adds(rdocs, None)
+    ss_any = ss_read | _si_ssr_adds(None, tdocs)
+    ss_skip: set = set()
     if aps is not None:                                        # words move, positions do not [C4]; unknown ≠ none
         for e in entries:
             k = CO.fold(e["symbol"])
@@ -730,6 +758,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             k = CO.fold(sym)
             if k in mk or k in dk or k in have:
                 continue
+            if k in ss_read:                                   # ⛔🔒 C2: an ADDED name never takes a 🎯 seat
+                ss_skip.add(k)
+                continue
             if k in refuse_k:                                  # 🚫 never seated; not "aplus_skipped" (no free seat)
                 refuse(sym)
                 continue
@@ -766,6 +797,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
         for sym, cand, srcs, tracker_only in arrivals(merged, tracked):
             k = CO.fold(sym)
             if k in mk or k in dk or k in have or (tracker_only and k in out_today):
+                continue
+            if k in (ss_any if tracker_only else ss_read):     # ⛔🔒 C2: never a 🤖 seat, never evicts
+                ss_skip.add(k)
                 continue
             if k in refuse_k:                                  # 🚫 before the volume floor — counted once, here
                 refuse(sym)
@@ -804,6 +838,7 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
                           "float_shares": cand["float_shares"], "added_at": now, "added_et": PT._hhmm(now),
                           "dropped_since": since})
         skipped[SKIPPED_KEYS[4]] = len(ne)
+        skipped[SKIPPED_KEYS[5]] = len(ss_skip)                # ⛔🔒 C2: each ADDED name counted once
         entries = entries + added
     removed += gone_now
     res = {"symbols": [e["symbol"] for e in entries], "added": [e["symbol"] for e in added],
@@ -814,7 +849,8 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
            "not_eligible": ne, "broker_fault": bool(bfault),
            # ✅ 2026-11-24 (spec watchall §3.4 [C7]): every A+ name of this step — seated, skipped or already held —
            # handed to allrules.step by the loop; [] when the A+ set is unknown or out of window
-           "aplus_now": [sym for sym, _ap, _srcs in aplus_arrivals(aps)] if aps is not None else []}
+           "aplus_now": [sym for sym, _ap, _srcs in aplus_arrivals(aps)
+                         if CO.fold(sym) not in ss_read] if aps is not None else []}   # ⛔🔒 C2: never a ✅ A+
     res["changed"] = _changed(doc, iso, entries, removed, dismissed)
     return res, {"session": iso, "entries": entries, "removed": removed, "dismissed": dismissed}
 

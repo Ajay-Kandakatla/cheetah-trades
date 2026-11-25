@@ -801,7 +801,9 @@ def _note():
 def test_rules_info_clause_is_in_the_section_note_and_moves_with_the_constants(monkeypatch):
     n = _note()
     assert "🩳 High SI:" in n and "BOTH float reads" in n and "display only" in n and HS.push_text() in n
-    assert n.index("🌱 Diverging") < n.index("🩳 High SI")
+    # WIDENED 2026-11-25 (spec sissr §3.6): the ⛔🩳🔒 clause (rules_info._gg_si_ssr_clause, before 🌱) also says
+    # "🩳 High SI" — this pin reads the high-SI clause's own head "🩳 High SI:" (the clause order is unchanged).
+    assert n.index("🌱 Diverging") < n.index("🩳 High SI:")
     monkeypatch.setattr(GC, "HIGH_SI_MAX_FLOAT", 6_543_210)
     assert "6,543,210" in _note()
     monkeypatch.setattr(GC, "HIGH_SI_CROSS_PUSH_MODE", "live")

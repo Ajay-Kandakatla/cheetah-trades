@@ -120,3 +120,29 @@ negatives marked `NEGATIVE`. Mutation spot-checks run 2026-11-24, each turning a
 - dropping partial part 2 turns test 12b red.
 - removing the list-day anchor turns tests 7b and 15 red.
 - dropping the spelling de-duplication turns test 3 red.
+
+## 2026-11-24 (late) — `recent_triggers`: the names under it from a RECENT trigger day (sissr WP be-ssr-words)
+
+Ajay 2026-11-24 ~23:35 ET: "Days past little bit like AKAN is what I am mainly looking for many were so confident on
+SSR..". `_new_triggers` steps 3–8 moved VERBATIM into `_rows_on(D, db, now_et, lists, corp)`; `_new_triggers` keeps the
+status gate (step 2) and the honesty table (step 9), so `new_triggers` is byte-identical (pinned over 15 branches
+against the 5dec3c6b body). NEW `recent_triggers(now)` reads today (once regular hours have opened — the `pre_open`
+rule) plus `SSR_RECENT_TRIGGER_DAYS = SSR_FOLLOWING_TRADING_DAYS` market days before it, each through `_rows_on`, and
+serves `{kind: "ssr_recent_triggers", status: ok | failed | closed, today, days, by_symbol, faults}`. Each name carries
+the market day it is on counting the trigger day — `day_n` = the count of market days from the trigger day through
+today, no numeric literal (AKAN: triggered Mon 11/23 → "⛔ SSR 11/23 · day 2" on Tue 11/24). The newest trigger wins;
+`retriggered` is the newer row's own (a second trigger after the first window ended is new, never "retriggered"). A
+day whose read raises is left out and listed in `faults`; every day raising reads `failed`, never an empty `ok`. A
+closed day reads `closed` with nothing in it. The window is HIS CALL #1 (one constant): as built, AKAN is untagged on
+Wed 11/25, the session the restriction lifts. Mongo reads only; never kicks, never writes. UNMEASURED. Tests:
+`backend/tests/test_ssr_recent_triggers_2026_11_24.py` (negatives marked `NEGATIVE`; mutation spot-checks on `day_n`,
+the pre-open skip and the moved sort each turn a named test red).
+
+**HIS CALL #1 — open, ask before shipping (verifier, 2026-11-24 late).** Not a defect: the build does what §3.1 says.
+A branch probe on live Mongo read 11/24 15:00 → days [11/24, 11/23], AKAN "⛔ SSR 11/23 · day 2"; 03:59 → [11/23]
+only, AKAN still day 2. With `SSR_RECENT_TRIGGER_DAYS = SSR_FOLLOWING_TRADING_DAYS` (1), an AKAN-type name drops its
+tag on day 3 (Wed 11/25). His words, "Days past little bit like AKAN is what I am mainly looking for", point at day 3
+and later. The question: "keep AKAN tagged through day N?" — one constant; no number is picked here (the
+`2026-11-24_ssr_day_closeout` study has no outcomes yet). Before widening, check that the older days' list files are
+kept in Mongo (§6). Pinned both ways: `test_06_NEGATIVE_his_call_1_as_built_akan_is_untagged_on_wed_1125_day_3` and
+`test_06_his_call_1_widening_the_one_constant_keeps_akan_on_day_3`.

@@ -226,6 +226,9 @@ export function ggwJoinable(row: GgwRow): boolean {
   /* ✅ 2026-11-24 (spec watch_all_rules §3.6): a ✅ All rules met row NEVER joins his pick — even one a board reads A+
    * today (its `aplus` block served) — up to ~50 multi-day names. */
   if (ggwIsRulesRow(row)) return false;
+  /* ⛔🩳🔒 2026-11-25 (spec sissr §3.7, verifier HIGH): a ⛔🩳🔒 potentials row NEVER joins his pick either — even one
+   * carrying a served `aplus` block (it is a machine-added tagged potential, not his name nor a 🎯 seat). */
+  if (ggwIsSissrRow(row)) return false;
   return row.auto == null || row.aplus != null || row.auto?.why === 'aplus';
 }
 /** The joinable rows that are NEW to this view: added after `pickAt` (strictly; no pickAt → the last
@@ -550,6 +553,8 @@ export type GgwBoard = {
 /** ✅ The served all-rules head (backend payload `rules`). Every word served; display only, UNMEASURED. */
 export type GgwRulesHead = {
   state: string; n: number | null; keep_sessions: number | null; text: string | null; not_seated_n: number | null;
+  /** ⛔🩳🔒 2026-11-25 (spec sissr §3.6): the served ⛔🩳🔒 seated / 🚫-not-eligible counts; ABSENT unless served. */
+  sissr_n?: number | null; sissr_not_eligible_n?: number | null;
 };
 export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: string | null };
 /** The server's own failure answer (payload.error_payload): its reason is printed verbatim (served words only). */
@@ -898,7 +903,14 @@ export function parseGgw(raw: unknown): GgwPayload | null {
 export function parseRulesHead(v: unknown): GgwRulesHead | null {
   if (!isObj(v) || !str(v.state)) return null;
   const nn = (x: unknown): number | null => { const k = num(x); return k != null && k >= 0 ? k : null; };
-  return { state: v.state, n: nn(v.n), keep_sessions: nn(v.keep_sessions), text: str(v.text), not_seated_n: nn(v.not_seated_n) };
+  return {
+    state: v.state, n: nn(v.n), keep_sessions: nn(v.keep_sessions), text: str(v.text), not_seated_n: nn(v.not_seated_n),
+    /* ⛔🩳🔒 2026-11-25 (spec sissr §3.6 [C5]): the ⛔🩳🔒 counts — each key set ONLY when served (an older head stays
+     * byte-equal); junk / negative → null. Parsed only: the board draws no digit from them (the served section hint in
+     * ℹ️ already carries its own words). */
+    ...('sissr_n' in v ? { sissr_n: nn(v.sissr_n) } : {}),
+    ...('sissr_not_eligible_n' in v ? { sissr_not_eligible_n: nn(v.sissr_not_eligible_n) } : {}),
+  };
 }
 /** ✅ The board's one fault line OUTSIDE ℹ️: the served `rules.text` when the all-rules list could not be read; null else. */
 export function ggwRulesWarn(b: { rules?: GgwRulesHead | null } | null | undefined): string | null {
@@ -911,6 +923,16 @@ export const GGW_RULES_WHY = 'rules';
 export function ggwIsRulesRow(r: { auto?: GgwRowAuto | null }): boolean {
   return r.auto?.why === GGW_RULES_WHY;
 }
+// ── ⛔🩳🔒 potentials (2026-11-25, spec sissr §3.7, WP fe-watch) ─────────────────────────────────────────────────────
+/* Ajay 2026-11-24 ~23:20 ET (verbatim in spec sissr §0): the 🩳 / ⛔ / 🔒 tagged names that become 🧠 potentials go on
+ * the Watch "and give them a time stamp of the day". The server serves a section `sissr` (after ✅, folded on the phone)
+ * and its rows under `row.auto` with `why: "sissr"`; every word on them (chip, hover, ×) is served — the FE composes
+ * none. Layout only: nothing here gates, pushes, caps or sorts. */
+export const GGW_SISSR_WHY = 'sissr';
+export function ggwIsSissrRow(r: { auto?: GgwRowAuto | null }): boolean {
+  return r.auto?.why === GGW_SISSR_WHY;
+}
+// ── end ⛔🩳🔒 ──
 const NO_SKIP: ReadonlySet<string> = new Set<string>();
 /** 🤖 The live-interest list (2026-11-17): EVERY row's symbol in served order — his names, then the auto names — so an
  *  auto tile's charts move live like his (the board used to POST `symbols`, his names only).
@@ -921,7 +943,10 @@ const NO_SKIP: ReadonlySet<string> = new Set<string>();
 export function ggwLiveSymbols(b: GgwBoard, skip: ReadonlySet<string> = NO_SKIP): string[] {
   const keep = (r: GgwRow) => r.auto == null || !r.org?.group || !skip.has(r.org.group);
   const rows = b.rows.filter(keep);
-  return [...rows.filter((r) => !ggwIsRulesRow(r)), ...rows.filter(ggwIsRulesRow)].map((r) => r.symbol);
+  /* ⛔🩳🔒 2026-11-25 (spec sissr §3.7, verifier HIGH): ⛔🩳🔒 rows go AFTER the ✅ rows, so past the hub's cap the
+   * refused tail is ⛔🩳🔒 first, then ✅ — 👤 / 🎯 / 🤖 → ✅ → ⛔🩳🔒. No ⛔🩳🔒 row → exactly the 11-24 list. */
+  const rest = rows.filter((r) => !ggwIsRulesRow(r) && !ggwIsSissrRow(r));
+  return [...rest, ...rows.filter(ggwIsRulesRow), ...rows.filter(ggwIsSissrRow)].map((r) => r.symbol);
 }
 
 /** The rows still waiting for their first read (the pending poll asks for these only). */

@@ -83,7 +83,8 @@ def test_group_of_is_three_keys_only():
     assert SE.group_of({"why": None}) == SE.group_of({}) == SE.group_of({"why": "ran"}) == "auto"
     # ✅ 2026-11-24 (spec watchall §3.1, HIS CALL #5): "rules" appended LAST — only a ✅ entry with no 🤖 entry reaches it
     # (test_gajjala_watch_allrules_payload_2026_11_24.py); never "ran".
-    assert C.SECTION_ORDER == ("yours", "aplus", "auto", "rules") and SE.RS_SETUP in GC.SETUPS
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 "sissr" appended after "rules"
+    assert C.SECTION_ORDER == ("yours", "aplus", "auto", "rules", "sissr") and SE.RS_SETUP in GC.SETUPS
 
 
 # ── when_block ────────────────────────────────────────────────────────────────────────────────────────────────────

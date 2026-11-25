@@ -59,7 +59,9 @@ def _probe(st, adoc, iso, db=None):
 
 
 def test_probe_constants_are_the_engines():
-    assert P.TRACKER_FIELDS == C.RULES_TRACKER_FIELDS
+    # RE-PINNED 2026-11-24 (spec sissr §3.6) — ⛔🩳🔒 the projection gained the stamp + the add marker; the probe
+    # re-implements the ✅ armed rule only, so it reads every other field
+    assert P.TRACKER_FIELDS == {k: v for k, v in C.RULES_TRACKER_FIELDS.items() if k not in ("si_ssr", "si_ssr_add")}
     assert P.floor() == C.RULES_MIN_VOLUME == GC.K11_MIN_SESSION_VOLUME
     assert C.RULES_KINDS[0] == GC.POTENTIAL_KINDS[0]
 

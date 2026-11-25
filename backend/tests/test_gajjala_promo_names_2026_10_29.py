@@ -461,7 +461,11 @@ def test_NEGATIVE_no_promo_map_means_no_count_key_and_a_trader_add_keeps_its_own
                       owner="owner@example.com", tape="rth", trader_hold={"MXCT": 300_000})
     assert tuple(out) == PT.COUNT_KEYS and out["trader_held"] == 1        # no promo_held key; 📌 decides a 📌 add
     assert [h["reason"] for h in st.get_potential(S, "MXCT", "bull_flag")["held"]] == list(PT.TRADER_HELD)
-    assert PT.ADD_HELD == PT.TRADER_HELD + PT.PROMO_HELD and PT.PROMO_HELD == (PN.HOLD_REASON,)
+    # WIDENED 2026-11-24 (⛔🔒🩳 SPEC sissr §3.5, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly
+    # looking for many were so confident on SSR.."): ADD_HELD also carries the SI / SSR name source's add hold, LAST
+    assert PT.ADD_HELD == PT.TRADER_HELD + PT.PROMO_HELD + PT.SI_SSR_HELD and PT.PROMO_HELD == (PN.HOLD_REASON,)
+    assert PT.SI_SSR_HELD == ("si_ssr_add",) and PT.ADD_HELD != PT.TRADER_HELD + PT.PROMO_HELD          # NEGATIVE
+    assert "si_ssr_held" not in out                                      # no si_ssr_hold handed → no count key
     # MOVED 2026-11-11 (entry spec §6 [C3]): the tail after trader_held = the two 2026-11-11 counts; promo_held is
     # still not a COUNT_KEYS member (appended LAST only when a promo map is handed)
     assert not set(PT.PROMO_HELD) & set(PT.HELD_WORDS) and PT.COUNT_KEYS[PT.COUNT_KEYS.index("trader_held"):] == ("trader_held", "building_held", "name_held")

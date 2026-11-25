@@ -1149,6 +1149,11 @@ def test_NEGATIVE_a_failing_pick_is_skipped_not_raised(monkeypatch):
 
 # ═════════════════════════════════════════════ display only
 REG_SHO_READERS_2026_11_23 = ("chart_maps/gajjala/high_si.py", "chart_maps/gajjala/high_si_cross.py")
+# WIDENED 2026-11-24 (⛔🔒🩳 SPEC sissr §3.3, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly
+# looking for many were so confident on SSR.."): si_ssr_names.py reads the SAME stored payload(kick=False) to TAG names
+# past their close-out date, plus the pure RSH.past_closeout_text word. It aliases the module RSH, so it has its own
+# read-only pin below (test_NEGATIVE_si_ssr_names_reads_the_stored_payload_only); nothing else may join.
+REG_SHO_READERS_2026_11_24 = ("chart_maps/gajjala/si_ssr_names.py",)
 
 
 def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():
@@ -1160,10 +1165,40 @@ def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():
         for f in (BACKEND / sub).rglob("*.py"):
             if "__pycache__" not in f.parts and "reg_sho" in f.read_text(errors="ignore"):
                 hits.append(f.relative_to(BACKEND).as_posix())
-    assert sorted(hits) == sorted(REG_SHO_READERS_2026_11_23)
+    assert sorted(hits) == sorted(REG_SHO_READERS_2026_11_23 + REG_SHO_READERS_2026_11_24)
     assert "reg_sho" not in (BACKEND / "crontab").read_text()
     ua = RS.HTTP_HEADERS["User-Agent"]
     assert "cheetah" not in ua.lower() and "@" not in ua
+
+
+def test_NEGATIVE_si_ssr_names_reads_the_stored_payload_only():
+    import ast
+    for rel in REG_SHO_READERS_2026_11_24:
+        src = (BACKEND / rel).read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+        assert not [n for n in top if "reg_sho" in ast.dump(n)], rel                 # lazy only
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                 and isinstance(n.func.value, ast.Name) and n.func.value.id in ("RS", "RSH", "reg_sho")]
+        assert {c.func.attr for c in calls} == {"payload", "past_closeout_text"}, rel  # the matcher can fail
+        for c in calls:
+            if c.func.attr == "payload":
+                kw = {k.arg: k.value for k in c.keywords}
+                assert isinstance(kw.get("kick"), ast.Constant) and kw["kick"].value is False, rel
+        for banned in ("refresh(", "kick=True", "_fetch", "spawn", "_popen", "reg_sho" + "_runs"):
+            assert banned not in src, (rel, banned)
+
+
+def test_NEGATIVE_a_kicking_payload_read_in_si_ssr_names_would_trip():
+    import ast
+    src = (BACKEND / REG_SHO_READERS_2026_11_24[0]).read_text(encoding="utf-8")
+    planted = src + "\ndef _x(now):\n    from short_interest import reg_sho as RSH\n    return RSH.payload(kick=True)\n"
+    tree = ast.parse(planted)
+    kicks = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and isinstance(n.func.value, ast.Name) and n.func.value.id == "RSH" and n.func.attr == "payload"
+             and any(k.arg == "kick" and isinstance(k.value, ast.Constant) and k.value.value is True
+                     for k in n.keywords)]
+    assert kicks and "kick=True" in planted
 
 
 def test_NEGATIVE_the_two_2026_11_23_readers_only_read_the_stored_payload_never_kick_or_refresh():

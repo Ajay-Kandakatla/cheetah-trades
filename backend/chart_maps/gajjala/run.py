@@ -97,6 +97,25 @@ def _upto(raw, now):
     return raw if keep.all() else raw[keep]
 
 
+def _carried_adds(st, session, names, rows) -> set:
+    """⛔🔒 2026-11-25 review (fail-open) — on an unreadable scan window: the listed names with NO row this pass whose
+    stored read doc is a ⛔🔒 add (si_ssr_names.is_add — the read doc's ctx tag flag). A row of this pass decides
+    (added_symbols). An unreadable read doc is no proof either way: it reads as not-an-add (store._find_one's None —
+    GG's own carried names are never held by a fault)."""
+    from . import si_ssr_names as SSN                           # run_pass's own local-import convention
+    have = {str(r["symbol"]).upper() for r in rows or () if isinstance(r, dict) and r.get("symbol")}
+    out = set()
+    for s in names or ():
+        if s in have:
+            continue
+        try:
+            if SSN.is_add(st.get_read(session, s)):
+                out.add(s)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala pass: si/ssr carried add unreadable for %s: %s", s, type(exc).__name__)
+    return out
+
+
 def _run_bases_of(frames: dict, who: str) -> dict:
     """📶 2026-11-15 (Ajay "There is a concept of 3 bases and climax run can you bake that in to the app please") —
     {SYM: run_bases.count block} over each name's counting frame (GC.RUN_BASE_FRAME), one try per name: a failing
@@ -253,6 +272,11 @@ class Deps:
     # it. Runs right after the 🧠 step with the SAME `now` (its transition is the 🧠 tracker's stamp of THIS pass), and
     # only when the 🧠 gate completed. Never a key of out, never out["errors"], never a gate.
     vol_dried: Optional[Callable] = None
+    # ⛔🔒🩳 2026-11-24 (Ajay "Days past little bit like AKAN is what I am mainly looking for many were so confident on
+    # SSR.."; SPEC sissr §3.4): the stored SI / SSR / Reg SHO tags reader `(now, session) -> read`
+    # (si_ssr_names.default_reader). None = the step does not run, the pass doc gains NO key and every read doc is byte-
+    # identical (tests, replays, dry runs); the cron path passes it. An ADDED name is read but handed to NO push engine (C1).
+    si_ssr_names: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -399,6 +423,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     from . import detectors as D
     from . import trader_names as TN
     from . import promo_names as PN
+    from . import si_ssr_names as SSN
     from . import audited_pass as AP
 
     deps = deps or Deps()
@@ -459,13 +484,21 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             pblock = PN.run_step(st, now, session, rows, result, types=types, reader=deps.promo_tags, good=good)
             if pblock is not None:                              # unwired / empty → no "promo" key, no promo_* count
                 out["promo"] = pblock
+        if deps.si_ssr_names is not None:                       # ⛔🔒🩳 2026-11-24 — the same fence, after the 🎪 step
+            sblock = SSN.run_step(st, now, session, rows, result, types=types, reader=deps.si_ssr_names, good=good,
+                                  on_open=on_demand)
+            if sblock is not None:                              # unwired / failed snapshot → no "si_ssr" key
+                out["si_ssr"] = sblock
         mine()
         SC.record_scan(st, session, now, result, fetch_splits=deps.fetch_splits)
         TN.recount(result)                                      # the hold-out rewrote counts["qualifiers"]
         PN.recount(result)                                      # 🎪 qualifiers = GG's rows only (no-op without one)
+        SSN.recount(result)                                     # ⛔🔒 the same rule (no-op without an add)
         TN.trim_block(out["trader"], result)                    # critic F1: a split-held name leaves the 📌 block too
         if "promo" in out:
             PN.trim_block(out["promo"], result)
+        if "si_ssr" in out:
+            SSN.trim_block(out["si_ssr"], result)
         mine()
         out["ah_carry"] = SC.commit_ah_carry(st, session, now, result, meta)
         try:
@@ -510,10 +543,23 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             win_docs, win_err = None, exc
         try:
             add_syms = (TN.added_symbols(win_docs, result["qualifiers"])
-                        | PN.added_symbols(win_docs, result["qualifiers"])) if win_err is None else set()
+                        | PN.added_symbols(win_docs, result["qualifiers"])
+                        | SSN.added_symbols(win_docs, result["qualifiers"])) if win_err is None else set()
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala pass: add order unreadable: %s", type(exc).__name__)
             add_syms = set()
+        # ⛔🔒 2026-11-24 (C1) — the ⛔🔒 ADDS: never handed to a push engine, held by 🧠. Fenced; an unreadable window
+        # reads this pass's rows (an add of this pass is still held) AND — 2026-11-25 review (fail-open) — a carried name
+        # with no row this pass is still an add when its stored read doc says so (_carried_adds), so a window fault
+        # never lets 🎯 / 🧠 / 💧 / 🧪 ring an add kept listed from an earlier pass.
+        try:
+            if win_err is not None:
+                raise win_err
+            ss_adds = SSN.added_symbols(win_docs, result["qualifiers"])
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala pass: si/ssr adds unreadable: %s", type(exc).__name__)
+            ss_adds = (SSN.added_symbols((), result["qualifiers"])
+                       | _carried_adds(st, session, names, result["qualifiers"]))
         frames = B.frames_for(sorted(names, key=lambda s: s in add_syms), session, now, load_day=deps.load_day,
                               budget_sec=left, stats=bar_stats)
         frames = {s: frames[s] for s in names if s in frames}   # every later step iterates in sorted(listed) order
@@ -524,6 +570,12 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                                                           D.K11_CTX_KEY: sv.get(s)})
                  for s, fr in frames.items()}
         run_bases = _run_bases_of(frames, "gajjala pass")   # 📶 2026-11-15 — the base count, stored only (never ctx / alert_ctx)
+        # ⛔🔒 C1: the push engines get the reads / frames WITHOUT the adds — the SAME dict objects when none is read
+        held_adds = ss_adds & set(reads)
+        pr = reads if not held_adds else {s: r for s, r in reads.items() if s not in held_adds}
+        pf = frames if not held_adds else {s: f for s, f in frames.items() if s not in held_adds}
+        if "si_ssr" in out:
+            SSN.note_push_held(out["si_ssr"], result, len(held_adds))
 
         # float chain step 3 — paced Yahoo, 🎾-alive names first; a changed float re-reads ONLY the 🎾 setup.
         # Never on an on-open pass (C7: one snapshot + the minute fetches, like a cron pass — no Yahoo).
@@ -596,6 +648,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             from supply_demand import momentum_burst as MB
             rv_tape, rv_half = MB.burst_session(result.get("tape_session"), et)
             rv_frac = MB.session_frac(rv_tape, et, half_day=rv_half)
+        # ⛔🔒🩳 2026-11-24 — the tag of every read name (FENCED → {}); the open carries the last pass's tag (below)
+        sstags = (SSN.ctx_tags(out["si_ssr"], list(frames), floats, ss_adds, today=session)
+                  if "si_ssr" in out else None)
         alert_ctx: dict = {}
         pot_ctx: dict = {}
         for s, fr in frames.items():
@@ -617,6 +672,11 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 ctx["rvol"] = DT.rvol_read({"volume": sv.get(s)}, {"avg_vol50": av}, tape=rv_tape, frac=rv_frac,
                                             half_day=rv_half)
             prior = st.get_read(session, s) or {}
+            if sstags is not None:                              # the key only when tagged — untagged docs byte-unchanged
+                if sstags.get(s):
+                    ctx[SSN.SOURCE] = sstags[s]
+            elif on_demand and isinstance((prior.get("ctx") or {}).get(SSN.SOURCE), dict):
+                ctx[SSN.SOURCE] = prior["ctx"][SSN.SOURCE]      # the open reads no tag source: the last pass's tag stays
             stopped = dict(prior.get("stopped_today") or {})
             for setup, r in (reads.get(s) or {}).items():
                 if (r or {}).get("state") == "stopped" and setup not in stopped:
@@ -645,7 +705,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         push_dry = bool(dry or on_demand)                       # K2: an open never sends, claims or records a row
         al_failed = False
         try:
-            alerts = AL.run_pass(reads, frames, now, session, store=st, send=deps.send, owner=deps.owner,
+            alerts = AL.run_pass(pr, pf, now, session, store=st, send=deps.send, owner=deps.owner,
                                  dry=push_dry, ctx=alert_ctx)
         except Exception:                                       # noqa: BLE001 — D1: never silences the 🧠 gate
             log.exception("gajjala pass: the A+ gate failed")
@@ -655,7 +715,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                     "strip": result["strip"], "n_listed": len(names), "n_read": len(reads), "bars": bar_stats,
                     "alerts": alerts, "floats": yahoo, "status": "ok" if good else "failed",
                     "qualifiers": [q["symbol"] for q in result["qualifiers"]
-                                   if q.get("source") != TN.SOURCE and q.get("source") != PN.SOURCE],
+                                   if q.get("source") not in (TN.SOURCE, PN.SOURCE, SSN.SOURCE)],
                     "premarket": {"pm_levels": pm_levels}, "postmarket": post,
                     "bars_through_et": _bars_through(frames),
                     "aplus": sorted(f"{s}:{k}" for s, rs in reads.items() for k, r in rs.items()
@@ -667,7 +727,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             mine()
             gga = AP.store_for(st, deps)
             if gga is not None:
-                AP.run_step(st, gga, reads, frames, now, session, alert_ctx=alert_ctx, owner=deps.owner, dry=dry,
+                AP.run_step(st, gga, pr, pf, now, session, alert_ctx=alert_ctx, owner=deps.owner, dry=dry,
                             push_dry=push_dry,
                             record_status=None if (dry or on_demand) else deps.record_audited_status,
                             strip=result.get("strip"), floats=floats, session_volume=sv)
@@ -688,6 +748,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                                            # 🎪 the SAME hold for a 🎪 add — None (no count key) when no source ran
                                            promo_hold=({s: sv.get(s) for s in promo_adds if s in frames}
                                                        if ("promo" in out or promo_adds) else None),
+                                           # ⛔🔒 C1 — an add is tracked, never rung; None when no source ran
+                                           si_ssr_hold=(frozenset(ss_adds & set(frames))
+                                                        if ("si_ssr" in out or ss_adds) else None),
                                            # 2026-11-11 — the ⚡ break watch's 1M floor: `last.session_volume`
                                            session_volume=sv)
         except Exception:                                       # noqa: BLE001
@@ -697,13 +760,13 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         if (deps.vol_dried is not None and not push_dry           # 💧 2026-11-24 — after the 🧠 step, its OWN try (never an open)
                 and "tracked_today" in (out.get("potential") or {})):
             try:
-                vd = deps.vol_dried(st, reads, frames, now, session, volume=sv, ctx=pot_ctx, owner=deps.owner)
+                vd = deps.vol_dried(st, pr, pf, now, session, volume=sv, ctx=pot_ctx, owner=deps.owner)
                 log.info("gajjala pass: 💧 vol dried %s", {k: n for k, n in (vd or {}).items() if n})
             except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
                 log.exception("gajjala pass: the 💧 vol dried push failed")
         if deps.fade_cross is not None and not push_dry:       # 🔀 2026-11-15 — the ➖ cross push, its OWN try (never an open)
             try:
-                xc = deps.fade_cross(reads, frames, now, session, store=st, owner=deps.owner, volume=sv)
+                xc = deps.fade_cross(pr, pf, now, session, store=st, owner=deps.owner, volume=sv)
                 log.info("gajjala pass: 🔀 fade cross %s", {k: n for k, n in (xc or {}).items() if n})
             except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
                 log.exception("gajjala pass: the 🔀 fade cross push failed")
@@ -716,7 +779,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         if deps.high_si_cross is not None and not push_dry:    # 🩳 2026-11-23 — the High SI 9/21 cross push (never an open)
             hs_counts, hs_reason = {}, None
             try:
-                hs_counts = deps.high_si_cross(st, frames, now, session, floats=floats, volume=sv,
+                hs_counts = deps.high_si_cross(st, pf, now, session, floats=floats, volume=sv,
                                                owner=deps.owner) or {}
                 log.info("gajjala pass: 🩳 high SI cross %s", {k: n for k, n in hs_counts.items() if n})
             except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
@@ -799,6 +862,9 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps, *, on_deman
                                     "on_demand", "bars_through_et", "lease", "trader")}
     if "promo" in out:                                          # 🎪 2026-10-29 — only when the source ran (GG5 bytes)
         body["promo"] = out["promo"]
+    if "si_ssr" in out:                                         # ⛔🔒🩳 2026-11-24 — the same rule; never its tag map
+        from . import si_ssr_names as SSN
+        body["si_ssr"] = SSN.stored_block(out["si_ssr"])
     body["snapshot_meta"] = out.get("snapshot")
     body["types_meta"] = out.get("types_meta")
     body["finished_at"] = now + timedelta(seconds=float(out.get("wall_s") or 0))
@@ -934,6 +1000,8 @@ def _cron_deps() -> Deps:
     d.high_si_cross = HSX.run_step
     d.record_high_si_status = _record_high_si_status
     d.vol_dried = VD.run_step
+    from . import si_ssr_names as SSN                           # ⛔🔒🩳 2026-11-24 — the stored SI / SSR / Reg SHO tags
+    d.si_ssr_names = SSN.default_reader
     try:                                                        # ⛔ 2026-11-23 — the SSR read; a failed import leaves the step off
         from short_interest import ssr as SSR
         d.ssr = SSR.record_pass

@@ -324,7 +324,8 @@ def test_10_his_list_is_never_written_and_chsn_never_enters_the_auto_doc():
 def test_11_append_only_and_old_docs_round_trip():
     assert A.REASONS[:6] == ("not_progressing", "dropped", "dismissed", "on_your_list", "made_room", "made_room_aplus")
     assert A.SKIPPED_KEYS[:4] == ("volume_unknown", "under_floor", "full", "failed")
-    assert A.REASONS[-1] == A.SKIPPED_KEYS[-1] == "not_eligible"
+    # PIN MOVED 2026-11-24 (spec sissr §3.6 C2): SKIPPED_KEYS += "si_ssr" (appended after "not_eligible")
+    assert A.REASONS[-1] == A.SKIPPED_KEYS[4] == "not_eligible" and A.SKIPPED_KEYS[5:] == ("si_ssr",)
     db = fake_db(auto=auto_doc([entry("AAA")], removed=[_ne_rec("RAYA")]))
     run(db, world("AAA", "BBB", flagged=[]))
     d = stored(db)

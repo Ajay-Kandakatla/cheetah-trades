@@ -34,6 +34,16 @@ re-read yesterday every minute all day.
 Writes are ONE compare-and-set `update_one` (auto._cas, doc id C.RULES_DOC_ID). Every stamp is the caller's `now`.
 Never a fetch, never a push, never a claim; C.RULES_PUSH_MODE ("off") keeps these names out of the 1-min cross push
 (loop.py holds them `suppressed_auto`). Display / tracking only. UNMEASURED.
+
+⛔🩳🔒 SI / SSR / Reg SHO POTENTIALS (2026-11-24, spec sissr rev 2 §3.6 — Ajay, verbatim: "Then potentials to be alerts
+sooner - add them to watch list and give them a time stamp of the day" · "Days past little bit like AKAN is what I am
+mainly looking for"). The SAME step, the SAME doc, the SAME × / 🚫 / keep window — no second seating path. A 🧠 tracker
+doc carrying potential.track's one-time `si_ssr` stamp (the first pass the name was tagged AND a potential) is a THIRD
+kind of record, C.RULES_KINDS[2], at the same K11 floor (`skip` honoured as for armed). Precedence aplus > armed > si_ssr:
+an entry never downgrades, and a si_ssr entry that later arms or turns A+ becomes ✅ (its met times then come from the ✅
+records). A si_ssr-only record never refreshes a ✅ entry's met times. The entry keeps the EARLIEST stamp (`si_ssr`). A
+tracker doc of an ADDED ⛔🔒 name (`si_ssr_add`, si_ssr_names.is_add — it failed GG's own scanner rule) yields NO armed
+record [C2]; it can only sit in "sissr". 🚫 names of kind si_ssr only are counted apart (`not_eligible_sissr`).
 """
 from __future__ import annotations
 
@@ -105,6 +115,41 @@ def _armed_stamps(doc) -> list:
     return out
 
 
+def _ssn():
+    """The ⛔🔒 names step (chart_maps.gajjala.si_ssr_names), imported LAZILY — its `is_add` is the ONE add test."""
+    from chart_maps.gajjala import si_ssr_names as SSN
+    return SSN
+
+
+def si_ssr_stamp(doc) -> Optional[dict]:
+    """⛔🩳🔒 the tracker doc's stored one-time stamp (potential.track, key PT.SI_SSR_TAG_KEY) as a copy with `first_at`
+    as aware UTC (ms) — None when absent, not a dict, without a readable `first_at` or without a source key."""
+    st = doc.get(PT.SI_SSR_TAG_KEY) if isinstance(doc, dict) else None
+    if not isinstance(st, dict):
+        return None
+    t = _at(st.get("first_at"))
+    keys = st.get("keys")
+    if t is None or not (isinstance(keys, list) and any(isinstance(k, str) and k for k in keys)):
+        return None
+    out = copy.deepcopy(st)
+    out["first_at"] = t
+    return out
+
+
+def first_si_ssr_at(doc) -> Optional[datetime]:
+    """⛔🩳🔒 the stamp's `first_at` (aware UTC, ms) — None when the doc carries no readable stamp."""
+    st = si_ssr_stamp(doc)
+    return st["first_at"] if st is not None else None
+
+
+def _is_add_doc(doc) -> bool:
+    try:
+        return bool(_ssn().is_add(doc))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch ✅: the add test failed: %s", type(exc).__name__)
+        return True                                             # fail closed: an unknown add never seats in ✅
+
+
 def first_armed_at(doc) -> Optional[datetime]:
     """The EARLIEST state_path turn into (forming, armed) — aware UTC; None when none / malformed."""
     s = _armed_stamps(doc)
@@ -167,6 +212,8 @@ def _entries(doc) -> list:
         for f in _STAMPS:
             if f in e:
                 e[f] = _u(e[f])
+        if isinstance(e.get(PT.SI_SSR_TAG_KEY), dict) and "first_at" in e[PT.SI_SSR_TAG_KEY]:
+            e[PT.SI_SSR_TAG_KEY]["first_at"] = _u(e[PT.SI_SSR_TAG_KEY]["first_at"])
         out.append(e)
     return out
 
@@ -257,11 +304,15 @@ def qualifiers(isos, *, stores, tdocs_by_iso, aplus, auto_prior) -> Optional[lis
             return None
         shared_by[s] = shared
         by: dict = {}
+        sby: dict = {}                                          # ⛔🩳🔒 {FOLD: stamped trackers} (spec sissr §3.6)
         for key in AUTO.read_sources():
             for d in (tdocs_by_iso.get(s) or {}).get(key) or []:
                 sym = AUTO._up(d.get("symbol")) if isinstance(d, dict) else ""
+                stamp = si_ssr_stamp(d) if sym else None
+                if stamp is not None:
+                    _stamp_into(sby, sym, d, stamp, key)
                 fa = first_armed_at(d) if sym else None
-                if fa is None:
+                if fa is None or _is_add_doc(d):                # [C2] an ADDED ⛔🔒 name is never an armed record
                     continue
                 la = last_armed_at(d)
                 setup = d.get("setup") if isinstance(d.get("setup"), str) else None
@@ -286,6 +337,14 @@ def qualifiers(isos, *, stores, tdocs_by_iso, aplus, auto_prior) -> Optional[lis
             srcs = [x for x in act if x in t["present"] or bor.get(x) in t["present"]]
             recs.append(_rec(t["sym"], s, C.RULES_KINDS[0], setup=t["setup"], setups=setups, sources=srcs,
                              volume=vol, volume_source=vsrc, first=t["first"], last=t["last"], skip=_vol_skip(vol)))
+        for _k, t in sby.items():                               # ⛔🩳🔒 one si_ssr record per (fold, session)
+            vol, vsrc = AUTO.volume_of(t["sym"], (scan_by.get(t["sym"]) or {}).get("last"), shared.get("trackers"))
+            setups = sorted(t["setups"], key=lambda x: (AUTO._setup_rank(x), x))
+            srcs = [x for x in act if x in t["present"] or bor.get(x) in t["present"]]
+            r = _rec(t["sym"], s, C.RULES_KINDS[2], setup=t["setup"], setups=setups, sources=srcs, volume=vol,
+                     volume_source=vsrc, first=t["first"], last=t["last"], skip=_vol_skip(vol))
+            r["si_ssr"] = t["stamp"]
+            recs.append(r)
     ps = auto_prior.get("session") if isinstance(auto_prior, dict) else None
     if isinstance(ps, str) and ps in shared_by:
         for e in AUTO.entries_of(auto_prior, ps):
@@ -311,6 +370,27 @@ def qualifiers(isos, *, stores, tdocs_by_iso, aplus, auto_prior) -> Optional[lis
     return recs
 
 
+def _stamp_into(sby: dict, sym: str, d: dict, stamp: dict, key: str) -> None:
+    """Fold one stamped tracker doc into `sby`: the EARLIEST stamp (then GC.SETUPS order) wins the setup and the stamp,
+    the latest `first_at` is `last`, every setup and read source is kept."""
+    setup = stamp.get("setup") if isinstance(stamp.get("setup"), str) else (
+        d.get("setup") if isinstance(d.get("setup"), str) else None)
+    t0 = stamp["first_at"]
+    k = CO.fold(sym)
+    cur = sby.get(k)
+    if cur is None:
+        sby[k] = {"sym": sym, "first": t0, "last": t0, "setup": setup, "setups": {setup} - {None}, "present": {key},
+                  "stamp": stamp}
+        return
+    cur["present"].add(key)
+    if setup is not None:
+        cur["setups"].add(setup)
+    if t0 > cur["last"]:
+        cur["last"] = t0
+    if (t0, AUTO._setup_rank(setup)) < (cur["first"], AUTO._setup_rank(cur["setup"])):
+        cur.update(first=t0, setup=setup, stamp=stamp)
+
+
 # ── the minute step ───────────────────────────────────────────────────────────────────────────────────────────────
 def _removed_rec(sym, now, iso, reason, text=None) -> dict:
     return {"symbol": sym, "at": now, "at_et": PT._hhmm(now), "session": iso, "reason": reason, "text": text}
@@ -320,18 +400,37 @@ def _words_of(rs: list) -> dict:
     """setup / setups / sources / volume from one session's records — an A+ setup first, else the armed one."""
     ap = [r for r in rs if r["kind"] == C.RULES_KINDS[1]]
     ar = [r for r in rs if r["kind"] == C.RULES_KINDS[0]]
-    setup = next((r["setup"] for r in ap + ar if r["setup"]), None)
+    ss = [r for r in rs if r["kind"] == C.RULES_KINDS[2]]      # ⛔🩳🔒 [C9] the fallback when no ✅ record
+    setup = next((r["setup"] for r in ap + ar + ss if r["setup"]), None)
     setups: list = []
-    for r in ar + ap:
+    for r in ar + ap + (ss if not (ar or ap) else []):
         for x in r["setups"]:
             if x and x not in setups:
                 setups.append(x)
     setups.sort(key=lambda x: (AUTO._setup_rank(x), x))
     present = {x for r in rs for x in r["sources"]}
     sources = [x for x in C.AUTO_SOURCES if x in present] + sorted(present - set(C.AUTO_SOURCES))
-    vr = next((r for r in ar + ap if PT._num(r["volume"]) is not None), None)
+    vr = next((r for r in ar + ap + ss if PT._num(r["volume"]) is not None), None)
     return {"setup": setup, "setups": setups, "sources": sources,
             "volume": PT._num(vr["volume"]) if vr else None, "volume_source": vr["volume_source"] if vr else None}
+
+
+_PRECEDENCE = (C.RULES_KINDS[2], C.RULES_KINDS[0], C.RULES_KINDS[1])     # ⛔🩳🔒 si_ssr < armed < aplus
+
+
+def _rank(kind) -> int:
+    """The kind's precedence (an unknown kind ranks below si_ssr — it never wins)."""
+    return _PRECEDENCE.index(kind) + 1 if kind in _PRECEDENCE else 0
+
+
+def _earliest_stamp(stamps) -> Optional[dict]:
+    """The stamp with the earliest readable `first_at` (aware UTC); None when none is readable."""
+    best = None
+    for st in stamps:
+        t = _u(st.get("first_at")) if isinstance(st, dict) else None
+        if t is not None and (best is None or t < best[0]):
+            best = (t, st)
+    return dict(copy.deepcopy(best[1]), first_at=best[0]) if best is not None else None
 
 
 def _compute(doc, now, iso, recs, manual, bk, auto_prior, backfilled=()) -> tuple:
@@ -344,10 +443,10 @@ def _compute(doc, now, iso, recs, manual, bk, auto_prior, backfilled=()) -> tupl
     mk = {CO.fold(m) for m in manual or [] if isinstance(m, str)}
     blk = blocked(doc, auto_prior, iso)
     skipped = {k: 0 for k in C.RULES_SKIPPED_KEYS}
-    ne: list = []
+    ne_by: dict = {}                                           # {FOLD: [house spelling, {kinds}]} — first-refusal order
     survivors: dict = {}
     for r in recs:
-        if r["kind"] == C.RULES_KINDS[0] and r["skip"]:
+        if r["kind"] in (C.RULES_KINDS[0], C.RULES_KINDS[2]) and r["skip"]:     # ⛔🩳🔒 [C9] the floor for both
             skipped[r["skip"]] += 1
             continue
         k = r["fold"]
@@ -359,30 +458,45 @@ def _compute(doc, now, iso, recs, manual, bk, auto_prior, backfilled=()) -> tupl
             continue
         if k in bk:
             skipped[C.RULES_SKIPPED_KEYS[2]] += 1
-            if k not in {CO.fold(x) for x in ne}:
-                ne.append(r["symbol"])
+            ne_by.setdefault(k, [r["symbol"], set()])[1].add(r["kind"])
             continue
         survivors.setdefault(k, []).append(r)
+    ne = [v[0] for v in ne_by.values() if v[1] - {C.RULES_KINDS[2]}]           # ✅ 🚫 (an armed / A+ record)
+    ne_ss = [v[0] for v in ne_by.values() if not (v[1] - {C.RULES_KINDS[2]})]  # ⛔🩳🔒 🚫 (si_ssr records only) [C5]
     by = {CO.fold(e["symbol"]): e for e in entries}
     added: list = []
     for k, rs in survivors.items():
-        newest = max(r["session"] for r in rs)
+        stamp = _earliest_stamp([r.get("si_ssr") for r in rs])
+        kind = max((r["kind"] for r in rs), key=_rank)
+        core = [r for r in rs if r["kind"] != C.RULES_KINDS[2]]
+        use = core or rs                                       # ✅ records decide the met times when there are any
+        newest = max(r["session"] for r in use)
         words = _words_of([r for r in rs if r["session"] == newest])
-        kind = C.RULES_KINDS[1] if any(r["kind"] == C.RULES_KINDS[1] for r in rs) else C.RULES_KINDS[0]
-        firsts = [r["first"] for r in rs if r["first"] is not None]
-        lasts = [r["last"] for r in rs if r["last"] is not None]
-        sess = sorted({r["session"] for r in rs})
+        firsts = [r["first"] for r in use if r["first"] is not None]
+        lasts = [r["last"] for r in use if r["last"] is not None]
+        sess = sorted({r["session"] for r in use})
         e = by.get(k)
         if e is None:
             e = dict(symbol=rs[0]["symbol"], kind=kind, **words,
                      first_met_at=min(firsts) if firsts else now, first_met_session=sess[0],
                      last_met_at=max(lasts) if lasts else (max(firsts) if firsts else now), last_met_session=newest,
                      sessions=[x for x in sess if x in win], added_at=now)
+            if stamp is not None:
+                e["si_ssr"] = stamp
             entries.append(e)
             by[k] = e
             added.append(e["symbol"])
             continue
-        if kind == C.RULES_KINDS[1]:
+        if stamp is not None:                                  # ⛔🩳🔒 the entry keeps the EARLIEST stamp
+            e["si_ssr"] = _earliest_stamp([e.get("si_ssr"), stamp])
+        old_kind = e.get("kind")
+        if not core and old_kind != C.RULES_KINDS[2]:
+            continue                                           # a si_ssr-only read never refreshes a ✅ entry
+        if core and old_kind == C.RULES_KINDS[2]:              # promoted to ✅: its met times are the ✅ records'
+            e.update(kind=kind, first_met_at=min(firsts) if firsts else now, first_met_session=sess[0],
+                     last_met_at=max(lasts) if lasts else (max(firsts) if firsts else now), last_met_session="",
+                     sessions=[])
+        elif _rank(kind) > _rank(old_kind):
             e["kind"] = kind                                   # an A+ wins; an armed read never downgrades it
         old_last_s = e.get("last_met_session") if isinstance(e.get("last_met_session"), str) else ""
         if firsts:
@@ -422,7 +536,7 @@ def _compute(doc, now, iso, recs, manual, bk, auto_prior, backfilled=()) -> tupl
     dismissed = [r for r in dismissed if r.get("session") in win]
     res = {"symbols": [CO.house(e["symbol"]) for e in entries], "added": added,
            "removed": [{k: r.get(k) for k in ("symbol", "reason", "text")} for r in gone], "n": len(entries),
-           "skipped": skipped, "reason": None, "not_eligible": ne}
+           "skipped": skipped, "reason": None, "not_eligible": ne, "not_eligible_sissr": ne_ss}
     marks = sorted({x for x in marks0 + list(backfilled) if x in win})   # the back-fill record, pruned to the window
     res["changed"] = (entries, dismissed, removed, marks) != stored
     return res, {"entries": entries, "dismissed": dismissed, "removed": removed, BACKFILLED_KEY: marks}
@@ -432,7 +546,7 @@ def _early(reason, symbols=None, backfilled=None) -> dict:
     syms = list(symbols or [])
     return {"symbols": syms, "added": [], "removed": [], "n": len(syms),
             "skipped": {k: 0 for k in C.RULES_SKIPPED_KEYS}, "reason": reason, "changed": False, "not_eligible": [],
-            "backfilled": list(backfilled or [])}
+            "backfilled": list(backfilled or []), "not_eligible_sissr": []}
 
 
 def step(now, session, *, db=None, manual: list, dry: bool = False, stores: Optional[dict] = None,

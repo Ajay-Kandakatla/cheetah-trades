@@ -12775,7 +12775,8 @@ const CONTRACTS = [
       const iScan = rp.indexOf('SC.scan_rows('), iStep = rp.indexOf('TN.run_step('), iRec = rp.indexOf('SC.record_scan('), iRe = rp.indexOf('TN.recount(result)');
       if (rp && !(iScan >= 0 && iStep > iScan && iRec > iStep && iRe > iRec)) errs.push('run_pass must call SC.scan_rows( → TN.run_step( → SC.record_scan( → TN.recount(result) in that order');
       if (rp && !/refresh=\(not dry and not on_demand and deps\.trader_fetch is not None\)/.test(rp)) errs.push('TN.run_step refresh must be (not dry and not on_demand and deps.trader_fetch is not None)');
-      if (rp && !/q\.get\("source"\) != TN\.SOURCE/.test(rp)) errs.push('out["qualifiers"] must stay GG-only (q.get("source") != TN.SOURCE)');
+      // WIDENED 2026-11-24 (🩳⛔ sissr §3.4: out["qualifiers"] also excludes SSN.SOURCE) — the != form OR a `not in (TN.SOURCE, …)` tuple; TN.SOURCE is still required.
+      if (rp && !/q\.get\("source"\) != TN\.SOURCE|q\.get\("source"\) not in \(TN\.SOURCE,/.test(rp)) errs.push('out["qualifiers"] must stay GG-only (q.get("source") != TN.SOURCE, or not in (TN.SOURCE, …))');
       if (run && !/^\s+trader_fetch: Optional\[Callable\] = None$/m.test(run)) errs.push('Deps.trader_fetch must default to None (no in-pass fetch in tests / dry / replays / on-open)');
       const mainFn = pyCode(pyDef(run, 'main') || '');
       // 2026-11-09 (WP-C bar_close): main hands Deps through _cron_deps() — the literal may live there, never lost.
@@ -18117,8 +18118,9 @@ const CONTRACTS = [
       const ht = read('src/components/GgHardToBorrow.tsx');
       for (const k of ['tag.short', 'tag.chip', 'tag.label']) if (!ht.includes(k)) errs.push(`GgHardToBorrow.tsx must still print ${k}`);
       // the 🩳 High SI sub reads the SAME tag for display (payload kick=False) — the only allowed readers outside short_interest
-      const ALLOWED = ['../backend/chart_maps/gajjala/high_si.py', '../backend/chart_maps/gajjala/high_si_cross.py'];
-      for (const f of ALLOWED) { const t = read(f); if (/reg_sho\.payload\(|RS\.payload\(/.test(t) && !/payload\(kick=False/.test(t)) errs.push(`${f} must read the Reg SHO payload with kick=False`); }
+      // WIDENED 2026-11-24 (🩳⛔ sissr §4 main-session: ALLOWED += si_ssr_names.py, the 🔒 sho_past tag read; it imports reg_sho as RSH).
+      const ALLOWED = ['../backend/chart_maps/gajjala/high_si.py', '../backend/chart_maps/gajjala/high_si_cross.py', '../backend/chart_maps/gajjala/si_ssr_names.py'];
+      for (const f of ALLOWED) { const t = read(f); if (/reg_sho\.payload\(|RSH?\.payload\(/.test(t) && !/payload\(kick=False/.test(t)) errs.push(`${f} must read the Reg SHO payload with kick=False`); }
       const nf = read('src/lib/newFeatures.ts');
       const lab = /id: 'gajjala-reg-sho-close-out-day-2026-11-24',\s*label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push("the ✨ 'gajjala-reg-sho-close-out-day-2026-11-24' entry is missing");
@@ -18706,7 +18708,8 @@ const CONTRACTS = [
       if (!/^RULES_KEEP_SESSIONS = GC\.LEDGER_SPAN_SESSIONS\s*$/m.test(code)) errs.push('gajjala_watch/constants.RULES_KEEP_SESSIONS must be GC.LEDGER_SPAN_SESSIONS by NAME — never a typed number');
       if (!/^RULES_MIN_VOLUME = AUTO_MIN_VOLUME\s*$/m.test(code)) errs.push('gajjala_watch/constants.RULES_MIN_VOLUME must be AUTO_MIN_VOLUME (GG K11) by NAME');
       if (!/^SECTION_KEYS = \("yours", "aplus", "auto", "rules"[,)]/m.test(code)) errs.push('gajjala_watch/constants.SECTION_KEYS must start ("yours", "aplus", "auto", "rules") — ✅ after 🤖');
-      if (!/^SECTIONS_FOLDED_DEFAULT = \("rules",\)/m.test(code)) errs.push('gajjala_watch/constants.SECTIONS_FOLDED_DEFAULT must be ("rules",) — ✅ folded on the phone');
+      // WIDENED 2026-11-25 (sissr §3.6): the ⛔🩳🔒 "sissr" section after ✅ is folded on the phone too — ("rules", "sissr").
+      if (!/^SECTIONS_FOLDED_DEFAULT = \("rules",\)|^SECTIONS_FOLDED_DEFAULT = \("rules", "sissr"\)/m.test(code)) errs.push('gajjala_watch/constants.SECTIONS_FOLDED_DEFAULT must be ("rules",) or ("rules", "sissr") — ✅ (and ⛔🩳🔒) folded on the phone');
 
       // 2. the seating engine never sends — no push module, hook, sender or cross-alert run; its mode fails closed
       const ar = pyCode(quiet('../backend/chart_maps/gajjala_watch/allrules.py'));
@@ -18749,6 +18752,141 @@ const CONTRACTS = [
         'src/lib/newFeatures.watch_all_rules.test.ts']) {
         if (!exists(f)) errs.push(`${f} must exist`);
       }
+      return errs;
+    },
+  },
+  {
+    name: '🩳⛔ SI/SSR potentials → alert + 👀 Watch (2026-11-24)',
+    file: '../backend/chart_maps/gajjala/si_ssr_names.py',
+    // Ajay 2026-11-24 ~23:20 ET, verbatim: "Make this new routine 1. Scan Short interest tabs sotkcs that become potentials
+    // also and also look for new SSR stocks 2. Then potentials to be alerts sooner - add them to watch list and give them a
+    // time stamp of the day" · ~23:35 ET "Days past little bit like AKAN is what I am mainly looking for many were so
+    // confident on SSR..". Spec sissr rev 2 §2, §3.3-§3.6, §4 main-session. ONE engine per concept: the routine TAGS and
+    // ADDS names; GG's detectors + the EXISTING 🧠 classifier (potential.potential_kind) and gate decide every potential —
+    // no second detector. The 👀 seat is the ✅ engine's ONE seating function (gajjala_watch/allrules.step, kind "si_ssr")
+    // — the pass never seats. Adds are held from every push (C1). UNMEASURED.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyFn = (s, name) => {
+        const at = s.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return '';
+        const rest = s.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const code = pyCode(src);
+      const G = '../backend/chart_maps/gajjala/';
+      const pot = quiet(`${G}potential.py`), potCode = pyCode(pot);
+      const run = quiet(`${G}run.py`), runCode = pyCode(run);
+      const ssr = quiet('../backend/short_interest/ssr.py');
+
+      // 1. NO SECOND DETECTOR — si_ssr_names imports only the tag / add engines, never a detector or the 🧠 module.
+      const IMPORTS = new Set(['from __future__ import annotations', 'import logging', 'from datetime import date, datetime',
+        'from typing import Callable, Optional', 'from . import constants as GC', 'from . import trader_names as TN',
+        'from . import promo_names as PN', 'from sepa import symbols', 'from short_interest import ssr as SSR',
+        'from short_interest import reg_sho as RSH', 'from . import high_si as HS', 'from . import scanner as SC']);
+      const imports = code.split('\n').map((l) => l.trim()).filter((l) => /^(from|import) /.test(l));
+      if (!imports.length) errs.push('si_ssr_names.py: no import line found (the file moved?)');
+      for (const l of imports) if (!IMPORTS.has(l)) errs.push(`si_ssr_names.py imports "${l}" — only the tag / add engines (no detector, no 🧠 module, no reg_sho_runs)`);
+      if (/\b(potential_kind|read_all|detectors|frames_for|reg_sho_runs)\b/.test(code)) errs.push('si_ssr_names.py must not name potential_kind / read_all / detectors / frames_for / reg_sho_runs — GG\'s detectors and the 🧠 classifier decide, the 🔒 read is payload(kick=False)');
+      if (/^def \w*(kind|grade|detect|classify)\w*\(/m.test(code)) errs.push('si_ssr_names.py must define no kind / grade / detect / classify function — a second detector');
+      if ((pot.match(/^def potential_kind\(/gm) || []).length !== 1) errs.push('potential.py must define potential_kind exactly once (the ONE 🧠 classifier)');
+      if (/^def potential_kind\(/m.test(run)) errs.push('run.py must not define its own potential_kind');
+      const rp = pyCode(pyFn(pot, 'run_pass'));
+      if (!/potential_kind\(/.test(rp)) errs.push('potential.run_pass must still classify with potential_kind(');
+      if (!/^\s+si_ssr_hold: Optional\[frozenset\] = None/m.test(pyFn(pot, 'run_pass'))) errs.push('potential.run_pass must take si_ssr_hold: Optional[frozenset] = None (an add is tracked, never rung)');
+      if (!/def track\([\s\S]*?si_ssr: Optional\[dict\] = None\) -> tuple:/.test(pot)) errs.push('potential.track must take si_ssr: Optional[dict] = None — the stamp lives on the ONE 🧠 tracker doc');
+      if (/short_interest|si_ssr_names|\bSSN\b/.test(potCode.replace(/^.*__all__.*$/gm, ''))) errs.push('potential.py must import neither short_interest nor si_ssr_names (the tag rides ctx)');
+      if (!/PT\.run_pass\(reads, frames, now, session,/.test(runCode)) errs.push('run.py must hand PT.run_pass the pass\'s own reads + frames (no side read set)');
+      if (!/si_ssr_hold=\(frozenset\(ss_adds & set\(frames\)\)/.test(runCode)) errs.push('run.py must hand PT.run_pass si_ssr_hold=frozenset(ss_adds & set(frames))');
+
+      // 2. the constants by name (HIS CALLS #1 #4 #10) — no number typed
+      if (!/^ADD_MIN_VOLUME = GC\.SCAN_MIN_VOLUME\b/m.test(src)) errs.push('si_ssr_names.ADD_MIN_VOLUME must be GC.SCAN_MIN_VOLUME');
+      if (!/^ADD_MAX_NEW_PER_PASS = GC\.FLOAT_MAX_NEW_PER_PASS\b/m.test(src)) errs.push('si_ssr_names.ADD_MAX_NEW_PER_PASS must be GC.FLOAT_MAX_NEW_PER_PASS');
+      if (!/^ADD_ON_OPEN = False\b/m.test(src)) errs.push('si_ssr_names.ADD_ON_OPEN must be False (the open\'s budget stays GG\'s)');
+      if (!/^SSR_RECENT_TRIGGER_DAYS = SSR_FOLLOWING_TRADING_DAYS\b/m.test(ssr)) errs.push('ssr.SSR_RECENT_TRIGGER_DAYS must be SSR_FOLLOWING_TRADING_DAYS (HIS CALL #1 — one window constant)');
+      for (const m of code.matchAll(/\bpayload\(([^)]*)\)/g)) if (!/kick=False/.test(m[1])) errs.push(`si_ssr_names.py reads payload(${m[1]}) without kick=False`);
+      if (/kick_refresh|requests\.|httpx|urlopen/.test(code)) errs.push('si_ssr_names.py must never kick a worker or fetch — stored reads only');
+
+      // 3. C1 — the push engines get the reads WITHOUT the adds (pr / pf), never `reads`
+      for (const [call, re, bad] of [
+        ['AL.run_pass', /AL\.run_pass\(pr, pf, /, /AL\.run_pass\(reads\b/],
+        ['AP.run_step', /AP\.run_step\(st, gga, pr, pf, /, /AP\.run_step\(st, gga, reads\b/],
+        ['deps.vol_dried', /deps\.vol_dried\(st, pr, pf, /, /deps\.vol_dried\(st, reads\b/],
+        ['deps.fade_cross', /deps\.fade_cross\(pr, pf, /, /deps\.fade_cross\(reads\b/],
+        ['deps.high_si_cross', /deps\.high_si_cross\(st, pf, /, /deps\.high_si_cross\(st, frames\b/],
+      ]) {
+        if (!re.test(runCode)) errs.push(`run.py must hand ${call} the add-free pr / pf (C1)`);
+        if (bad.test(runCode)) errs.push(`run.py hands ${call} the full reads / frames — an added name would ring (C1, HIS CALL #6)`);
+      }
+      if (!/pr = reads if not held_adds else \{s: r for s, r in reads\.items\(\) if s not in held_adds\}/.test(runCode)) errs.push('run.py: pr must be reads itself when there is no add (byte-identical pass)');
+
+      // 4. ONE SEATING FUNCTION — the pass never seats; the ✅ engine (allrules.step) does, kind "si_ssr"
+      // run.py: only run_pass (the 👀 minute-loop SPAWN in _spawn_watch is older and seats nothing)
+      const runPass = pyCode(pyFn(run, 'run_pass'));
+      if (!runPass) errs.push('run.py lost def run_pass(');
+      for (const [f, t] of [['si_ssr_names.py', code], ['run.py run_pass', runPass], ['potential.py', potCode]])
+        if (/gajjala_watch|\bWCO?\./.test(t)) errs.push(`${f} names gajjala_watch — the pass must never seat a 👀 name (one seating function: gajjala_watch/allrules.step)`);
+      const W = '../backend/chart_maps/gajjala_watch/';
+      // HELD 2026-11-24 (verify refix): the 👀 seat exists only once be-watch lands — RULES_KINDS[2] == "si_ssr" AND
+      // allrules.qualifiers builds that record. Until then nothing in gajjala_watch may name si_ssr (no second seating
+      // path) and the ✨ must be ABSENT, so words never ship ahead of the code. The slot taken by any other kind is an error.
+      const ar = exists(`${W}allrules.py`) ? quiet(`${W}allrules.py`) : '';
+      // 2026-11-25 (verifier HIGH): '#' comments are stripped BEFORE the regex — the live tuple carries comments with
+      // parentheses ("(a test pins)"), which cut the raw match short and read ["armed","aplus","armed"].
+      const kinds = ar ? /^RULES_KINDS = \(([^)]*)\)/m.exec(pyCode(quiet(`${W}constants.py`))) : null;
+      const ks = kinds ? [...kinds[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]) : [];
+      const seated = ks[2] === 'si_ssr';
+      if (ar && ks.length > 2 && !seated) errs.push(`gajjala_watch/constants.RULES_KINDS[2] is reserved for "si_ssr" (found ${JSON.stringify(ks)})`);
+      if (seated) {
+        if ((ar.match(/^def step\(/gm) || []).length !== 1) errs.push('gajjala_watch/allrules.py must define step exactly once (the ONE ✅ seating function)');
+        if (!/RULES_KINDS\[2\]/.test(pyCode(pyFn(ar, 'qualifiers')))) errs.push('allrules.qualifiers must build the si_ssr record (RULES_KINDS[2]) — the ✅ engine seats it');
+        for (const name of readdirSync(join(FRONTEND_ROOT, W))) {
+          if (!name.endsWith('.py') || name === 'allrules.py') continue;
+          if (/RULES_KINDS\[2\][^\n]*_rec\(|_rec\([^\n]*RULES_KINDS\[2\]/.test(pyCode(quiet(`${W}${name}`)))) errs.push(`gajjala_watch/${name} builds an si_ssr seat — only allrules.py seats`);
+        }
+      } else {
+        // before the ✅ engine seats si_ssr: nothing in gajjala_watch may name si_ssr on its own (no second seating path)
+        for (const name of readdirSync(join(FRONTEND_ROOT, W))) {
+          if (name.endsWith('.py') && /si_ssr/.test(pyCode(quiet(`${W}${name}`)))) errs.push(`gajjala_watch/${name} names si_ssr before RULES_KINDS[2] == "si_ssr" — a second seating path`);
+        }
+      }
+
+      // 5. the ✨ — HELD until seated. Seated: his messages 1 + 3 + the 00:25 🩳 ask verbatim, curly quotes, UNMEASURED,
+      // never the b-word. Not seated: the entry must be absent (it promises the 👀 ⛔🩳🔒 section).
+      // 2026-11-25: PLACED past index 100, right above the ✅ entry (the 💧 / ✅ way), NOT FIRST — NEW_FEATURES[0..100]
+      // are pinned by index in ~40 vitest files; past index 100 no pin moves.
+      const ID = 'gajjala-si-ssr-potentials-watch-2026-11-24';
+      const M1 = 'Make this new routine 1. Scan Short interest tabs sotkcs that become potentials also and also look for new SSR stocks 2. Then potentials to be alerts sooner - add them to watch list and give them a time stamp of the day';
+      const M3 = 'Days past little bit like AKAN is what I am mainly looking for many were so confident on SSR..';
+      const M4 = 'I do need a mention of High SI stock when alerting for potential though..';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      if (!seated) {
+        if (ids.includes(ID) || nf.includes(M3)) errs.push(`the ✨ '${ID}' is HELD until be-watch seats si_ssr (RULES_KINDS[2] == "si_ssr" in gajjala_watch/allrules) — it promises a 👀 section the code does not have yet`);
+      } else {
+        const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+        if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+        else {
+          if (lab[2] !== '2026-11-24') errs.push(`the 🩳⛔ ✨ addedAt must be 2026-11-24 (found ${lab[2]})`);
+          if (lab[3] !== '/chart-maps?tab=gajjala_watch') errs.push(`the 🩳⛔ ✨ route must be /chart-maps?tab=gajjala_watch (found ${lab[3]})`);
+          for (const q of [M1, M3, M4]) if (!lab[1].includes(`“${q}”`)) errs.push(`the 🩳⛔ ✨ must quote him verbatim in curly quotes: “${q}”`);
+          for (const w of ['UNMEASURED', 'Not advice.', 'never rung', 'every 🧠 alert title']) if (!lab[1].includes(w)) errs.push(`the 🩳⛔ ✨ must say ${w}`);
+          if (/bounc/i.test(lab[1])) errs.push('the 🩳⛔ ✨ must never say bounce — reversal');
+        }
+        const at = ids.indexOf(ID);
+        if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+        if (ids[at + 1] !== 'gajjala-watch-all-rules-2026-11-24') errs.push(`the ✨ '${ID}' must sit right above the ✅ entry (found ${ids[at + 1]})`);
+        if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+      }
+
+      // 6. ship together
+      for (const f of ['../backend/tests/test_gajjala_si_ssr_names_2026_11_24.py', '../backend/tests/test_gajjala_si_ssr_potential_2026_11_24.py',
+        '../backend/tests/test_gajjala_si_ssr_push_hold_2026_11_24.py', '../backend/tests/test_ssr_recent_triggers_2026_11_24.py',
+        '../backend/tests/test_reg_sho_past_closeout_2026_11_24.py', '../docs/gajjala/si_ssr_potentials_2026_11_24.md',
+        'src/lib/newFeatures.si_ssr_watch.test.ts']) if (!exists(f)) errs.push(`${f} must exist`);
       return errs;
     },
   },

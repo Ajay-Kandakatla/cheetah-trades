@@ -56,6 +56,12 @@ the Watch list so I can keep tracking them later"): ONE more stored read — the
 today's seat > ✅ (a name that leaves 🤖 is served in ✅). A ✅ row's block sits under `row["auto"]` in the 🤖 shape with
 `why` "rules"; the board carries `rules` {state, n, keep_sessions, text, not_seated_n} (absent while C.RULES_ON is False;
 a read fault → `unreadable`, the other rows intact, never `error`). Display only — the list rings nothing. UNMEASURED.
+
+⛔🩳🔒 (2026-11-24, spec sissr rev 2 §3.6 — Ajay, verbatim: "Then potentials to be alerts sooner - add them to watch list
+and give them a time stamp of the day"): a ✅-doc entry of kind C.RULES_KINDS[2] rides the SAME read and the SAME
+`row["auto"]` block (no new chip [C11]) with `why` "sissr", `tag` = its stamp's glyphs, `text` = C.SISSR_WHEN and
+`title` = C.SISSR_WHEN_TITLE (sections.sissr_words — the STORED stamp, never `now`). The board's `rules` block counts ✅
+rows in `n` and gains `sissr_n` / `sissr_not_eligible_n` [C5]. Display only. UNMEASURED.
 """
 from __future__ import annotations
 
@@ -201,6 +207,8 @@ RULES_REMOVE_TITLE = "Remove {sym} (✅ all rules — not added again this sessi
 RULES_UNREADABLE_TEXT = "✅ the all-rules list could not be read — showing the rest"
 RULES_STATES = ("ok", "unreadable", "off")
 RULES_WHY = "rules"                                   # the ✅ row's `auto.why` (== C.SECTION_KEYS[3]; the FE reads it)
+SISSR_WHY = C.SISSR_KEY                               # ⛔🩳🔒 2026-11-24 — the "sissr" row's `auto.why` (== C.SECTION_KEYS[4])
+SISSR_REMOVE_TITLE = "Remove {sym} (⛔🩳🔒 potential — not added again this session)"   # MINE — HIS CALL #9
 
 # 📈📐 2026-11-23 (spec vwapzones rev 2 §3.4 — Ajay: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15
 # accross board" · "Add vwap and supply demand too"): a frame missing from a stored doc (an old 1m/3m/5m doc has no 15m)
@@ -903,10 +911,34 @@ def rules_read(cs: dict, symbols: list, session) -> tuple:
     return RULES_STATES[0], out
 
 
+def _sissr_words(entry: dict) -> Optional[dict]:
+    """⛔🩳🔒 sections.sissr_words (imported lazily through sys.modules) — None on a fault / no stamp."""
+    try:
+        return importlib.import_module(SECTIONS_MODULE).sissr_words(entry)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: ⛔🩳🔒 words unavailable: %s", type(exc).__name__)
+        return None
+
+
+def sissr_row_block(entry: dict, now: datetime) -> dict:
+    """⛔🩳🔒 2026-11-24 (spec sissr §3.6) — a si_ssr entry's block, the ✅ block's shape with `why` "sissr", `tag` = the
+    stamp's glyphs, `text` / `title` from the STORED stamp (no stamp → the no-word, never invented)."""
+    blk = rules_row_block(dict(entry, kind=C.RULES_KINDS[0]), now)      # the ✅ shape (sources / volume / clocks)
+    w = _sissr_words(entry)
+    sym = entry.get("symbol") if isinstance(entry.get("symbol"), str) else ""
+    blk.update(tag=(w or {}).get("glyphs") or AUTO_NO_WORD, text=(w or {}).get("text") or AUTO_NO_WORD,
+               title=(w or {}).get("title"), added_text=None, remove_title=SISSR_REMOVE_TITLE.format(sym=sym),
+               why=SISSR_WHY)
+    return blk
+
+
 def rules_row_block(entry: dict, now: datetime) -> dict:
     """The ✅ row's block, served under `row["auto"]` in the 🤖 shape (the FE treats it as machine-added, `why` "rules").
-    The volume goes through potential._num first (a stored NaN serves no volume words)."""
+    The volume goes through potential._num first (a stored NaN serves no volume words). ⛔🩳🔒 2026-11-24: an entry of
+    kind C.RULES_KINDS[2] → `sissr_row_block`."""
     from chart_maps.gajjala import potential as PT
+    if entry.get("kind") == C.RULES_KINDS[2]:
+        return sissr_row_block(entry, now)
     sym = entry.get("symbol") if isinstance(entry.get("symbol"), str) else ""
     sources = [s for s in _list(entry.get("sources")) if isinstance(s, str) and s in C.AUTO_SOURCES]
     source_words = [C.AUTO_SOURCE_WORDS[s] for s in sources if isinstance(C.AUTO_SOURCE_WORDS.get(s), str)]
@@ -926,24 +958,28 @@ def rules_row_block(entry: dict, now: datetime) -> dict:
             "why": RULES_WHY}
 
 
-def rules_not_seated(state_doc, siso: Optional[str]) -> int:
+def rules_not_seated(state_doc, siso: Optional[str], key: str = "not_eligible") -> int:
     """The 🚫 count of the loop's LAST ✅ step of THIS session (state doc `rules.not_eligible` — a list of names or a
-    count); another session's / no state doc → 0."""
+    count); another session's / no state doc → 0. ⛔🩳🔒 2026-11-24: `key` "not_eligible_sissr" → the "sissr" count."""
     if not isinstance(state_doc, dict) or not siso or state_doc.get("session") != siso:
         return 0
     blk = state_doc.get("rules")
-    v = blk.get("not_eligible") if isinstance(blk, dict) else None
+    v = blk.get(key) if isinstance(blk, dict) else None
     if isinstance(v, list):
         return len({CO.fold(x) for x in v if isinstance(x, str) and x.strip()})
     return _int_or_zero(v)
 
 
-def rules_board(state: str, n: int, not_seated_n: int) -> dict:
-    """The board's `rules` block — `text` only when unreadable; every number an int."""
-    return {"state": state, "n": _int_or_zero(n) if state == RULES_STATES[0] else 0,
+def rules_board(state: str, n: int, not_seated_n: int, sissr_n: int = 0, sissr_not_seated_n: int = 0) -> dict:
+    """The board's `rules` block — `text` only when unreadable; every number an int. ⛔🩳🔒 2026-11-24 [C5]: `n` counts
+    the ✅ rows; `sissr_n` the "sissr" rows; `sissr_not_eligible_n` the 🚫 names of kind si_ssr only."""
+    ok = state == RULES_STATES[0]
+    return {"state": state, "n": _int_or_zero(n) if ok else 0,
             "keep_sessions": _int_or_zero(C.RULES_KEEP_SESSIONS),
             "text": RULES_UNREADABLE_TEXT if state == RULES_STATES[1] else None,
-            "not_seated_n": _int_or_zero(not_seated_n)}
+            "not_seated_n": _int_or_zero(not_seated_n),
+            "sissr_n": _int_or_zero(sissr_n) if ok else 0,
+            "sissr_not_eligible_n": _int_or_zero(sissr_not_seated_n)}
 
 
 def rules_section(cs: dict, symbols: list, siso: str, session, now: datetime, *, state_doc=None) -> tuple:
@@ -957,12 +993,15 @@ def rules_section(cs: dict, symbols: list, siso: str, session, now: datetime, *,
             sess = sess.date()
         state, entries = rules_read(cs, symbols, sess)
         ns = rules_not_seated(state_doc, siso)
+        ns2 = rules_not_seated(state_doc, siso, "not_eligible_sissr")          # ⛔🩳🔒 [C5]
         blocks = {e["symbol"]: rules_row_block(e, now) for e in entries}
         at_by = {e["symbol"]: CO.added_iso(e.get("added_at")) for e in entries}
         raw = {"entries": {e["symbol"]: e for e in entries},
                "boards": _and([C.AUTO_SOURCE_WORDS.get(k) for k in _active_sources()]),
-               "not_seated": C.RULES_NOT_SEATED.format(n=ns) if ns else ""}
-        return blocks, rules_board(state, len(entries), ns), at_by, raw
+               "not_seated": C.RULES_NOT_SEATED.format(n=ns) if ns else "",
+               "not_seated_sissr": C.SISSR_NOT_SEATED.format(n=ns2) if ns2 else ""}
+        n_ss = sum(1 for e in entries if e.get("kind") == C.RULES_KINDS[2])
+        return blocks, rules_board(state, len(entries) - n_ss, ns, n_ss, ns2), at_by, raw
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: all-rules section failed: %s", type(exc).__name__)
     try:

@@ -42,12 +42,18 @@ RS, KF, BF, HF, VCP = "reversal_squeeze", "kiss_fly", "bull_flag", "horizontal_f
 PASS_OK = {"status": "ok", "stale": False, "warming": False, "as_of_et": "10:31 ET"}
 
 # step 1 of WP be-potall: sha256 of inspect.getsource on the UNTOUCHED tree (origin/main 5dec3c6b), recorded BEFORE any edit
+# WIDENED 2026-11-25 (spec sissr rev 2 §3.5 + Ajay ~00:25 ET "I do need a mention of High SI stock when alerting for
+# potential though.."): potential.run_pass (si_ssr_hold, the add hold, title_lead — every tag in the 🧠 title), track (the
+# one-time si_ssr stamp) and compose (lead_text) changed ON PURPOSE; potential_kind, eligible, alerts.run_pass and
+# stages.steps are UNCHANGED (still the 5dec3c6b values).
+# WIDENED 2026-11-25 (sissr review defect 3): compose puts the ticker first and the lead right after it
+# ("🧠 AKAN · ⛔ SSR … · 🚩 …") — a 119-char lead in front pushed the ticker off the lock screen. Placement is HIS CALL.
 PUSH_PATH_SHA = {
-    "potential.run_pass": "957892da2c550f362684644c8ae4f9039773bf2207c5e93cac772ef8b38cc712",
+    "potential.run_pass": "629c24a61435d57743a7be44ed6f30ad15adde584b3d674ae9d99397354f49a0",
     "potential.potential_kind": "ac772217dc447021e13cec40c418c5d8f06cdc0790efac2ea98ae396348ac3d9",
     "potential.eligible": "819f8d4f8eed7cd2f03a22a5f582e0b97cfa707a9bee2e6de69a48b53193e107",
-    "potential.track": "ade129f8ddada031c79991c378f2cbfc8bfe9113842035970f7052cf7448d9db",
-    "potential.compose": "c7d3a3fc3c920cc4df3e92fda0d01ae8eba147a195d73467db6d98cb6e3075be",
+    "potential.track": "6fb63d1f722d8ad7aba6753c746edbc1128708fc2b275e4179eab5f0c20c5fe5",
+    "potential.compose": "21197e6b7e47e0d039869fdac0ae3e6cc2bfc8588292974779ae3a8755503d3c",
     "alerts.run_pass": "d2ded91a11f4fecd41deb023adb6ca4104ba9fcebbea8c808ebb8fff9acbc778",
     "stages.steps": "73110327d1518ea04868e97cdcd58f7b86f5e960c416a3d047b0781058c3f291",
 }
