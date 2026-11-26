@@ -37,6 +37,13 @@ GROUPS = (("aplus_winners", "🏁 A+ winners"), ("aplus_losers", "A+ losers"),
 # winners / A+ losers by its grade, like any A+ ring (it used to sit under "other" — HIS CALL #3 of 11-17, answered);
 # "other" keeps only an ungraded ring. (2) The 🚩 1-minute page retired 2026-11-18 ("stop 1 min tab"): its reels and its
 # 🎾 tracker rows are never listed (they stay on disk).
+# Ajay 2026-11-26, verbatim: "Unless there are 30% uptrend don't call them winners from our A+ trigger.." · "You can call
+# them losers.." · then, on this tab: "Don't think videos are up to date these are still in Winner". The replay pipeline
+# (eod-audits/replays/replay_win30.py, the ONE home of the 30) writes `win30` into each A+ sidecar: label winner | loser |
+# not final. An A+ reel files by that label; only a sidecar WITHOUT a usable label (older reels, "not final") files by
+# the Track record grade as before. The grade itself is unchanged and still printed on the card.
+WIN30_KEY = "win30"                                        # == replay_win30.KEY (pipeline-owned; test pins the literal)
+WIN30_GROUP = {"winner": "aplus_winners", "loser": "aplus_losers"}   # == replay_win30 WINNER / LOSER words
 EXCLUDED_PAGES = ("gajjala_1m",)
 GROUP_KEYS = tuple(k for k, _ in GROUPS)
 PAGE_WORDS = {"gajjala": WC.FRAME_WORDS["5m"], "gajjala_1m": WC.FRAME_WORDS["1m"]}

@@ -2593,6 +2593,15 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'hot-sector-members', label: '\uD83D\uDD25 Click any Hot sectors chip \u2014 sector, industry or theme \u2014 and its member stocks open in a popover, ranked by the backend\u2019s traction score with the definition of that score printed next to the sort. Each name carries its 5 / 21 / 63-session return vs RSP, how many points it sits from its own group\u2019s median, and a \uD83E\uDE83 when it is standing at a demand band. The panel says out loud that the chip\u2019s median is a 25-name sample while the table is the full membership \u2014 the two are different sets and are not meant to reconcile. Names that could not be priced are counted, never hidden', addedAt: '2026-09-10', route: '/chart-maps' },
   { id: 'five-min-today-frame', label: '\u23F1\uFE0F 5 min \u00B7 today only \u2014 a new chart frame that starts at 04:00 ET and shows nothing before it: pre-market, the regular session and after-hours, today and only today. The existing \u201C5 min \u00B7 live \u00B7 pre/post market\u201D frame is untouched and still carries the last ~2.5 sessions, so the overnight view you asked for is one click away \u2014 this is an extra choice, not a replacement, and it is not the default. Levels are unchanged: they still come from the daily window, so the support and overhead lines on the chart are the same ones the board and the alerts use', addedAt: '2026-09-17', route: '/chart-maps?tab=support' },
   { id: 'setup-tab-direct', label: '🎯 Chart Maps zone tiles and Back in Demand rows now open straight on the Setup tab — the plan, not the chart you were already looking at', addedAt: '2026-08-17', route: '/supply-demand' },
+  // Ajay 2026-11-26, verbatim: "Unless there are 30% uptrend don't call them winners from our A+ trigger.." · "You can call
+  // them losers.." · "Don't think videos are up to date these are still in Winner". backend/chart_maps/replays/store.group_of
+  // files an A+ reel by its sidecar's win30.label (the replay pipeline's +30%-from-trigger rule); grade only as a fallback.
+  {
+    id: 'chart-maps-replays-win30-groups-2026-11-26',
+    label: '🎬 Replays — you said: “Unless there are 30% uptrend don’t call them winners from our A+ trigger..” and “You can call them losers..”. 🏁 A+ winners now lists only reels that ran +30% or more above the A+ trigger the same session (to 8 PM); every other A+ reel files under A+ losers. The Track record grade (W +1R / L −1R) still shows on each card, unchanged. Older reels with no measured run still file by their grade. UNMEASURED; a replay is for your eyes, not a signal.',
+    addedAt: '2026-11-26',
+    route: '/chart-maps?tab=replays',
+  },
 ];
 
 /** A feature stops highlighting this many days after it shipped. */

@@ -13,8 +13,9 @@ ACCEPT RULE per `.json` in a day folder (his 11-16 rule decides the window):
   sidecar drops ONE card (`skipped_bad`), never the listing.
 
 GROUPS (`group_of`, in this order): 🎾 plan word or an `rs` list → rs_potentials; `why[0]` starting with the pipeline's
-own "biggest mover of" → biggest_mover; `|aplus` + grade W/L → aplus_winners / aplus_losers (a carried after-close
-ring too, 2026-11-18); else other. A reel of an EXCLUDED_PAGES page (🚩 1-minute, retired 2026-11-18) → skipped_page.
+own "biggest mover of" → biggest_mover; `|aplus` + the sidecar's `win30.label` winner/loser (Ajay's +30%-from-trigger
+rule, 2026-11-26) → aplus_winners / aplus_losers, else grade W/L → the same (a carried after-close ring too, 2026-11-18);
+else other. A reel of an EXCLUDED_PAGES page (🚩 1-minute, retired 2026-11-18) → skipped_page.
 
 CACHE: per (root, day) under a lock, keyed by ONE scandir — (dir mtime_ns, n_json, max json mtime_ns, n_mp4); the
 jsons are re-parsed only when the key moves (an in-place sidecar rewrite moves the max json mtime). UNMEASURED.
@@ -92,6 +93,10 @@ def group_of(side: dict, day: str) -> str:
         return "biggest_mover"
     ring_id = side["ring_id"]
     if ring_id.endswith(C.APLUS_SUFFIX):                  # a carried after-close A+ files by its grade too (2026-11-18)
+        w30 = side.get(C.WIN30_KEY)                       # the +30%-from-trigger label wins over the grade (2026-11-26)
+        lab = w30.get("label") if isinstance(w30, dict) else None
+        if isinstance(lab, str) and lab in C.WIN30_GROUP:
+            return C.WIN30_GROUP[lab]
         grade = side.get("grade")
         if isinstance(grade, str) and grade.startswith("W"):
             return "aplus_winners"

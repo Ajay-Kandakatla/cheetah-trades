@@ -113,3 +113,12 @@ Ajay 2026-11-18, verbatim: "Also on the videos categorize winners and losers as 
 ## 2026-11-18 — slot + search
 
 Ajay: "Can you put replays tab next to the Gajjala's please I cant find it in search either". The tab moved from after 📅 Long Term to right after 👀 Gajjala's Watch (`CM_TABS`), and ⌘K search gained 🎬 Replays ("replays", "videos") and 👀 Gajjala's Watch rows (`navSearch.EXTRA_ENTRIES`). Both tabs stay owner-only on the page.
+
+## 2026-11-26 — A+ winners / losers by the +30%-from-trigger rule
+
+Ajay 2026-11-26, verbatim: "Unless there are 30% uptrend don't call them winners from our A+ trigger.." · "You can call them losers.." · then on this tab: "Don't think videos are up to date these are still in Winner".
+
+- The replay pipeline (`eod-audits/replays/replay_win30.py`, the only home of the 30) writes `win30` into every A+ sidecar: `label` = `winner` | `loser` | `not final`, plus `min_pct`, `run_pct`, the trigger and the high after it (same session, to 20:00 ET).
+- `store.group_of` files an A+ reel by `win30.label` (`constants.WIN30_GROUP`); a sidecar with no usable label (older reels, `not final`, anything else) files by the Track record grade exactly as before. 🎾 potentials and the mover are never moved by it.
+- The card still shows the app grade (W +1R / L −1R) unchanged; the label and the run are in its `why` line.
+- Tests: `backend/tests/test_replays_win30_group_2026_11_26.py` (negatives: no key, non-dict, `not final`, unknown label → grade; potential / mover untouched; grade kept).
