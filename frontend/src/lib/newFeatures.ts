@@ -1089,6 +1089,21 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-26, verbatim: "I want you to have continous charts for previous day runners we have some examples with
+  // traderview charts with couple of indicators can you set that up? I wanna able to horizontal scroll tp check continuity
+  // like he does". Spec runcharts rev 2 (scratchpad runcharts/spec.md §3, §4.5, Appendix A.1). BE
+  // chart_maps/gajjala_watch/runchart.py + the GET C.API_RUNCHART_PATH route in gajjala_watch/api.py + constants.py
+  // (RUNCHART_*); FE lib/ggRunChart.ts, components/GgRunChart.tsx, GgRunChartHost.tsx, sessionsPrimitive.ts,
+  // styles/ggRunChart.css, the 📅 chip in GgRunnersStrip.tsx, the host mount in pages/ChartMaps.tsx. Docs
+  // docs/gajjala/runners_continuous_chart_2026_11_26.md, runners_continuous_chart_frontend_2026_11_26.md,
+  // runners_continuous_chart_mounts_2026_11_26.md, ema_follow_check_2026_11_26.md. Pinned by scripts/contracts.mjs
+  // ("📅 Runners continuous chart (2026-11-26)"). PLACED past index 100, the 💧 / ✅ way: no pin moves.
+  {
+    id: 'gajjala-runners-continuous-chart-2026-11-26',
+    label: "📅 Runners on one continuous chart — you said: “I want you to have continous charts for previous day runners … I wanna able to horizontal scroll tp check continuity like he does”. Tap a name on the 📅 Previous day runners strip: one chart of the last 5 sessions, 04:00–20:00 ET, 5-minute candles (1 / 5 / 15 to pick), pre-market and after-hours shaded, a dated line at each session, the 9 and 21 EMA carried across the days without restarting, volume underneath. Drag to move across days, scroll or pinch to zoom. A time on it is the start of its bar. Closed bars only. Display only — no alert, list or rule changed. Not advice.",
+    addedAt: '2026-11-26',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-26, verbatim: "can we make sure in the future these # are accurate ?" (the 🩳 / 🔒 / ⚠️ / 📄 / 🧨 chips
   // on Gajjala cards, after WHLR and AKAN showed wrong numbers). Spec sitrack rev 2 A1-A7 (scratchpad sitrack/spec.md).
   // BE short_interest/basis_math.filing_events + FILING_REGISTRATION_FORMS (S-11) + verdict (A6 baseline),

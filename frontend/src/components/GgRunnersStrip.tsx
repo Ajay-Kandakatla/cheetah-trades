@@ -10,21 +10,31 @@
  * time and no sentence. The ➕ is the shared GgWatchButton (never a copy); the phone test is the Watch's own usePhone
  * (never a second media query). Desktop folded: the first `fold_at` full chips + "+n more". Phone folded: ONE line —
  * title · count · the first `fold_at_phone` names as SYM + gain only · "+n more"; open → every full chip.
- * Display only, UNMEASURED: nothing here rings, gates, adds or trades. */
+ * Display only, UNMEASURED: nothing here rings, gates, adds or trades.
+ *
+ * 📅 2026-11-26 (spec runcharts rev 2 §3.8) — Ajay: "I want you to have continous charts for previous day runners … I
+ * wanna able to horizontal scroll tp check continuity like he does". A chip's symbol and the phone's mini are now the
+ * openers of the continuous chart: one click → openGgRunChart(symbol, every served row symbol in served order) — the
+ * ‹ › list. The chart itself is mounted by the page (its lazy host); this file imports only the open store and
+ * the served-free title rule of lib/ggRunChart. A removed name gets no opener. Every served word is untouched. */
 import { useState } from 'react';
 import {
   ggrMoreText, readGgrOpen, saveGgrOpen, useGgRunners, type GgRunnerRow, type GgRunnersPayload,
 } from '../lib/ggRunners';
+import { ggrcOpenTitle, openGgRunChart } from '../lib/ggRunChart';
 import { GgWatchButton } from './GgWatchButton';
 import { usePhone } from './GajjalaWatchTile';
 import '../styles/ggRunners.css';
 
-function Chip({ row }: { row: GgRunnerRow }) {
+function Chip({ row, syms }: { row: GgRunnerRow; syms: ReadonlyArray<string> }) {
   const sym = row.symbol;
   return (
     <span className={`ggr-chip${row.broker_text ? ' is-broker' : ''}`} data-testid={`ggr-chip-${sym}`}
           title={row.title ?? undefined}>
-      <b>{sym}</b>
+      <button type="button" className="ggr-open" data-testid={`ggr-open-${sym}`} title={ggrcOpenTitle(sym)}
+              aria-label={ggrcOpenTitle(sym)} onClick={() => openGgRunChart(sym, syms)}>
+        <b>{sym}</b>
+      </button>
       <span className="ggr-run">{row.run_text}</span>
       {row.timing_text && <span className="ggr-timing">{row.timing_text}</span>}
       {row.float_text && <span className="ggr-float" title={row.float_title ?? undefined}>{row.float_text}</span>}
@@ -65,6 +75,7 @@ export default function GgRunnersStrip({ fold = true }: { fold?: boolean }) {
   }
 
   const rows = p.rows;
+  const syms = rows.map((r) => r.symbol);  /* the chart's ‹ › list: every served row, served order */
   const canFold = fold && !!p.more_text && !!p.less_text && rows.length > 0;
   const toggle = () => { const next = !open; setOpen(next); saveGgrOpen(next); };
   const more = (n: number) => (
@@ -99,9 +110,11 @@ export default function GgRunnersStrip({ fold = true }: { fold?: boolean }) {
         <div className="ggr-line">
           <Head p={p} hint={false} />
           {minis.map((r) => (
-            <span key={r.symbol} className="ggr-mini" data-testid={`ggr-mini-${r.symbol}`}>
+            <button type="button" key={r.symbol} className="ggr-mini" data-testid={`ggr-mini-${r.symbol}`}
+                    title={ggrcOpenTitle(r.symbol)} aria-label={ggrcOpenTitle(r.symbol)}
+                    onClick={() => openGgRunChart(r.symbol, syms)}>
               <b>{r.symbol}</b> {r.run_text}
-            </span>
+            </button>
           ))}
           {more(rows.length - minis.length)}
         </div>
@@ -119,7 +132,7 @@ export default function GgRunnersStrip({ fold = true }: { fold?: boolean }) {
     <div className={`ggr-strip${phone ? ' is-phone' : ''}`} data-testid="ggr-strip" data-state={p.state}>
       <div className="ggr-head"><Head p={p} hint /></div>
       <div className="ggr-chips">
-        {shown.map((r) => <Chip key={r.symbol} row={r} />)}
+        {shown.map((r) => <Chip key={r.symbol} row={r} syms={syms} />)}
         {button}
       </div>
       {removed}

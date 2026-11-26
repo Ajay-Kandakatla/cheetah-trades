@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GG_RUNNERS_PATH, GGR_OPEN_KEY } from '../lib/ggRunners';
+import { ggrcOpenTitle } from '../lib/ggRunChart';
 import { GGW_PHONE_MQ } from '../lib/gajjalaWatch';
 import { usePhone } from './GajjalaWatchTile';
 
@@ -14,10 +15,18 @@ import { usePhone } from './GajjalaWatchTile';
  * owner_only / off / garbage / NaN draw nothing; error draws the sentence only; junk fold sizes and a junk ggr.open
  * never crash; the source files hold no threshold, clock time or sentence literal and no own media query. */
 
+const RC = vi.hoisted(() => ({ open: vi.fn(), toggle: vi.fn(async () => undefined) }));
+/* 📅 2026-11-26 (spec runcharts rev 2 §4.3): the chart's open store is spied — the strip only calls it. */
+vi.mock('../lib/ggRunChart', async (orig) => {
+  const m: any = await orig();
+  return { ...m, openGgRunChart: RC.open };
+});
+
 vi.mock('../lib/ggWatchList', async (orig) => {
   const m: any = await orig();
   return {
     ...m,
+    toggleGgw: RC.toggle,
     useGgwList: () => ({
       phase: 'ok', symbols: ['MSS'], full: false, full_text: null, busy: null, msg: null,
       labels: { add: '➕', remove: '➖', add_title: 'Add {sym}', remove_title: 'Remove {sym}' },
@@ -68,6 +77,7 @@ function mem() {
 }
 
 beforeEach(() => {
+  RC.open.mockClear(); RC.toggle.mockClear();
   vi.stubGlobal('localStorage', mem());
   phone = false;
   body = OK();
@@ -289,6 +299,91 @@ describe('📅 strip — NEGATIVES', () => {
   });
 });
 
+/* 📅 2026-11-26 — Ajay: "I want you to have continous charts for previous day runners … I wanna able to horizontal scroll
+ * tp check continuity like he does". A chip's symbol and the phone's mini open the chart with the whole served list. */
+describe('📅 strip — the continuous-chart openers (2026-11-26)', () => {
+  it('desktop, folded: a click on a chip symbol → openGgRunChart(sym, every served row in served order)', async () => {
+    await mount();
+    const b = await screen.findByTestId('ggr-open-MEDS');
+    expect(b.tagName).toBe('BUTTON');
+    expect(b.getAttribute('type')).toBe('button');
+    expect(b.textContent).toBe('MEDS');
+    expect(b.getAttribute('title')).toBe(ggrcOpenTitle('MEDS'));
+    expect(b.getAttribute('aria-label')).toBe(ggrcOpenTitle('MEDS'));
+    expect(chipSyms()).toEqual(SYMS.slice(0, 8));
+    fireEvent.click(b);
+    expect(RC.open).toHaveBeenCalledTimes(1);
+    expect(RC.open).toHaveBeenCalledWith('MEDS', SYMS);
+  });
+
+  it('desktop, unfolded: the last chip opens with the same full list', async () => {
+    await mount();
+    fireEvent.click(await screen.findByTestId('ggr-more'));
+    fireEvent.click(screen.getByTestId('ggr-open-CHSN'));
+    expect(RC.open).toHaveBeenCalledWith('CHSN', SYMS);
+  });
+
+  it('the chip keeps its own served title, its run text and the ➕; the opener holds only the symbol', async () => {
+    await mount();
+    const c = await screen.findByTestId('ggr-chip-MEDS');
+    expect(c).toHaveAttribute('title', 'title MEDS');
+    expect(within(c).getByTestId('ggr-open-MEDS').querySelector('b')!.textContent).toBe('MEDS');
+    expect(within(c).getByTestId('ggw-card-btn-MEDS')).toBeInTheDocument();
+    expect(within(c).getByTestId('ggr-open-MEDS').contains(within(c).getByTestId('ggw-card-btn-MEDS'))).toBe(false);
+  });
+
+  it('phone, folded: a mini is a button, its text still exactly "MEDS +165%", a click opens', async () => {
+    phone = true;
+    await mount();
+    const m = await screen.findByTestId('ggr-mini-MEDS');
+    expect(m.tagName).toBe('BUTTON');
+    expect(m.getAttribute('type')).toBe('button');
+    expect(m.textContent).toBe('MEDS +165%');
+    expect(m.className).toBe('ggr-mini');
+    fireEvent.click(m);
+    expect(RC.open).toHaveBeenCalledWith('MEDS', SYMS);
+    fireEvent.click(screen.getByTestId('ggr-mini-CIGL'));
+    expect(RC.open).toHaveBeenLastCalledWith('CIGL', SYMS);
+  });
+
+  it('NEGATIVE: a ➕ click does not open the chart', async () => {
+    await mount();
+    fireEvent.click(await screen.findByTestId('ggw-card-btn-MEDS'));
+    expect(RC.toggle).toHaveBeenCalledWith('MEDS');
+    expect(RC.open).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: the "+n more" button does not open the chart', async () => {
+    await mount();
+    fireEvent.click(await screen.findByTestId('ggr-more'));
+    expect(RC.open).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: a removed row gets no opener and is not in the ‹ › list', async () => {
+    body = { ...OK(), cut_active: true, removed_text: '1 not … served',
+      removed: [{ symbol: 'VIVS', run_text: '+241%', today_pct: 20.0, text: 'today +20.0% since 09:30' }] };
+    await mount();
+    const li = await screen.findByTestId('ggr-removed-VIVS');
+    expect(li.querySelector('button')).toBeNull();
+    expect(screen.queryByTestId('ggr-open-VIVS')).toBeNull();
+    fireEvent.click(screen.getByTestId('ggr-open-MEDS'));
+    expect(RC.open.mock.calls[0][1]).not.toContain('VIVS');
+  });
+
+  it.each([
+    ['error', { state: 'error', text: 'served error words' }],
+    ['empty', { ...OK(), state: 'empty', text: 'served empty words', rows: [] }],
+    ['owner_only', { state: 'owner_only' }],
+  ])('NEGATIVE: %s draws no opener', async (_k, b) => {
+    body = b;
+    const { container } = await mount();
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryAllByTestId(/^ggr-open-/)).toEqual([]);
+    expect(container.querySelector('.ggr-open, .ggr-mini')).toBeNull();
+    expect(RC.open).not.toHaveBeenCalled();
+  });
+});
+
 /* SOURCE guards: jsdom has no layout and the FE must type no threshold / time / sentence. */
 describe('📅 strip — source guards', () => {
   async function read(rel: string): Promise<string> {
@@ -332,5 +427,24 @@ describe('📅 strip — source guards', () => {
     expect(src).not.toMatch(/HotSectors/);
     expect(src).not.toMatch(/from '\.\.\/pages\//);
     expect(src).not.toMatch(/ggw-card-btn/);
+  });
+
+  it('📅 2026-11-26: the strip imports only the open store of the chart — never the chart, the host or the library', async () => {
+    const src = await read('components/GgRunnersStrip.tsx');
+    expect(src).toMatch(/import \{ ggrcOpenTitle, openGgRunChart \} from '\.\.\/lib\/ggRunChart'/);
+    expect(src).not.toMatch(/lightweight-charts/);
+    expect(src).not.toMatch(/['"]\.\/GgRunChart['"]/);
+    expect(src).not.toMatch(/GgRunChartHost/);
+    expect(src).not.toMatch(/import\(/);
+  });
+
+  it('📅 2026-11-26: the opener buttons are reset to text in the stylesheet', async () => {
+    const css = await read('styles/ggRunners.css');
+    const r = rule(css, '.ggr-open, .ggr-mini')!;
+    expect(r).toMatch(/font:\s*inherit/);
+    expect(r).toMatch(/border:\s*0/);
+    expect(r).toMatch(/background:\s*none/);
+    expect(r).toMatch(/cursor:\s*pointer/);
+    expect(rule(css, '.ggr-mini')!).toMatch(/font-size:\s*12px/);
   });
 });

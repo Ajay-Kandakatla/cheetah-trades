@@ -252,3 +252,51 @@ SISSR_WHEN = "{glyphs} {md} {at} ET · {setup}"     # "⛔ 11-24 14:31 ET · ➖
 SISSR_WHEN_TITLE = "{lead} — tagged and a 🧠 potential at {md} {at} ET ({kind})"
 SISSR_WHEN_SINCE = "; 🧠 since {pot_at} ET"        # [C4] printed ONLY when the tracker's first 🧠 time differs
 SISSR_NOT_SEATED = " {n} more were tagged potentials but are on your 🚫 list — not seated."
+# ── 📅 Runners on one continuous chart (2026-11-26, spec runcharts rev 2 §3.1) ── Ajay, verbatim: "I want you to have
+# continous charts for previous day runners … I wanna able to horizontal scroll tp check continuity like he does").
+# runchart.py is the ONE engine. DISPLAY ONLY — nothing gates, sorts, rings or adds a name on any of this. UNMEASURED.
+API_RUNCHART_PATH = API_RUNNERS_PATH + "/chart/{symbol}"   # == FE lib/ggRunChart.GG_RUNCHART_PATH + "/{symbol}"
+RUNCHART_ON = True
+RUNCHART_FRAMES = FRAMES                     # the Watch's own 1m / 5m / 15m rules, by name — no rule typed here
+RUNCHART_DEFAULT_TF = GC.RUN_BASE_FRAME      # "5m" — GG T1 "I concluded on the five minute"; his charts are 5-minute
+RUNCHART_SESSIONS = 5                        # HIS CALL #1 — his thinkorswim header reads "5 D 5m"; 11-23 "duration to 5 days". No query parameter moves it.
+RUNCHART_SEED_SESSIONS = 1                   # MINE (HIS CALL #11) — sessions loaded before the first drawn one, EMA / volume-average warm-up only (the replay's rule)
+RUNCHART_MAX_BARS = 5000                     # TRANSPORT — MINE: above it the OLDEST whole sessions are not drawn (5 × 960 one-minute bars = 4800 fits)
+RUNCHART_BUDGET_SEC = 12                     # TRANSPORT — MINE: wall budget of ONE build's day loads, newest day first
+RUNCHART_MEMO_SEC = 60                       # TRANSPORT — MINE: the live day is re-read at most this often; ALSO the chart's refresh while the market is open, on every frame
+RUNCHART_MEMO_SLACK_SEC = 5                  # TRANSPORT — MINE: a live-day read is reused only while younger than MEMO − SLACK, so a 60 s timer always gets a new read
+RUNCHART_MEMO_MAX = 24                       # TRANSPORT — MINE: names whose days are held at once (the least recently opened goes)
+RUNCHART_BUILT_MAX = 6                       # TRANSPORT — MINE: served payloads held (a 1-minute one is 684 KB of JSON, measured)
+RUNCHART_WAIT_SEC = 4                        # TRANSPORT — MINE: a request waits this long for the SAME name's read already in flight, then answers `busy`
+RUNCHART_BUSY_RETRY_SEC = 2                  # TRANSPORT — MINE: served on `busy`; the chart asks again after it
+RUNCHART_SPLIT_RETRY_SEC = RUNCHART_MEMO_SEC # TRANSPORT — after a split check that did not answer, NO name asks again for this long (its timeout is 15 s)
+RUNCHART_SPLIT_SAME_DAY_OK = False           # HIS CALL #7 — a day saved ON a split's execution date counts as NOT proven on the new share count (not drawn)
+RUNCHART_VIEW_SESSIONS = 2                   # DRAWING — MINE (HIS CALL #8): sessions on screen when the chart opens
+RUNCHART_VIEW_SESSIONS_PHONE = 1             # DRAWING — MINE (HIS CALL #8)
+RUNCHART_RIGHT_GAP_BARS = 12                 # DRAWING — MINE (HIS CALL #8): empty bars right of the last candle (his 11-15 "right side with gaps")
+RUNCHART_VWAP_ON = False                     # HIS CALL #2 — GG's chart has no VWAP; True draws the Watch's VWAP, restarted every session
+RUNCHART_STATES = ("ok", "empty", "error", "busy", "off", "bad_symbol", "owner_only")
+RUNCHART_NOTE_KINDS = ("split", "split_adjusted", "split_unchecked", "failed", "budget", "bar_cap")
+RUNCHART_WORDS = {"pre": "pre-market", "ah": "after-hours", "regular": "regular hours"}
+RUNCHART_TITLE = "📅 {sym} · {frame} · {first} → {last}"
+RUNCHART_TITLE_ONE = "📅 {sym} · {frame} · {first}"
+RUNCHART_ASOF_TEXT = "last bar closed {bar} ET · read {at} ET"
+RUNCHART_EMPTY_TEXT = "No bars for {sym} in the last {n} sessions ({first} → {last})."
+RUNCHART_ERROR_TEXT = "The bars for {sym} could not be read — the 1-minute feed did not answer."
+RUNCHART_FAULT_TEXT = "The chart for {sym} could not be built."
+RUNCHART_BUSY_TEXT = "Still reading {sym} — asking again in {sec} s."
+RUNCHART_BAD_SYMBOL_TEXT = "Not a ticker"
+RUNCHART_SPLIT_TEXT = "🔀 {to:g}-for-{frm:g} split on {day} — {days} were saved before it and may be on the old share count: not drawn"
+RUNCHART_SPLIT_ADJUSTED_TEXT = "🔀 {to:g}-for-{frm:g} split on {day} — the sessions before it were read after it and are drawn on the new share count"
+RUNCHART_SPLIT_UNCHECKED_TEXT = "split check did not answer — a split inside these sessions would not be flagged"
+RUNCHART_FAILED_TEXT = "{days} could not be read — not drawn; reopen to try again"
+RUNCHART_BUDGET_TEXT = "{days} not loaded yet (the read ran out of time) — reopen to load"
+RUNCHART_BAR_CAP_TEXT = "{frame}: the newest {k} of {n} sessions drawn (bar limit {cap})"
+RUNCHART_HINT = ("Every closed {frame} bar of the last {n} sessions, {open}–{end} ET, on one chart: pre-market and after-hours "
+                 "are shaded, the overnight and closed days are skipped, and a dashed line with the date starts each session. "
+                 "9 and 21 EMA: the same EMA the cards use, run over every loaded bar in time order — extended hours "
+                 "included, never restarted at a session — and warmed on {seed} earlier session that is loaded but not "
+                 "drawn; with fewer than {slow} bars the 21 starts late. Volume with its {vol}-bar average. A time here is "
+                 "the START of its bar; the cards and the 👀 Watch stamp a bar when it CLOSES, one bar later. Drag to move "
+                 "across days, scroll or pinch to zoom, ← → to step. Closed bars only; while the market is open the "
+                 "chart is re-read every {memo} s. Display only — nothing here rings, gates, sorts or adds a name. UNMEASURED.")

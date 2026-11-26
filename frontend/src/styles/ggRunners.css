@@ -70,6 +70,18 @@
 /* review 11-22: the minis (the point of the fold) never shrink; the title and the count give up their room first */
 .ggr-line > .ggr-mini { flex: 0 0 auto; }
 .ggr-line > .ggr-title, .ggr-line > .ggr-count { flex: 0 100 auto; }
+/* 📅 2026-11-26: a chip's symbol and the phone's mini open the continuous chart — buttons drawn as plain text */
+.ggr-open, .ggr-mini {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  text-align: inherit;
+  cursor: pointer;
+}
+.ggr-open:hover, .ggr-mini:hover { text-decoration: underline; }
 .ggr-mini { font-size: 12px; }
 @media (max-width: 640px) {
   .ggr-strip { padding: 4px 6px; font-size: 12px; }

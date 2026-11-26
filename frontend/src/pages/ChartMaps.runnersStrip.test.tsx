@@ -18,8 +18,13 @@ vi.mock('../components/LukBoard', () => ({ default: () => <div data-testid="luk-
 vi.mock('../components/LongTermBoard', () => ({ default: () => <div data-testid="lt-stub" /> }));
 vi.mock('../components/HotSectors', () => ({ default: () => <div data-testid="hot-stub" /> }));
 vi.mock('../components/GgRunnersStrip', () => ({ default: () => <div data-testid="ggr-strip" /> }));
+/* 📅 2026-11-26 (spec runcharts rev 2 §4.3): the chart is stubbed; the REAL host and the REAL open store mount it. */
+vi.mock('../components/GgRunChart', () => ({
+  default: (p: { symbol: string }) => <div data-testid="ggrc-stub" data-symbol={p.symbol} />,
+}));
 
 import ChartMaps from './ChartMaps';
+import { closeGgRunChart, openGgRunChart } from '../lib/ggRunChart';
 
 const BOARD = { tab: 'zones', count: 0, matched: 0, scanned: 100, tiles: [], disclaimer: 'Study board.' };
 beforeEach(() => {
@@ -28,7 +33,7 @@ beforeEach(() => {
     return { ok: true, json: async () => (url.includes('/chart-maps?') ? BOARD : {}) } as unknown as Response;
   }));
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); act(() => closeGgRunChart()); vi.unstubAllGlobals(); });
 
 async function mount(tab: string | null) {
   const r = render(
@@ -81,5 +86,59 @@ describe('📅 the runners strip takes the 🔥 slot on 🚩', () => {
     owner();
     const { getByTestId } = await mount('gajjala');
     expect(getByTestId('cm-hot-wrap').getAttribute('class')).toBeNull();
+  });
+});
+
+/* 📅 2026-11-26 — Ajay: "I want you to have continous charts for previous day runners … I wanna able to horizontal scroll
+ * tp check continuity like he does". The host rides the EXISTING showRunners flag, right after the strip. */
+describe('📅 the continuous-chart host rides showRunners', () => {
+  async function openChart() {
+    await act(async () => { openGgRunChart('MEDS', ['MEDS', 'MSS']); await new Promise((res) => setTimeout(res, 20)); });
+  }
+  it('owner on ?tab=gajjala: an open through the store draws the (stubbed) chart', async () => {
+    owner();
+    const { findByTestId, queryByTestId } = await mount('gajjala');
+    expect(queryByTestId('ggrc-stub')).toBeNull();
+    await openChart();
+    expect((await findByTestId('ggrc-stub')).getAttribute('data-symbol')).toBe('MEDS');
+  });
+  it('the host draws nothing in place: the strip is still the 🔥 wrapper\'s next sibling, chart open or not', async () => {
+    owner();
+    const { getByTestId, findByTestId } = await mount('gajjala');
+    expect(getByTestId('cm-hot-wrap').nextElementSibling).toBe(getByTestId('ggr-strip'));
+    await openChart();
+    await findByTestId('ggrc-stub');
+    expect(getByTestId('cm-hot-wrap').nextElementSibling).toBe(getByTestId('ggr-strip'));
+  });
+  it('NEGATIVE: ?tab=gajjala_watch → no host (an open draws nothing)', async () => {
+    owner();
+    const { queryByTestId } = await mount('gajjala_watch');
+    await openChart();
+    expect(queryByTestId('ggrc-stub')).toBeNull();
+  });
+  it('NEGATIVE: a loaded co-owner on 🚩 → no host', async () => {
+    coOwner();
+    const { queryByTestId } = await mount('gajjala');
+    await openChart();
+    expect(queryByTestId('ggrc-stub')).toBeNull();
+  });
+  it('NEGATIVE: while /auth/me loads on 🚩 → no host', async () => {
+    USER.user = null; USER.loading = true;
+    const { queryByTestId } = await mount('gajjala');
+    await openChart();
+    expect(queryByTestId('ggrc-stub')).toBeNull();
+  });
+  it('NEGATIVE: ChartMaps.tsx mounts <GgRunChartHost exactly once, behind showRunners, after the strip; no new flag', async () => {
+    const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+    const fs: any = mod?.default || mod;
+    const root = (globalThis as any).process?.cwd?.() || '.';
+    const src: string = fs.readFileSync(`${root}/src/pages/ChartMaps.tsx`, 'utf8');
+    expect(src.split('<GgRunChartHost').length - 1).toBe(1);
+    expect(src).toContain('{showRunners && <GgRunChartHost />}');
+    expect(src.indexOf('{showRunners && <GgRunnersStrip />}')).toBeGreaterThan(-1);
+    expect(src.indexOf('{showRunners && <GgRunChartHost />}')).toBeGreaterThan(src.indexOf('{showRunners && <GgRunnersStrip />}'));
+    expect(src).not.toMatch(/showRunChart/);
+    expect(src).not.toMatch(/from '\.\.\/components\/GgRunChart'/);
+    expect(src).not.toMatch(/lightweight-charts/);
   });
 });

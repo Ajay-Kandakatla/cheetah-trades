@@ -43,6 +43,13 @@ add remove tickers from the dashboard."
     `owner_only_payload()` and nothing is read). `runners.strip(now)` built, scrubbed and JSON-encoded inside ONE
     `asyncio.to_thread`; never raises (state `error` + the served sentence). Display only.
 
+  * `GET    /chart-maps/gajjala-watch/runners/chart/{symbol}[?tf=1m|5m|15m]` (📅 2026-11-26, spec runcharts §3.5 — Ajay:
+    "I want you to have continous charts for previous day runners … I wanna able to horizontal scroll tp check
+    continuity like he does") — PRIMARY OWNER ONLY through `_is_owner` (anyone else, or a direct call with the Depends
+    OBJECT, gets exactly `owner_only_payload()` and nothing is read). `runchart.build(symbol, now, tf=tf)` (imported
+    LAZILY), scrubbed and JSON-encoded inside ONE `asyncio.to_thread`; never raises (state `error` +
+    C.RUNCHART_FAULT_TEXT). No session-count parameter: an unknown query key changes nothing. Display only.
+
   * `POST   /chart-maps/gajjala-watch/run/{symbol}` (▶ 2026-11-24, spec ggrun §3.4 — Ajay: "On the Watch list I need a
     run button to run against Gajjalas rules of a stock") — `require_primary_admin` (404 for anyone else, before the
     handler). `run_rules.run(symbol, now)` (imported LAZILY through C.RUN_MODULE), scrubbed and JSON-encoded inside ONE
@@ -126,6 +133,26 @@ def _runners_body(now: datetime) -> bytes:
     return JSONResponse(_scrub(out)).body
 
 
+def _runchart_body(symbol, now: datetime, tf) -> bytes:
+    """📅 2026-11-26 — the owner's continuous chart as JSON bytes, called ONLY inside asyncio.to_thread. Never raises: a
+    fault anywhere → {state: "error", text: C.RUNCHART_FAULT_TEXT}."""
+    from growth.api import _scrub
+    try:
+        from . import runchart as RC
+        out = RC.build(symbol, now, tf=tf)
+        if not isinstance(out, dict):
+            raise TypeError("not an answer")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: runner chart failed: %s", type(exc).__name__)
+        out = {"state": "error", "text": C.RUNCHART_FAULT_TEXT.format(sym=ST.normalize(symbol) or str(symbol))}
+    try:
+        return JSONResponse(_scrub(out)).body
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: runner chart not encoded: %s", type(exc).__name__)
+        return JSONResponse({"state": "error",
+                             "text": C.RUNCHART_FAULT_TEXT.format(sym=ST.normalize(symbol) or str(symbol))}).body
+
+
 def _run_fallback() -> dict:
     out = {k: None for k in C.RUN_ANSWER_KEYS}
     out.update(state="error", title=C.RUN_TITLE_TEXT, text=C.RUN_ERROR_TEXT, note=C.RUN_NOTE_TEXT, setups=[])
@@ -190,6 +217,17 @@ async def gajjala_watch_runners(email: Optional[str] = Depends(maybe_current_use
     if not _is_owner(email):
         return PL.owner_only_payload()
     body = await asyncio.to_thread(_runners_body, datetime.now(ET))
+    return Response(content=body, media_type="application/json")
+
+
+@router.get(C.API_RUNCHART_PATH)
+async def gajjala_watch_runner_chart(symbol: str, email: Optional[str] = Depends(maybe_current_user),
+                                     tf: Optional[str] = Query(None)):
+    """📅 the owner's continuous chart of one runner. A direct call (container smoke test) receives the Depends OBJECT
+    and is served as a non-owner — nothing read."""
+    if not _is_owner(email):
+        return PL.owner_only_payload()
+    body = await asyncio.to_thread(_runchart_body, symbol, datetime.now(ET), tf)
     return Response(content=body, media_type="application/json")
 
 

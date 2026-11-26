@@ -19318,6 +19318,149 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '📅 Runners continuous chart (2026-11-26)',
+    file: 'src/components/GgRunChart.tsx',
+    // Ajay 2026-11-26, verbatim: "I want you to have continous charts for previous day runners we have some examples with
+    // traderview charts with couple of indicators can you set that up? I wanna able to horizontal scroll tp check
+    // continuity like he does". Spec runcharts rev 2 §3, §4.5, Appendix A.2. ONE engine (backend
+    // chart_maps/gajjala_watch/runchart.py) on the Watch's own frame / EMA / closed-bar pieces; the FE draws what it is
+    // served. Display only — no alert, list, gate or rule. UNMEASURED.
+    checks: (chart) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const pyCode = (s) => s.replace(/#[^\n]*/g, '');
+      const count = (s, re) => (s.match(re) || []).length;
+      const tuple = (src, name) => {
+        const m = new RegExp(`^${name}\\s*=\\s*\\(([^)]*)\\)`, 'm').exec(src);
+        return m ? [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : null;
+      };
+
+      // 1. the path and the states — backend == frontend
+      const K = quiet('../backend/chart_maps/gajjala_watch/constants.py');
+      const lib = quiet('src/lib/ggRunChart.ts');
+      if (!/^API_RUNCHART_PATH\s*=\s*API_RUNNERS_PATH\s*\+\s*"\/chart\/\{symbol\}"/m.test(K)) errs.push('constants.py: API_RUNCHART_PATH must be API_RUNNERS_PATH + "/chart/{symbol}"');
+      if (!/^API_RUNNERS_PATH\s*=\s*API_PATH\s*\+\s*"\/runners"/m.test(K) || !/^API_PATH\s*=\s*"\/chart-maps\/gajjala-watch"/m.test(K)) errs.push('constants.py: API_RUNNERS_PATH must stay API_PATH + "/runners" with API_PATH "/chart-maps/gajjala-watch"');
+      if (!/export const GG_RUNCHART_PATH = '\/chart-maps\/gajjala-watch\/runners\/chart';/.test(lib)) errs.push("lib/ggRunChart.ts: GG_RUNCHART_PATH must be '/chart-maps/gajjala-watch/runners/chart'");
+      const beStates = tuple(K, 'RUNCHART_STATES');
+      const fe = /export type GgrcState\s*=\s*([^;]+);/.exec(lib);
+      const feStates = fe ? [...fe[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : null;
+      if (!beStates) errs.push('constants.py lost RUNCHART_STATES');
+      if (!feStates) errs.push('lib/ggRunChart.ts lost the GgrcState type');
+      if (beStates && feStates && JSON.stringify([...beStates].sort()) !== JSON.stringify([...feStates].sort())) {
+        errs.push(`GgrcState (${feStates.join(', ')}) must list exactly the backend RUNCHART_STATES (${beStates.join(', ')})`);
+      }
+
+      // 2. the constants — by name, the two HIS CALL defaults, no sessions cap
+      if (!/^RUNCHART_DEFAULT_TF\s*=\s*GC\.RUN_BASE_FRAME\b/m.test(K)) errs.push('constants.py: RUNCHART_DEFAULT_TF must be GC.RUN_BASE_FRAME (by name)');
+      if (!/^RUNCHART_FRAMES\s*=\s*FRAMES\b/m.test(K)) errs.push("constants.py: RUNCHART_FRAMES must be FRAMES (the Watch's own rules)");
+      if (!/^RUNCHART_VWAP_ON\s*=\s*False\b/m.test(K)) errs.push('constants.py: RUNCHART_VWAP_ON must be False (HIS CALL #2)');
+      if (!/^RUNCHART_SPLIT_SAME_DAY_OK\s*=\s*False\b/m.test(K)) errs.push('constants.py: RUNCHART_SPLIT_SAME_DAY_OK must be False (HIS CALL #7)');
+      if (/RUNCHART_SESSIONS_MAX/.test(K)) errs.push('constants.py must not define RUNCHART_SESSIONS_MAX — no sessions parameter (HIS CALL #1)');
+
+      // 3. the engine — the named pieces reused, no parallel EMA / fetch / write
+      const RC = quiet('../backend/chart_maps/gajjala_watch/runchart.py');
+      for (const w of ['build_frame', 'tile_payload', 'closed_only', 'resample_ohlcv', 'load_intraday', 'prev_market_day', '_closes', 'new_breaker']) {
+        if (!RC.includes(w)) errs.push(`runchart.py must name ${w} (one engine per concept)`);
+      }
+      for (const w of ['.ewm(', 'signals.ema(', '_masked_ema(', '_fetch_massive_minute', 'load_intraday_range', 'update_one']) {
+        if (RC.includes(w)) errs.push(`runchart.py must not hold ${w} (not even in a comment)`);
+      }
+
+      // 4. the route — owner-gated, built off the loop, no sessions parameter
+      const api = quiet('../backend/chart_maps/gajjala_watch/api.py');
+      const ri = api.indexOf('@router.get(C.API_RUNCHART_PATH)');
+      if (ri < 0) errs.push('api.py must register @router.get(C.API_RUNCHART_PATH)');
+      else {
+        const nx = api.indexOf('\n@router.', ri + 1);
+        const fn = pyCode(api.slice(ri, nx < 0 ? undefined : nx));
+        if (!/if not _is_owner\(email\):\s*\n\s*return PL\.owner_only_payload\(\)/.test(fn)) errs.push('the runchart route must answer owner_only to anyone but the owner (_is_owner) before any read');
+        if (!/await asyncio\.to_thread\(/.test(fn)) errs.push('the runchart route must build in asyncio.to_thread (never on the event loop)');
+        if (/\bsessions\b/.test(fn)) errs.push('the runchart route must take no sessions parameter (HIS CALL #1)');
+      }
+      if (count(api, /@router\.get\(C\.API_RUNCHART_PATH\)/g) > 1) errs.push('api.py must register the runchart route once');
+
+      // 5. the chart, the host, the strip, the Watch tile
+      const code = tsCode(chart);
+      if (!/from 'lightweight-charts'/.test(code)) errs.push("GgRunChart.tsx must import from 'lightweight-charts'");
+      if (!/import \{[^}]*\bEMA_BOLD\b[^}]*\} from '\.\.\/lib\/chartMaps'/.test(code)) errs.push('GgRunChart.tsx must take its EMA colours from EMA_BOLD (lib/chartMaps)');
+      if (!/EMA_BOLD\.ema9\.color/.test(code) || !/EMA_BOLD\.ema21\.color/.test(code)) errs.push('GgRunChart.tsx must colour the 9 and 21 from EMA_BOLD.ema9 / EMA_BOLD.ema21');
+      for (const bad of ['TradingViewAdvancedChart', 'tvDatafeed']) if (code.includes(bad)) errs.push(`GgRunChart.tsx must never import ${bad}`);
+      const host = tsCode(quiet('src/components/GgRunChartHost.tsx'));
+      if (!/lazyWithReload\(\s*\(\)\s*=>\s*import\('\.\/GgRunChart'\)\s*\)/.test(host)) errs.push("GgRunChartHost.tsx must load GgRunChart through lazyWithReload(() => import('./GgRunChart'))");
+      if (/import\s+GgRunChart\b|from '\.\/GgRunChart'/.test(host)) errs.push('GgRunChartHost.tsx must never import GgRunChart statically');
+      const strip = tsCode(quiet('src/components/GgRunnersStrip.tsx'));
+      const stripFeat = [...strip.matchAll(/from '([^']*(?:ggRunChart|GgRunChart|sessionsPrimitive)[^']*)'/gi)].map((m) => m[1]);
+      if (JSON.stringify(stripFeat) !== JSON.stringify(['../lib/ggRunChart'])) errs.push(`GgRunnersStrip.tsx must import only ../lib/ggRunChart of this feature (found ${stripFeat.join(', ') || 'none'})`);
+      const tile = quiet('src/components/GajjalaWatchTile.tsx');
+      for (const w of ['ggRunChart', 'GgRunChart', 'sessionsPrimitive', 'ggrc']) if (tile.includes(w)) errs.push(`GajjalaWatchTile.tsx must name none of the runner chart (found ${w}) — no 📅 on the 👀 Watch (HIS CALL #4)`);
+
+      // 6. the page — the host once, behind showRunners, after the strip
+      const page = tsCode(quiet('src/pages/ChartMaps.tsx'));
+      const hostAt = page.indexOf('{showRunners && <GgRunChartHost />}');
+      const stripAt = page.indexOf('{showRunners && <GgRunnersStrip />}');
+      if (count(page, /<GgRunChartHost\b/g) !== 1) errs.push(`ChartMaps.tsx must mount <GgRunChartHost /> exactly once (found ${count(page, /<GgRunChartHost\b/g)})`);
+      if (hostAt < 0) errs.push('ChartMaps.tsx must mount the host behind showRunners: {showRunners && <GgRunChartHost />}');
+      if (stripAt < 0) errs.push('ChartMaps.tsx lost {showRunners && <GgRunnersStrip />}');
+      if (hostAt >= 0 && stripAt >= 0 && hostAt < stripAt) errs.push('ChartMaps.tsx must mount <GgRunChartHost /> after the strip');
+
+      // 7. the stylesheet — the phone-width rules
+      const css = quiet('src/styles/ggRunChart.css');
+      const rule = (sel) => { const m = new RegExp(`(?:^|\\n)\\${sel}\\s*\\{([^}]*)\\}`).exec(css); return m ? m[1] : null; };
+      const head = rule('.ggrc-head');
+      if (!head || !/flex-wrap:\s*wrap/.test(head) || !/min-width:\s*0/.test(head)) errs.push('ggRunChart.css: .ggrc-head must wrap (flex-wrap: wrap) and carry min-width: 0');
+      const cv = rule('.ggrc-canvas');
+      if (!cv || !/min-width:\s*0/.test(cv) || !/min-height:\s*0/.test(cv)) errs.push('ggRunChart.css: .ggrc-canvas must carry min-width: 0 and min-height: 0');
+
+      // 8. ema-verify — the store read, never the loader that fetches and writes
+      const EV = quiet('../backend/scripts/ema_frame_cross_count_2026_11_26.py');
+      for (const w of ['frame_crosses', '_mongo_get_day']) if (!EV.includes(w)) errs.push(`ema_frame_cross_count_2026_11_26.py must name ${w}`);
+      if (EV.includes('load_intraday(')) errs.push('ema_frame_cross_count_2026_11_26.py must never call load_intraday( (an uncached day would be fetched and written)');
+
+      // 9. the ✨ — his words verbatim, curly quotes, past index 100 right above the 🚫 broker-section entry
+      const ID = 'gajjala-runners-continuous-chart-2026-11-26';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        if (lab[2] !== '2026-11-26') errs.push(`the 📅 chart ✨ addedAt must be 2026-11-26 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala') errs.push(`the 📅 chart ✨ route must be /chart-maps?tab=gajjala (found ${lab[3]})`);
+        for (const q of ['I want you to have continous charts for previous day runners', 'I wanna able to horizontal scroll tp check continuity like he does']) {
+          if (!lab[1].includes(q)) errs.push(`the 📅 chart ✨ must quote him verbatim: ${q}`);
+        }
+        if (!/“I want you to have continous charts[^”]*like he does”/.test(lab[1])) errs.push('the 📅 chart ✨ must carry his words inside curly quotes');
+        for (const w of ['Closed bars only.', 'Not advice.', 'the start of its bar']) if (!lab[1].includes(w)) errs.push(`the 📅 chart ✨ must say ${w}`);
+        if (/⤢/.test(lab[1])) errs.push('the 📅 chart ✨ must not mention ⤢ — that opener is not built (HIS CALL #4)');
+        if (/bounc/i.test(lab[1])) errs.push('the 📅 chart ✨ must never say bounce — reversal');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-si-chip-accuracy-2026-11-26') errs.push(`the ✨ '${ID}' must sit right above the 🩳 chip-accuracy entry (moved 2026-11-26 on rebase: the 🩳 / 🏁 SI entries landed first) — not the 🚫 broker-section entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 10. ship together; no b-word, no e-mail address in any new file (CSS at-rules are not addresses)
+      const DOCS = ['../docs/gajjala/runners_continuous_chart_2026_11_26.md', '../docs/gajjala/runners_continuous_chart_frontend_2026_11_26.md',
+        '../docs/gajjala/runners_continuous_chart_mounts_2026_11_26.md', '../docs/gajjala/ema_follow_check_2026_11_26.md'];
+      const NEW = ['../backend/chart_maps/gajjala_watch/runchart.py', '../backend/scripts/ema_frame_cross_count_2026_11_26.py',
+        '../backend/scripts/ema_frame_cross_count_2026_11_26.json', 'src/lib/ggRunChart.ts', 'src/components/GgRunChart.tsx',
+        'src/components/GgRunChartHost.tsx', 'src/components/sessionsPrimitive.ts', 'src/styles/ggRunChart.css', ...DOCS];
+      for (const f of [...NEW, '../backend/tests/test_gajjala_watch_runchart_2026_11_26.py',
+        '../backend/tests/test_gajjala_watch_runchart_api_2026_11_26.py', '../backend/tests/test_ema_frame_cross_count_2026_11_26.py',
+        'src/lib/ggRunChart.test.ts', 'src/lib/ggRunChart.golden.test.ts', 'src/lib/__fixtures__/ggRunChart.golden.json',
+        'src/components/GgRunChart.test.tsx', 'src/components/GgRunChart.phone.test.tsx', 'src/components/GgRunChartHost.test.tsx',
+        'src/components/sessionsPrimitive.test.ts']) if (!exists(f)) errs.push(`${f} must exist`);
+      for (const f of NEW) {
+        if (!exists(f)) continue;
+        const t = quiet(f);
+        if (/\bbounce/i.test(t)) errs.push(`${f} must never say bounce — reversal`);
+        const isCss = f.endsWith('.css');
+        if (isCss ? /[\w.+-]+@[\w-]+\.[\w.]+/.test(t) : t.includes('@')) errs.push(`${f} must hold no "@" (no e-mail address in a new file)`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

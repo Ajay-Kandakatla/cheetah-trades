@@ -1,0 +1,59 @@
+/* 📅 Runners on one continuous chart — the overlay (2026-11-26, spec runcharts rev 2 §3.7, package fe-chart).
+ * Ajay 2026-11-26: "I wanna able to horizontal scroll tp check continuity like he does".
+ * Phone target 430 px: every flex child shrinks (min-width: 0), long served words wrap anywhere, the head wraps,
+ * the canvas takes the rest of the window. z-index 5100 sits above the stretch view (.ggw-stretch, 5000). */
+
+.ggrc-backdrop {
+  position: fixed; inset: 0; z-index: 5100;
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 0; box-sizing: border-box; padding: 10px;
+  height: 100vh;
+  background: rgba(5, 7, 10, 0.96);
+  overscroll-behavior: contain;
+  color: #e2e8f0;
+}
+@supports (height: 100dvh) {
+  .ggrc-backdrop { height: 100dvh; }
+}
+
+.ggrc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.ggrc-title { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.ggrc-ran { min-width: 0; overflow-wrap: anywhere; font-size: 0.85em; opacity: 0.9; }
+.ggrc-frames { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+
+.ggrc-btn {
+  font: inherit; font-size: 0.85em; line-height: 1.2; cursor: pointer;
+  padding: 2px 8px; border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.08); color: inherit;
+}
+.ggrc-btn[aria-pressed="true"] { background: rgba(148, 163, 184, 0.3); border-color: rgba(148, 163, 184, 0.7); }
+.ggrc-btn:disabled { opacity: 0.4; cursor: default; }
+.ggrc-close { margin-left: auto; }
+
+.ggrc-hint { min-width: 0; }
+.ggrc-hint > summary { list-style: none; display: inline-block; }
+.ggrc-hint > summary::-webkit-details-marker { display: none; }
+.ggrc-hint-body {
+  min-width: 0; overflow-wrap: anywhere; max-width: 60ch;
+  margin-top: 6px; font-size: 0.85em; line-height: 1.4; opacity: 0.9;
+}
+
+.ggrc-notes { min-width: 0; overflow-wrap: anywhere; margin: 0; padding: 0 0 0 1.1em; font-size: 0.85em; }
+.ggrc-asof { min-width: 0; overflow-wrap: anywhere; font-size: 0.8em; opacity: 0.65; }
+.ggrc-legend { min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 0.8em; opacity: 0.85; }
+.ggrc-key { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.ggrc-sw { display: inline-block; width: 12px; height: 3px; border-radius: 1px; flex: 0 0 auto; }
+.ggrc-hud {
+  min-width: 0; overflow-wrap: anywhere; min-height: 1.4em;
+  display: flex; flex-wrap: wrap; gap: 2px 10px;
+  font-size: 0.8em; font-variant-numeric: tabular-nums;
+}
+.ggrc-up { color: #22c55e; }
+.ggrc-down { color: #ef4444; }
+
+.ggrc-canvas { flex: 1 1 auto; min-width: 0; min-height: 0; position: relative; }
+.ggrc-msg { min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 0; }
+
+@media (max-width: 640px) {
+  .ggrc-btn { min-height: 32px; min-width: 32px; padding: 6px; }
+}

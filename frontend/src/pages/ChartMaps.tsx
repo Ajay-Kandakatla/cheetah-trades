@@ -105,6 +105,7 @@ import { UV_VIEW_PARAM, UV_VIEW_PSG, parseUvView, uvViewParam } from '../lib/und
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import GgRunnersStrip from '../components/GgRunnersStrip';
+import GgRunChartHost from '../components/GgRunChartHost';
 import IndexZones from '../components/IndexZones';
 import OverlayLegend from '../components/OverlayLegend';
 import { filterForGrid, filterTile, hiddenForTab, loadHidden, presentGroups,
@@ -1228,6 +1229,9 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * across tab trips. Hidden on 🚩 while /auth/me loads too; a loaded non-owner sees 🔥 and no strip. */}
       <div hidden={hideHot} data-testid="cm-hot-wrap"><HotSectors /></div>
       {showRunners && <GgRunnersStrip />}
+      {/* 📅 2026-11-26 — the continuous chart a 📅 name opens ("I wanna able to horizontal scroll tp check continuity like
+        * he does"). Draws nothing in place (a portal on <body>), so the strip stays the 🔥 wrapper's next sibling. */}
+      {showRunners && <GgRunChartHost />}
 
       {/* ✨ Names that arrived on 🚀 Explosive Growth (Ajay 2026-10-12: "special
         * emphasis wiht a tag or something in the chart map pages top"). One
