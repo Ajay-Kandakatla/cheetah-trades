@@ -141,7 +141,8 @@ def test_S2_a_fresh_record_is_the_house_chip_verbatim(monkeypatch):
     r = by_sym(t)["A1"]
     house = SR.si_block(dict(doc), TODAY)
     # 2026-11-18 sitier: si_text carries the served tier word (30.0% of float, 24.0% of shares out — confirmed).
-    assert r["si_text"] == house["chip"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
+    # 2026-11-26 sitrack A4: the chip computes shares short ÷ ADV (1,200,000 ÷ 500,000 = 2.4), not the provider's 2.3
+    assert r["si_text"] == house["chip"] == "🩳 SI EXTREME 30.0% float · 2.4d · 9/30"
     assert r["si_stale"] is False and r["si_asof"] == "2026-09-30"
     assert r["si_title"] == house["title"] and r["si_title"].startswith("🩳 Short interest — FINRA settlement 2026-09-30")
     assert t["si_fault_text"] is None
@@ -368,9 +369,13 @@ def test_S10_no_rule_gate_or_alert_reads_short_interest():
     # for many were so confident on SSR.."): si_ssr_names.py (the ⛔🔒🩳 name source) imports short_interest.ssr +
     # short_interest.reg_sho and reads the 🩳 block only via high_si.si_blocks; pinned by
     # test_S10_si_ssr_names_reads_short_interest_only_through_ssr_reg_sho_and_high_si. Nothing else may join.
+    # WIDENED 2026-11-26 (spec sitrack WP5, main-session suite gate): si_track.py (the 🏁 SI track record — display
+    # only, the nightly's fenced step + the 🩳 sub's ⓘ fold) rebuilds the point-in-time settlement through
+    # read.si_block and reads the 🔒/⛔ fields; pinned by test_gajjala_si_track_guards_2026_11_26 (its short_interest
+    # imports, and no rule / gate / alert module imports it). Nothing else may join.
     others = [p for p in sorted(gj.glob("*.py"))
               if p.name not in ("all_table.py", "tab.py", "context.py", "high_si.py", "high_si_cross.py",
-                                "si_ssr_names.py")]
+                                "si_ssr_names.py", "si_track.py")]
     others += [BACKEND / "trading" / n for n in ("gajjala_entry.py", "gajjala_stream.py", "gajjala_untraded.py")]
     others += [BACKEND / "push" / "hooks.py"]
     assert len(others) > 10
@@ -494,7 +499,8 @@ def test_S11_the_1_minute_table_carries_the_column(monkeypatch):
     assert t1["heads"] == t5["heads"] and t1["heads"][-1]["key"] == "si"
     assert all(set(TBL.SI_KEYS) <= set(r) for r in t1["rows"])
     # 2026-11-18 sitier: the served tier word leads the chip
-    assert by_sym(t1)["A1"]["si_text"] == by_sym(t5)["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
+    # 2026-11-26 sitrack A4: the chip computes shares short ÷ ADV (1,200,000 ÷ 500,000 = 2.4), not the provider's 2.3
+    assert by_sym(t1)["A1"]["si_text"] == by_sym(t5)["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.4d · 9/30"
 
 
 # ── S12 NaN / private keys ───────────────────────────────────────────────────────────────────────────────────────
@@ -516,7 +522,8 @@ def test_S13_the_gg5_route_serves_the_column(monkeypatch):
     assert t["heads"][-1] == {"key": "si", "label": "Short interest"} and t["si_fault_text"] is None
     by = by_sym(t)
     # 2026-11-18 sitier: the served tier word leads the chip
-    assert by["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
+    # 2026-11-26 sitrack A4: the chip computes shares short ÷ ADV (1,200,000 ÷ 500,000 = 2.4), not the provider's 2.3
+    assert by["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.4d · 9/30"
     assert by["K1"]["si_text"] is None                                              # NEGATIVE: no record → null
 
 
@@ -537,7 +544,8 @@ def test_S13_the_1_minute_route_serves_the_column(monkeypatch):
     t = body["table"]
     assert t["heads"][-1]["key"] == "si" and t["si_fault_text"] is None
     # 2026-11-18 sitier: the served tier word leads the chip
-    assert by_sym(t)["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
+    # 2026-11-26 sitrack A4: the chip computes shares short ÷ ADV (1,200,000 ÷ 500,000 = 2.4), not the provider's 2.3
+    assert by_sym(t)["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.4d · 9/30"
     assert by_sym(t)["K1"]["si_text"] is None
 
 

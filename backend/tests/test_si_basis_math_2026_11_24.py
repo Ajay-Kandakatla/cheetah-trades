@@ -140,8 +140,10 @@ def test_filing_kind(form, items, kind):
     assert BM.filing_kind(form, items) == kind
 
 
+# 2026-11-26 sitrack A2: S-11 / S-11/A moved OUT of this list — they are registrations now (S-1 still never
+# catches them by prefix; see test_si_chip_accuracy_2026_11_26.py). "S-111" / "F-11" stand in as the near-misses.
 @pytest.mark.parametrize("form,items", [
-    ("S-11", ""), ("S-11/A", ""), ("RW", ""), ("DEF 14A", ""), ("PRE 14A", ""), ("S-8", ""), ("10-Q", ""),
+    ("S-111", ""), ("F-11", ""), ("RW", ""), ("DEF 14A", ""), ("PRE 14A", ""), ("S-8", ""), ("10-Q", ""),
     ("8-K", "13.02"), ("8-K", "1.01,9.01"), ("8-K", ""), ("6-K", "3.02"), (None, "3.02"), (42, ""),
     ("S-1X", ""), ("F-10", ""),
 ])
@@ -544,7 +546,8 @@ def test_CLRO_only_gains_the_filing_flag():
     v = BM.verdict(rec, doc, TODAY)
     assert v["float_refused"] is None and v["growth"] is None and v["fell"] is None
     assert [f["short"] for f in v["flags"]] == ["📄 S-1/A 11/24 +1"]
-    assert v["flags"][0]["text"] == "📄 dilution filings since 11/10: S-1/A 11/24 · 8-K 3.02 11/17"
+    # 2026-11-26 sitrack A1: the text counts the events ("2 dilution filings")
+    assert v["flags"][0]["text"] == "📄 2 dilution filings since 11/10: S-1/A 11/24 · 8-K 3.02 11/17"
 
 
 def _clro():
@@ -596,14 +599,19 @@ def test_XLAB_sec_none_still_flags_its_dilution_filings():
     rec, doc = _xlab("none")
     v = BM.verdict(rec, doc, TODAY)
     assert v["sources"]["sec"] == "none" and v["float_refused"] is None
-    assert [f["short"] for f in v["flags"]] == ["📄 424B3 11/16 +1"]
-    assert v["flags"][0]["text"] == "📄 dilution filings since 11/5: 424B3 11/16 · 424B3 11/9"   # 11/05 + S-1 10/30: not after the anchor
+    # 2026-11-26 sitrack A3: the 424B3 filed ON the anchor (11/05) now counts, labelled same day; the stored rows carry
+    # no `doc`, so each 424B3 is one event and the text says they are not yet checked for copies (S-1 10/30: before)
+    assert [f["short"] for f in v["flags"]] == ["📄 424B3 11/16 +2"]
+    assert v["flags"][0]["text"] == ("📄 3 dilution filings since 11/5: 424B3 11/16 · 424B3 11/9 · 424B3 11/5"
+                                     " — 424B3 11/5 filed the same day the share count was read; which came first is"
+                                     " not known — 3 prospectus filings not yet checked for copies")
 
 
 def test_XLAB_sec_none_chip_and_title_carry_the_filing():
     rec, doc = _xlab("none")
     b = SR.si_block(rec, TODAY, basis=doc)
-    assert b["chip"] == "🩳 SI 2.1% shs out · 1.0d · 10/30 · 📄 424B3 11/16 +1"
+    # 2026-11-26 sitrack A3 (+2: the 11/05 same-day 424B3) and A4 (the provider's 1.0 with no ADV is FINRA's floor)
+    assert b["chip"] == "🩳 SI 2.1% shs out · ≤1d · 10/30 · 📄 424B3 11/16 +2"
     assert "424B3" in b["title"]
     assert [f["key"] for f in b["basis"]["flags"]] == ["filing"]
 
@@ -625,7 +633,8 @@ def test_XLAB_sec_never_read_uses_no_filings(status):
 
 def test_sec_none_filings_only_before_the_anchor_give_no_flag():
     rec, doc = _xlab("none")
-    doc["sec"]["filings"] = [f for f in XLAB_FILINGS if f["filed"] <= "2026-11-05"]
+    # 2026-11-26 sitrack A3: a filing ON the anchor counts now — strictly before it gives no flag
+    doc["sec"]["filings"] = [f for f in XLAB_FILINGS if f["filed"] < "2026-11-05"]
     v = BM.verdict(rec, doc, TODAY)
     assert not any(f["key"] == "filing" for f in v["flags"])
 

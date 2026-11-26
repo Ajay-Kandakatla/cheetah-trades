@@ -1089,6 +1089,31 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-26, verbatim: "can we make sure in the future these # are accurate ?" (the 🩳 / 🔒 / ⚠️ / 📄 / 🧨 chips
+  // on Gajjala cards, after WHLR and AKAN showed wrong numbers). Spec sitrack rev 2 A1-A7 (scratchpad sitrack/spec.md).
+  // BE short_interest/basis_math.filing_events + FILING_REGISTRATION_FORMS (S-11) + verdict (A6 baseline),
+  // share_basis.fetch_filings (row shape), read.dtc_computed (A4), reg_sho.extend_runs + reg_sho_runs.extend_run (A5),
+  // supply_demand/bounce_room.room_read weak lid (A7); FE lib/bounceRoom.explosiveChipText. Display only. Pinned by
+  // scripts/contracts.mjs ("🩳 chip accuracy (2026-11-26)"). PLACED past index 100, right above the 🚫 entry (the 💧 / ✅
+  // way): no NEW_FEATURES[n] pin moves. Docs docs/short_interest/chip_accuracy_2026_11_26.md.
+  {
+    id: 'gajjala-si-chip-accuracy-2026-11-26',
+    label: "🩳 Truer numbers on the 🩳 · 🔒 · 📄 · ⚠️ · 🧨 chips — you said: “can we make sure in the future these # are accurate ?”. 📄 counts filings, not copies: one prospectus filed under several registration files on the day of a report is that report filed again (WHLR +18 → +4); S-11 is read; a filing dated the same day as the float now counts and says same day (AKAN). Days to cover = shares short ÷ average daily volume (WHLR <0.1d, not FINRA's 1.00 floor). 🔒 reads a name's run back past 30 days once its card asks (WHLR day 40, close-out day passed Fri 10/16). ⚠️ shares up, for a name with no usable float, starts from the newest SEC cover count — WHLR's ⚠️ 2.3× is gone (1.2×, under your bar); the counts sit in the hover. 🧨 keeps its room number and names the untested band in the way first (WHLR · 1× band +154% first). A name whose filings were stored before today says not yet checked until it refreshes. Display only — no alert, gate or sort changed. Not advice.",
+    addedAt: '2026-11-26',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
+  // Ajay 2026-11-26, verbatim: "I want us to track these patters for future from SI like a track recprd with in SI stocks
+  // itself". Spec sitrack rev 2 §3.7 B. BE chart_maps/gajjala/si_track.py (record_night in the nightly's own fence after
+  // 💧; gajjala_state only; served_block under high_si.block → si_track) + scripts/gajjala_si_track_backfill.py; FE
+  // components/GgSiTrack.tsx mounted INSIDE GgHighSiPanel (the 🩳 sub's ⓘ fold, nothing on the landing). The numbers in
+  // the label are pinned to GC.LEDGER_GRADE_AT_ET, WC.RAN_MIN_PCT, si_track.MIN_NAMES and len(si_track.PATTERNS) by
+  // scripts/contracts.mjs ("🏁 🩳 SI track record (2026-11-26)"). UNMEASURED. Docs docs/gajjala/si_track_record_2026_11_26.md.
+  {
+    id: 'gajjala-si-track-record-2026-11-26',
+    label: "🏁 A track record inside the 🩳 High SI names — you said: “I want us to track these patters for future from SI like a track recprd with in SI stocks itself”. Every night at 20:15 ET each name the 🩳 sub listed is recorded: the short interest published before that day, ⛔ SSR, 🔒 Reg SHO, 📄 · ✂️ filings, the gap, premarket volume, the high and where it printed, and the next session. To read it, open ⓘ on the 🩳 sub, then 🏁: how many ran +40% — only names on the list before the day count; names first listed that day sit on their own line — and 7 patterns known before the open, each with and without. Every pattern reads too few names or days until 20 names and 20 days sit on each side, about a month. A ledger of what happened, never a test: no alert, gate or sort reads it. UNMEASURED. Not advice.",
+    addedAt: '2026-11-26',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-25 ~10:25 ET, verbatim: "On the potential page move the no fidelity to the bottom segmented category.,".
   // Spec fidsec rev 2 (scratchpad fidsec/spec.md). BE tab.broker_section / BROKER_SECTION_SUBS (owner-only block,
   // 🧠 sub only); FE lib/ggBrokerSection + the keyed header in GajjalaBoard. Display only: no card moves (they have sat

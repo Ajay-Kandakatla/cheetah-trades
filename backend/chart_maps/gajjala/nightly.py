@@ -64,6 +64,13 @@ ledger's lookback whose same session ended is graded by ledger.grade (GG's trade
 before the first stop touch; an after-close ring also loads its ring evening. Loads capped at
 LEDGER_BACKFILL_MAX_SYMBOL_DAYS. A failure lands under `gajjala_vol_dried.error` — never in GG5's `errors`, never in
 the exit code. STEPS unchanged; the crontab line unchanged.
+
+🏁 🩳 SI track record (2026-11-26 — Ajay "I want us to track these patters for future from SI like a track recprd with
+in SI stocks itself"): `main` then runs `si_track.record_night` AFTER 💧, in its OWN fence (the import inside it), under
+`gajjala_si_track` — tonight's 🩳 names into gajjala_state `si_track|YYYY-MM-DD`, then the late sessions, the retry-state
+rows and the next-session columns of the last LEDGER_GRADE_LOOKBACK_SESSIONS market days, then the stats. 1-minute loads
+and outside split checks share LEDGER_BACKFILL_MAX_SYMBOL_DAYS. A failure lands under `gajjala_si_track.error` — never in
+GG5's `errors`, never in the exit code. STEPS unchanged; the crontab line unchanged.
 """
 from __future__ import annotations
 
@@ -372,6 +379,12 @@ def main(argv=None) -> int:
         except Exception as exc:                                 # noqa: BLE001
             log.exception("gajjala nightly: the vol-dried grade failed")
             out["gajjala_vol_dried"] = {"error": f"grade: {type(exc).__name__}"}
+        try:                                                     # 🩳 2026-11-26: after 💧, fenced — never in errors / the exit code
+            from . import si_track as SIT
+            out["gajjala_si_track"] = SIT.record_night(datetime.now(timezone.utc))
+        except Exception as exc:                                 # noqa: BLE001
+            log.exception("gajjala nightly: the SI track record failed")
+            out["gajjala_si_track"] = {"error": f"record: {type(exc).__name__}"}
     print(json.dumps(out, default=str))
     return 1 if out.get("errors") else 0
 

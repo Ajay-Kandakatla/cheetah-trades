@@ -218,3 +218,10 @@ Ajay: "Make sure we are looking for Dilution.." · "Also split related events an
 - Tests: `backend/tests/test_gajjala_high_si_basis_2026_11_24.py` (53, incl. NEGATIVES: Low / Moderate on file not named,
   no refused name → words byte-identical, flags-only stays listed, junk `basis` / `flags` / `float_pct_on_file` /
   `float_refused` never raise and add nothing, `classify` unchanged with any `basis`; 3 mutations go red).
+
+## 2026-11-26 — 🏁 SI track record (one fenced key)
+
+`high_si.block` serves one more key, `si_track` (`chart_maps/gajjala/si_track.py` `served_block`), in its own try
+like `ssr_new`: a raise, or a module that will not import, serves `{"fault_text": SIT_FAULT_TEXT}` and every card and
+text above stands. No stored session → the empty block, not a fault. Mongo reads only. The rule, every definition and
+the HIS CALLs: `docs/gajjala/si_track_record_2026_11_26.md`.

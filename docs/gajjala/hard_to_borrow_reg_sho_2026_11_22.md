@@ -309,6 +309,8 @@ ever disagree, the code wins. **MINE** = a number or word I chose; none is a tra
 | `RS_HIST_REASK_MIN` | 1440 | **MINE** (2026-11-24) — minutes between asks of a `missing` hole, and of an `error` hole past the tries |
 | `RS_HIST_NOT_READ_MAX` | 10 | **MINE** (2026-11-24) — unread dates listed per market in the payload |
 | `HOLE_KIND` | `nolist` | **MINE** (2026-11-24) — doc kind of a recorded hole |
+| `RS_RUN_START_MAX_SETTLEMENT_DAYS` | 250 | **MINE** (2026-11-26) — walk-back bound per asked name, about one year of settlement days (HIS CALL #11 of sitrack) |
+| `RUNSTART_KIND` | `runstart` | **MINE** (2026-11-26) — doc kind of an asked name's walked-back run start |
 
 The Rule 203(b)(3) / Rule 204 / Rule 144 constants of the close-out day live in `backend/short_interest/reg_sho_runs.py`;
 their table is in `docs/gajjala/reg_sho_closeout_day_2026_11_24.md`.

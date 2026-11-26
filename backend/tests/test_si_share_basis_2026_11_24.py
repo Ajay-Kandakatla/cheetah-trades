@@ -270,8 +270,12 @@ def test_smtk_happy_path_builds_the_frozen_doc(_iso):
     assert sec["status"] == "ok" and sec["read_at"] == NOW_ISO and sec["strikes"] == 0 and sec["error"] is None
     assert sec["since"] == "2026-10-15"                       # [C2] reaches back to prev_settlement_date
     assert sec["top_accn"] == "0001104659-26-127038"          # the 11-13 10-Q
-    assert sec["filings"] == [{"form": "8-K", "filed": "2026-11-23", "items": "5.03,9.01"},
-                              {"form": "S-4", "filed": "2026-11-13", "items": ""}]
+    # 2026-11-26 sitrack A1: each row also carries doc / file / accn / with (the SMTK capture has no primaryDocument
+    # or fileNumber arrays → None; `with` = the same-day report — the 8-K is its own, the S-4 sits beside the 10-Q)
+    assert sec["filings"] == [{"form": "8-K", "filed": "2026-11-23", "items": "5.03,9.01", "doc": None, "file": None,
+                               "accn": "0001104659-26-130965", "with": "8-K"},
+                              {"form": "S-4", "filed": "2026-11-13", "items": "", "doc": None, "file": None,
+                               "accn": "0001104659-26-126378", "with": "10-Q"}]
     assert len(sec["covers"]) == SB.SB_COVERS_KEPT == 8
     assert [c["as_of"] for c in sec["covers"]][0] == "2025-03-26"
     assert sec["covers"][-2:] == [{"as_of": "2026-08-12", "shares": 28263733, "form": "10-Q", "filed": "2026-08-14"},
@@ -306,11 +310,14 @@ def test_since_reaches_back_to_prev_settlement_date(_iso):
     rec = smtk_record(prev_settlement_date="2026-09-30", float_asof="2026-11-02")
     doc = run(smtk_db(records=[rec]))
     assert doc["sec"]["since"] == "2026-09-30"
-    assert {"form": "S-3", "filed": "2026-09-18", "items": ""} not in doc["sec"]["filings"]
+    # 2026-11-26 sitrack A1: rows carry doc / file / accn / with — compared on the three original fields
+    s3 = {"form": "S-3", "filed": "2026-09-18", "items": ""}
+    _3 = lambda rows: [{k: r[k] for k in ("form", "filed", "items")} for r in rows]
+    assert s3 not in _3(doc["sec"]["filings"])
     rec2 = smtk_record(prev_settlement_date="2026-09-15")
     doc2 = run(smtk_db(records=[rec2]))
     assert doc2["sec"]["since"] == "2026-09-15"
-    assert {"form": "S-3", "filed": "2026-09-18", "items": ""} in doc2["sec"]["filings"]
+    assert s3 in _3(doc2["sec"]["filings"])
 
 
 def test_since_includes_the_held_track_since(_iso):

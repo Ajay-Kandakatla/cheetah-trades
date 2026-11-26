@@ -81,9 +81,10 @@ def test_GMEX_newer_yahoo_float_heads_with_the_flag():
 
 def test_GMEX_served_block_low_3_5pct_of_float():
     plain = SR.si_block(gmex_rec(), TODAY)
-    assert plain["chip"] == "🩳 SI High 62.9% float · float unconfirmed · 1.0d · 10/30"        # what was served
+    # 2026-11-26 sitrack A4: GMEX's record carries its ADV: shares short ÷ ADV
+    assert plain["chip"] == "🩳 SI High 62.9% float · float unconfirmed · <0.1d · 10/30"        # what was served
     b = blk(gmex_rec(), gmex_doc())
-    assert b["chip"] == "🩳 SI Low 3.5% float · 1.0d · 10/30 · ⚠️ float updated · ✂️ split due 11/27"
+    assert b["chip"] == "🩳 SI Low 3.5% float · <0.1d · 10/30 · ⚠️ float updated · ✂️ split due 11/27"
     assert (b["pct_of_float"], b["tier"], b["float_check"]) == (3.52, "low", None)
     assert (b["float_shares"], b["float_asof"], b["float_source"]) == (361428, "2026-11-19", SR.YAHOO_LIVE_FLOAT_SOURCE)
     assert b["pct_of_shares_out"] == 1.69 and b["shares_outstanding"] == 752439 and b["headline_basis"] == "float"
@@ -264,10 +265,12 @@ def test_WETO_record_float_result_unchanged_without_the_newer_float():
                        {"as_of": "2026-06-30", "shares": 821300, "form": "20-F", "filed": "2026-11-05"}],
                yahoo={"float_shares": 14735015, "shares_outstanding": 14897999, "as_of": "2026-11-20"})
     old = blk(rec, _no_yfloat(doc))
-    assert old["chip"] == "🩳 SI 1.6% shs out · 1.0d · 10/30 · ⚠️ shares up 14×"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert old["chip"] == "🩳 SI 1.6% shs out · ≤1d · 10/30 · ⚠️ shares up 14×"
     assert old["float_suspect"] == SR.SHORT_EXCEEDS_FLOAT and "float_update" not in old["basis"]
     new = blk(rec, doc)
-    assert new["chip"] == "🩳 SI Low 1.6% float · 1.0d · 10/30 · ⚠️ float updated · ⚠️ shares up 14×"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert new["chip"] == "🩳 SI Low 1.6% float · ≤1d · 10/30 · ⚠️ float updated · ⚠️ shares up 14×"
 
 
 # ═════════════════════════════════════════════ the track keeps the REPLACED float's first-seen date
@@ -321,13 +324,16 @@ def test_SRTM_a_421_share_newer_float_is_still_refused_as_stale_with_its_filings
     assert new["float_update"]["replaced_shares"] == 552120 and new["float_update"]["shares"] == 552541
     assert new["float_refused"] == "diluted" and new["float_update"]["pct"] is None
     assert new["growth"]["to_shares"] == 4539240 and new["growth"]["from_shares"] == 569639
-    assert [f["form"] for f in new["filings"]] == ["424B3", "S-1/A", "S-1"]       # 8-K 10/26 = the float's own day
+    # 2026-11-26 sitrack A3: the 8-K 10/26 filed ON the float's own day is counted now (labelled same day)
+    assert [f["form"] for f in new["filings"]] == ["424B3", "S-1/A", "S-1", "8-K"]
+    assert [f["same_day"] for f in new["filings"]] == [False, False, False, True]
     b = blk(rec, doc)
-    assert b["chip"] == ("🩳 SI 0.9% shs out · 1.0d · 10/30 · ⚠️ float updated · ⚠️ float stale · ✂️ split 11/23 · "
-                         "📄 424B3 11/6 +2")
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV is FINRA's floor → '≤1d'; A3: +3 (the 8-K ON the float's day)
+    assert b["chip"] == ("🩳 SI 0.9% shs out · ≤1d · 10/30 · ⚠️ float updated · ⚠️ float stale · ✂️ split 11/23 · "
+                         "📄 424B3 11/6 +3")
     assert b["pct_of_float"] is None and b["tier"] is None
-    assert blk(rec, _no_yfloat(doc))["chip"] == ("🩳 SI 0.9% shs out · 1.0d · 10/30 · ⚠️ float stale · ✂️ split 11/23"
-                                                 " · 📄 424B3 11/6 +2")                    # what main serves
+    assert blk(rec, _no_yfloat(doc))["chip"] == ("🩳 SI 0.9% shs out · ≤1d · 10/30 · ⚠️ float stale · ✂️ split 11/23"
+                                                 " · 📄 424B3 11/6 +3")                    # main served +2 (A3)
 
 
 def test_AAOI_a_424B5_filed_between_the_two_float_dates_is_still_flagged():
@@ -372,7 +378,8 @@ def test_LABT_keeps_float_stale_under_its_newer_float():
     _old, new = _same_dilution(rec, doc)
     assert new["float_refused"] == "diluted" and "float_stale" in _keys(new)
     b = blk(rec, doc)
-    assert b["chip"] == "🩳 SI 1.7% shs out · 1.0d · 10/30 · ⚠️ float updated · ⚠️ float stale"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI 1.7% shs out · ≤1d · 10/30 · ⚠️ float updated · ⚠️ float stale"
     assert b["tier"] is None and b["pct_of_float"] is None
 
 
@@ -381,11 +388,15 @@ def test_GMEX_still_low_3_5pct_and_its_dilution_side_is_the_record_floats():
     assert new["float_update"]["pct"] == 3.52 and new["float_refused"] is None
 
 
-def test_NEGATIVE_a_filing_on_or_before_the_replaced_floats_date_is_not_flagged():
+def test_NEGATIVE_a_filing_before_the_replaced_floats_date_is_not_flagged():
     rec, doc = srtm()
-    doc["sec"]["filings"] = [{"form": "8-K", "filed": "2026-10-26", "items": "3.02,9.01"},
+    # 2026-11-26 sitrack A3: a filing ON the replaced float's date counts now (same day) — only BEFORE it is not flagged
+    doc["sec"]["filings"] = [{"form": "8-K", "filed": "2026-10-25", "items": "3.02,9.01"},
                              {"form": "S-1", "filed": "2026-10-01", "items": ""}]
     assert BM.verdict(rec, doc, TODAY)["filings"] == [] and "📄" not in blk(rec, doc)["chip"]
+    doc["sec"]["filings"][0]["filed"] = "2026-10-26"
+    v = BM.verdict(rec, doc, TODAY)
+    assert [(f["form"], f["same_day"]) for f in v["filings"]] == [("8-K", True)]
 
 
 def test_NEGATIVE_no_newer_float_serves_no_float_update_key():

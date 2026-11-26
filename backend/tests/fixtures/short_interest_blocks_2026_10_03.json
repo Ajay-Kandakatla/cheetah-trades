@@ -57,7 +57,7 @@
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
     "chip": "🩳 SI EXTREME 33.6% float · 4.1d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 120,015,346 shares short (+7.8% vs 2026-08-31). 33.6% of float — float 357.3M, yfinance floatShares (shares_cache), as of 2026-09-04. 33.2% of shares outstanding — 361.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: EXTREME (20% or more of the float). Float check: confirmed — 33.2% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 4.1 days to cover (shares short ÷ 29.0M average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 120,015,346 shares short (+7.8% vs 2026-08-31). 33.6% of float — float 357.3M, yfinance floatShares (shares_cache), as of 2026-09-04. 33.2% of shares outstanding — 361.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: EXTREME (20% or more of the float). Float check: confirmed — 33.2% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 4.13 days to cover — 120,015,346 shares short ÷ 29,047,980 average daily volume (the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -85,7 +85,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "4.13 — shares short ÷ 29,047,980 average daily volume (the provider's window)"
+      "v": "4.13 — 120,015,346 shares short ÷ 29,047,980 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -99,7 +99,7 @@
     "extreme": {
      "text": "🩳 SI EXTREME 33.6% float · 4.1d · 9/15",
      "short": "🩳 SI EXTREME 33.6% float",
-     "title": "🩳 EXTREME short interest — 33.6% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 33.2% of shares outstanding (361.7M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 4.1 days to cover (the provider's window). Float basis: the float stored with this short-interest record at the last warm (357,328,674 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
+     "title": "🩳 EXTREME short interest — 33.6% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 33.2% of shares outstanding (361.7M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 4.13 days to cover — 120,015,346 shares short ÷ 29,047,980 average daily volume (the provider's window). Float basis: the float stored with this short-interest record at the last warm (357,328,674 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
      "basis": "si_doc_float"
     }
    }
@@ -160,7 +160,7 @@
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
     "chip": "🩳 SI Low 1.0% float · 4.7d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 5,092,081 shares short (no prior settlement on file). 1.0% of float — float 499.7M, yfinance floatShares (shares_cache), as of 2026-09-04. 1.0% of shares outstanding — 515.8M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: Low (under 5% of the float). 4.7 days to cover (shares short ÷ 1.1M average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 5,092,081 shares short (no prior settlement on file). 1.0% of float — float 499.7M, yfinance floatShares (shares_cache), as of 2026-09-04. 1.0% of shares outstanding — 515.8M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: Low (under 5% of the float). 4.66 days to cover — 5,092,081 shares short ÷ 1,093,085 average daily volume (the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -184,7 +184,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "4.66 — shares short ÷ 1,093,085 average daily volume (the provider's window)"
+      "v": "4.66 — 5,092,081 shares short ÷ 1,093,085 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -253,8 +253,8 @@
     "next_due_on": "2026-10-13",
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
-    "chip": "🩳 SI 440.3K sh · 1.0d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 440,253 shares short (no prior settlement on file). % of float: not read (no float on file). % of shares outstanding: not read. Tier: not given — the tier words count the % of float, and no usable float is on file. 1.0 days to cover (shares short ÷ 878.6K average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "chip": "🩳 SI 440.3K sh · 0.5d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 440,253 shares short (no prior settlement on file). % of float: not read (no float on file). % of shares outstanding: not read. Tier: not given — the tier words count the % of float, and no usable float is on file. 0.50 days to cover — 440,253 shares short ÷ 878,632 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -278,7 +278,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "1.00 — shares short ÷ 878,632 average daily volume (the provider's window)"
+      "v": "0.50 — 440,253 shares short ÷ 878,632 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1."
      },
      {
       "k": "Freshness",
@@ -347,8 +347,8 @@
     "next_due_on": "2026-10-13",
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
-    "chip": "🩳 SI 8.2% shs out · 10.3d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 1,600,483 shares short (no prior settlement on file). % of float: not read (no float on file). 8.2% of shares outstanding — 19.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: not given — the tier words count the % of float, and no usable float is on file. 10.3 days to cover (shares short ÷ 154.6K average daily volume, the provider's window). ⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree, so the % shown is of shares outstanding. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "chip": "🩳 SI 8.2% shs out · 10.4d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 1,600,483 shares short (no prior settlement on file). % of float: not read (no float on file). 8.2% of shares outstanding — 19.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: not given — the tier words count the % of float, and no usable float is on file. 10.35 days to cover — 1,600,483 shares short ÷ 154,626 average daily volume (the provider's window). ⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree, so the % shown is of shares outstanding. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -372,7 +372,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "10.35 — shares short ÷ 154,626 average daily volume (the provider's window)"
+      "v": "10.35 — 1,600,483 shares short ÷ 154,626 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -436,7 +436,7 @@
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-09-21T00:26:40Z",
     "chip": "🩳 SI 30.6% shs out · 5.0d · 8/31 · stale",
-    "title": "🩳 Short interest — FINRA settlement 2026-08-31 (published ~2026-09-10). 111,323,398 shares short (-1.3% vs 2026-08-14). % of float: not read (no float on file). 30.6% of shares outstanding — 364.2M, Massive reference shares outstanding (legacy per-name warm), as of 2026-09-21. Tier: not given on a stale read. 5.0 days to cover (shares short ÷ 22.5M average daily volume, the provider's window). STALE — a newer FINRA settlement (2026-09-15) was due by 2026-09-28; this app still holds 2026-08-31. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "title": "🩳 Short interest — FINRA settlement 2026-08-31 (published ~2026-09-10). 111,323,398 shares short (-1.3% vs 2026-08-14). % of float: not read (no float on file). 30.6% of shares outstanding — 364.2M, Massive reference shares outstanding (legacy per-name warm), as of 2026-09-21. Tier: not given on a stale read. 4.95 days to cover — 111,323,398 shares short ÷ 22,470,177 average daily volume (the provider's window). STALE — a newer FINRA settlement (2026-09-15) was due by 2026-09-28; this app still holds 2026-08-31. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -460,7 +460,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "4.95 — shares short ÷ 22,470,177 average daily volume (the provider's window)"
+      "v": "4.95 — 111,323,398 shares short ÷ 22,470,177 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -579,8 +579,8 @@
     "next_due_on": "2026-10-13",
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
-    "chip": "🩳 SI EXTREME 33.6% float · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 120,015,346 shares short (+7.8% vs 2026-08-31). 33.6% of float — float 357.3M, yfinance floatShares (shares_cache), as of 2026-09-04. 33.2% of shares outstanding — 361.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: EXTREME (20% or more of the float). Float check: confirmed — 33.2% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. Days to cover: not read. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "chip": "🩳 SI EXTREME 33.6% float · 4.1d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 120,015,346 shares short (+7.8% vs 2026-08-31). 33.6% of float — float 357.3M, yfinance floatShares (shares_cache), as of 2026-09-04. 33.2% of shares outstanding — 361.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: EXTREME (20% or more of the float). Float check: confirmed — 33.2% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 4.13 days to cover — 120,015,346 shares short ÷ 29,047,980 average daily volume (the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -608,7 +608,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "not read"
+      "v": "4.13 — 120,015,346 shares short ÷ 29,047,980 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -620,9 +620,9 @@
      }
     ],
     "extreme": {
-     "text": "🩳 SI EXTREME 33.6% float · 9/15",
+     "text": "🩳 SI EXTREME 33.6% float · 4.1d · 9/15",
      "short": "🩳 SI EXTREME 33.6% float",
-     "title": "🩳 EXTREME short interest — 33.6% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 33.2% of shares outstanding (361.7M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). Float basis: the float stored with this short-interest record at the last warm (357,328,674 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
+     "title": "🩳 EXTREME short interest — 33.6% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 33.2% of shares outstanding (361.7M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 4.13 days to cover — 120,015,346 shares short ÷ 29,047,980 average daily volume (the provider's window). Float basis: the float stored with this short-interest record at the last warm (357,328,674 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
      "basis": "si_doc_float"
     }
    }
@@ -683,7 +683,7 @@
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
     "chip": "🩳 SI High 36.4% float · float unconfirmed · 1.0d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 193,393 shares short (no prior settlement on file). 36.4% of float — float 531.2K, yfinance floatShares (shares_cache), as of 2026-09-04. 8.1% of shares outstanding — 2.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: High — 36.4% of the float, held below EXTREME until the float is confirmed. Float check: float unconfirmed — the float on file (531,210 shares, yfinance floatShares (shares_cache), as of 2026-09-04) puts short interest at 36.4% of the float, but only 8.1% of all shares are short, under the 10% of shares outstanding that EXTREME also needs. 1.0 days to cover (shares short ÷ 193.4K average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 193,393 shares short (no prior settlement on file). 36.4% of float — float 531.2K, yfinance floatShares (shares_cache), as of 2026-09-04. 8.1% of shares outstanding — 2.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: High — 36.4% of the float, held below EXTREME until the float is confirmed. Float check: float unconfirmed — the float on file (531,210 shares, yfinance floatShares (shares_cache), as of 2026-09-04) puts short interest at 36.4% of the float, but only 8.1% of all shares are short, under the 10% of shares outstanding that EXTREME also needs. 1.00 days to cover — 193,393 shares short ÷ 193,393 average daily volume (the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -711,7 +711,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "1.00 — shares short ÷ 193,393 average daily volume (the provider's window)"
+      "v": "1.00 — 193,393 shares short ÷ 193,393 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -781,7 +781,7 @@
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
     "chip": "🩳 SI EXTREME 44.0% float · 1.0d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 391,224 shares short (no prior settlement on file). 44.0% of float — float 888.1K, yfinance floatShares (shares_cache), as of 2026-09-04. 14.6% of shares outstanding — 2.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: EXTREME (20% or more of the float). Float check: confirmed — 14.6% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 1.0 days to cover (shares short ÷ 391.2K average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 391,224 shares short (no prior settlement on file). 44.0% of float — float 888.1K, yfinance floatShares (shares_cache), as of 2026-09-04. 14.6% of shares outstanding — 2.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Tier: EXTREME (20% or more of the float). Float check: confirmed — 14.6% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 1.00 days to cover — 391,224 shares short ÷ 391,224 average daily volume (the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -809,7 +809,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "1.00 — shares short ÷ 391,224 average daily volume (the provider's window)"
+      "v": "1.00 — 391,224 shares short ÷ 391,224 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",
@@ -823,7 +823,7 @@
     "extreme": {
      "text": "🩳 SI EXTREME 44.0% float · 1.0d · 9/15",
      "short": "🩳 SI EXTREME 44.0% float",
-     "title": "🩳 EXTREME short interest — 44.0% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 14.6% of shares outstanding (2.7M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 1.0 days to cover (the provider's window). Float basis: the float stored with this short-interest record at the last warm (888,130 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
+     "title": "🩳 EXTREME short interest — 44.0% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 14.6% of shares outstanding (2.7M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 1.00 days to cover — 391,224 shares short ÷ 391,224 average daily volume (the provider's window). Float basis: the float stored with this short-interest record at the last warm (888,130 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
      "basis": "si_doc_float"
     }
    }
@@ -884,7 +884,7 @@
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
     "chip": "🩳 SI High 36.0% float · 1.0d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 36,000 shares short (no prior settlement on file). 36.0% of float — float 100.0K, yfinance floatShares (shares_cache), as of 2026-09-04. % of shares outstanding: not read. Tier: High — 36.0% of the float, held below EXTREME until the float is confirmed. Float check: not possible — shares outstanding is not on file, and EXTREME also needs at least 10% of shares outstanding. 1.0 days to cover (shares short ÷ 36.0K average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 36,000 shares short (no prior settlement on file). 36.0% of float — float 100.0K, yfinance floatShares (shares_cache), as of 2026-09-04. % of shares outstanding: not read. Tier: High — 36.0% of the float, held below EXTREME until the float is confirmed. Float check: not possible — shares outstanding is not on file, and EXTREME also needs at least 10% of shares outstanding. 1.00 days to cover — 36,000 shares short ÷ 36,000 average daily volume (the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -912,7 +912,7 @@
      },
      {
       "k": "Days to cover",
-      "v": "1.00 — shares short ÷ 36,000 average daily volume (the provider's window)"
+      "v": "1.00 — 36,000 shares short ÷ 36,000 average daily volume (the provider's window)"
      },
      {
       "k": "Freshness",

@@ -80,8 +80,11 @@ def test_only_gajjala_run_py_names_the_watch():
     # 🧾 2026-11-24 (spec accountability, WP-BE1 — verifier refix): accountability_api.py (My trades vs GG) reads the
     # Watch's owner-only answer (payload.owner_only_payload — one shape for every owner-only Gajjala route) and its
     # ticker normaliser (store.normalize). Pinned by the NEGATIVE below. Widened; nothing else may join (owner's note).
+    # 🏁 2026-11-26 (spec sitrack WP5, main-session suite gate): si_track.py (the 🩳 SI track record, display only)
+    # reads gajjala_watch.constants, runners (ran_of — the ONE winner engine) and vwap (minute_vwap). Pinned by
+    # test_gajjala_si_track_guards_2026_11_26. Widened; nothing else may join.
     assert hits == ["accountability_api.py", "alerts.py", "card_frames.py", "high_si.py", "high_si_cross.py",
-                    "live_events.py", "run.py", "tab.py"]
+                    "live_events.py", "run.py", "si_track.py", "tab.py"]
 
 
 def test_NEGATIVE_accountability_api_names_the_watch_only_for_owner_only_payload_and_normalize():

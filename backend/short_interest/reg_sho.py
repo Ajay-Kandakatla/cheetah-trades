@@ -40,6 +40,15 @@ math). The per-date history is READ now:
   * any failure in the history path serves `day count unknown` on the tag — never the fault payload.
 A rule date, not a price read. DISPLAY ONLY. UNMEASURED.
 
+THE RUN'S FIRST DAY (2026-11-26, spec sitrack §3.4 A5; Ajay: "can we make sure in the future these # are accurate ?").
+A name on every list of the window read `day 30+` — its first day was knowable, the app did not read far enough back.
+  * only names a caller ASKED about through `payload(check=…)` are walked (`_note_asks`, in-process, newest
+    RS_CHECK_MAX kept, never stored); a name is never walked because it merely sits on a list;
+  * the same worker, right AFTER `backfill_history`, walks older lists for them (`extend_runs`) inside ONE call budget
+    (RS_HIST_MAX_GETS a round), Nasdaq first; a market stops the moment its asked names are resolved or blocked;
+  * one doc per walked name (`kind: "runstart"`); `ext_due` is the ONE definition of done; the read adds a third
+    bounded `find` {"kind": "runstart", "on_through": {"$gte": …}} and `reg_sho_runs.extend_run` reads it.
+
 TRAPS (measured 2026-11-22, see docs/gajjala/hard_to_borrow_reg_sho_2026_11_22.md):
   * Nasdaq "no file" is HTTP 302 to /Trader.aspx?id=http404 — never a 404, so
     requests always pass allow_redirects=False.
@@ -112,6 +121,9 @@ RS_HIST_MAX_TRIES = 3            # asks of one hole at the short spacing; then a
 RS_HIST_REASK_MIN = 1440         # minutes between two asks of a missing hole, and of an error hole past the tries
 RS_HIST_NOT_READ_MAX = 10        # unread dates listed per market in closeout.history.not_read
 HOLE_KIND = "nolist"             # doc kind of a recorded hole
+# the run's first day, read past the window (2026-11-26, spec sitrack §3.4 A5) — engineering constants, MINE
+RS_RUN_START_MAX_SETTLEMENT_DAYS = 250   # walk-back bound per asked name (about one year of settlement days)
+RUNSTART_KIND = "runstart"               # doc kind of a name's walked-back run start
 _ET = ZoneInfo("America/New_York")
 _DEFAULT = object()              # [C6] "resolve the house Mongo handle"; None now means ONLY "Mongo is down"
 _http = None                     # [C6] the ONE outside-call seam; None → requests.get (lazy import)
@@ -196,8 +208,14 @@ TITLE_RUN_REACHED = " On the list %d straight settlement days since %s. Day %d =
 TITLE_RUN_PAST = (" On the list %d straight settlement days since %s. Day %d was %s%s; it is still on the list %d "
                   "settlement %s later. %s. Staying listed means the total of fails is still over the level, not that "
                   "any one fail is that old — a name leaves a list only after %d straight settlement days back under it.")
-TITLE_RUN_OPEN_WINDOW = (" On every list read for the last %d settlement days (back to %s), so day %d has passed; its "
-                         "date is not known. %s.")
+TITLE_RUN_OPEN_WINDOW = (" On every list read for the last %d settlement days (back to %s), so day %d has passed; this "
+                         "app has read only those %d days, so the date is not known to it. %s.")
+# 2026-11-26 (sitrack §3.4): a `passed_open` run walked back past the window by the worker (an asked name only)
+TITLE_RUN_OPEN_READ = (" On every list read back to %s (%d settlement days), so day %d has passed. The lists before %s "
+                       "%s, so the first day is not known to this app. %s.")
+OPEN_READ_NOT_YET = "have not been read yet"            # blocked None — the walk has not finished
+OPEN_READ_FAILED = "could not be read"                  # blocked "missing" / "error"
+OPEN_READ_CAP = "are past the %d settlement days this app reads back"   # blocked "cap" — RS_RUN_START_MAX_SETTLEMENT_DAYS
 TITLE_RUN_OPEN_HOLE = (" On the list at least %d straight settlement days, so day %d has passed; its date is not known "
                        "— the %s list for %s has not been read. %s.")
 TITLE_RUN_UNKNOWN = " Days on the list: not known — the %s list for %s has not been read."
@@ -689,7 +707,7 @@ def _hist_blocked() -> bool:
 
 
 def _empty_history() -> dict:
-    return {"days": {}, "members": {}, "docs": {}, "holes": {}}
+    return {"days": {}, "members": {}, "docs": {}, "holes": {}, "ext": {}}
 
 
 def _members_of(doc) -> Optional[frozenset]:
@@ -730,6 +748,10 @@ def load_history(coll, loaded: dict) -> dict:
             out["holes"][("fetch", str(doc["source"]), iso)] = doc
     for mkt, days in out["days"].items():
         out["members"][mkt] = {d.isoformat(): _members_of(out["docs"].get((mkt, d.isoformat()))) for d in days}
+    # 2026-11-26 (sitrack §3.4): the walked-back run starts still contiguous with the window — ONE bounded find
+    for doc in coll.find({"kind": RUNSTART_KIND, "on_through": {"$gte": since}}):
+        if isinstance(doc, dict) and doc.get("market") and doc.get("symbol"):
+            out["ext"][(str(doc["market"]), str(doc["symbol"]))] = doc
     return out
 
 
@@ -924,7 +946,8 @@ def _history_view(coll, loaded: dict, now_et: datetime) -> tuple:
         return _empty_history(), [], False
 
 
-def _run_block(norm: str, mkt: str, hist: dict) -> dict:
+def _window_run(norm: str, mkt: str, hist: dict) -> dict:
+    """The run read from the window's lists alone (`reg_sho_runs.run_for`)."""
     try:
         days = (hist.get("days") or {}).get(mkt)
         if not days:
@@ -933,6 +956,21 @@ def _run_block(norm: str, mkt: str, hist: dict) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("reg_sho: run for %s failed: %s", norm, type(exc).__name__)
         return RUNS.unknown_block()
+
+
+def _ext_of(hist: dict, mkt: str, norm: str) -> Optional[dict]:
+    ext = (hist.get("ext") or {}).get((mkt, norm))
+    return ext if isinstance(ext, dict) else None
+
+
+def _run_block(norm: str, mkt: str, hist: dict) -> dict:
+    """The served run: the window's run, read past the window by a usable runstart doc (2026-11-26)."""
+    run = _window_run(norm, mkt, hist)
+    try:
+        return RUNS.extend_run(run, _ext_of(hist, mkt, norm))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: run extension for %s failed: %s", norm, type(exc).__name__)
+        return run
 
 
 def _closeout_block(hist: dict, todo: list, ok: bool) -> dict:
@@ -953,6 +991,204 @@ def _closeout_block(hist: dict, todo: list, ok: bool) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("reg_sho: closeout block failed: %s", type(exc).__name__)
         out["ok"] = False
+    return out
+
+
+# ───────────────────────────────────────────── the run's first day, read past the window (2026-11-26, sitrack §3.4)
+# Only names a caller ASKED about through payload(check=…) are walked. The asks live in this process (never in Mongo):
+# payload stays "Mongo reads only". An API restart empties them; the next card read refills them.
+_asks_lock = threading.Lock()
+_asks = {"seq": 0, "items": {}}                  # {(mkt, norm): (monotonic seconds, seq)}
+
+
+def _note_asks(pairs) -> None:
+    """Remember asked (mkt, norm) pairs, newest last; only the newest RS_CHECK_MAX are kept. Never stored."""
+    with _asks_lock:
+        items = _asks["items"]
+        for p in pairs or ():
+            try:
+                mkt, norm = str(p[0]), str(p[1])
+            except Exception:                                  # noqa: BLE001
+                continue
+            if not mkt or not norm:
+                continue
+            _asks["seq"] += 1
+            items.pop((mkt, norm), None)
+            items[(mkt, norm)] = (_mono(), _asks["seq"])
+        if len(items) > RS_CHECK_MAX:
+            keep = sorted(items.items(), key=lambda kv: kv[1], reverse=True)[:RS_CHECK_MAX]
+            _asks["items"] = dict(keep)
+
+
+def _asked() -> list:
+    """[(mkt, norm)], newest ask first."""
+    with _asks_lock:
+        return [k for k, _v in sorted(_asks["items"].items(), key=lambda kv: kv[1], reverse=True)]
+
+
+def ext_due(run: dict, ext, now_et) -> bool:
+    """Is there still work for this name? The ONE definition of done (spec sitrack §3.4):
+    no usable ext → due · `start` set → resolved · blocked "cap" → done for good · blocked "missing" / "error" → the
+    hole rule as it stands (`_hole_due`) · neither (a round ran out of budget) → due."""
+    if not RUNS.ext_usable(run, ext):
+        return True
+    if ext.get("start"):
+        return False
+    blocked = ext.get("blocked")
+    if blocked == "cap":
+        return False
+    if blocked in ("missing", "error"):
+        return _hole_due({"result": blocked, "tries": ext.get("tries"), "asked_at": ext.get("asked_at")}, now_et)
+    return True
+
+
+def _runstart_id(mkt: str, norm: str) -> str:
+    return "%s|%s|%s" % (RUNSTART_KIND, mkt, norm)
+
+
+def _list_on(coll, mkt: str, d: date) -> Optional[dict]:
+    return coll.find_one({"kind": "list", "market": mkt, "trade_date": d.isoformat()}, sort=_SORT)
+
+
+def _write_runstart(coll, nm: dict, now_iso: str) -> None:
+    prev = nm["prev"] or {}
+    blocked = nm["blocked"]
+    tries = 0
+    if blocked in ("missing", "error"):
+        same = prev.get("blocked") == blocked and prev.get("blocked_on") == _iso_or_none(nm["blocked_on"])
+        tries = (_hole_tries(prev) if same else 0) + 1
+    doc = {"_id": _runstart_id(nm["mkt"], nm["norm"]), "kind": RUNSTART_KIND, "market": nm["mkt"],
+           "symbol": nm["norm"], "start": _iso_or_none(nm["start"]), "on_from": nm["on_from"].isoformat(),
+           "on_through": nm["through"].isoformat(), "blocked": blocked, "blocked_on": _iso_or_none(nm["blocked_on"]),
+           "tries": tries, "asked_at": now_iso}
+    coll.replace_one({"_id": doc["_id"]}, doc, upsert=True)
+
+
+def _iso_or_none(d) -> Optional[str]:
+    return d.isoformat() if d else None
+
+
+def extend_runs(coll, now_et: Optional[datetime] = None, *, http=None, calls_left: Optional[int] = None) -> dict:
+    """One round of the run-start walk for the ASKED names whose window run is `passed_open` (no hole) and
+    `ext_due`. {"calls", "names", "resolved", "blocked", "seconds"}. Never raises.
+    Markets in registry order (Nasdaq first). Per market the walk reads one settlement day at a time, older than the
+    oldest day each open name was verified on, WHILE an asked name of that market is still open: the stored list doc
+    when held, else ONE fetch (`fetch_source` + `_write_found(..., backfilled=True)`). A READ list lacking a name
+    resolves it; a `missing` / `error` answer blocks every still-open name of the market at that date;
+    RS_RUN_START_MAX_SETTLEMENT_DAYS days verified → blocked "cap". A market stops the moment its asked names are all
+    resolved or blocked; a market with no open asked name makes no call. `calls_left` (default RS_HIST_MAX_GETS) bounds
+    the outside calls; a raising Mongo write trips the history breaker and ends the round."""
+    t0 = _mono()
+    out = {"calls": 0, "names": 0, "resolved": 0, "blocked": 0, "seconds": 0.0}
+    if coll is None or _hist_blocked():
+        return out
+    asked = _asked()
+    if not asked:
+        return out
+    now_et = _to_et(now_et)
+    now_iso = _utc_iso(now_et)
+    left = RS_HIST_MAX_GETS if calls_left is None else max(0, int(calls_left))
+    calls = {"n": 0}
+    try:
+        base = _resolve_http(http)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: run-start walk has no http client: %s", type(exc).__name__)
+        return out
+
+    def counted(url, **kw):
+        calls["n"] += 1
+        return base(url, **kw)
+
+    try:
+        loaded = load(coll)
+        hist = load_history(coll, loaded)
+        by_mkt = {}
+        for mkt, norm in asked:
+            run = _window_run(norm, mkt, hist)
+            if run.get("state") != "passed_open" or run.get("missing") is not None:
+                continue
+            ext = _ext_of(hist, mkt, norm)
+            usable = RUNS.ext_usable(run, ext)
+            if not ext_due(run, ext, now_et):
+                if usable and str(ext.get("on_through")) < str(run["through"]):
+                    moved = dict(ext)
+                    moved["on_through"] = run["through"]           # contiguous again: one write, no call
+                    try:
+                        coll.replace_one({"_id": _runstart_id(mkt, norm)}, moved, upsert=True)
+                    except Exception as exc:                   # noqa: BLE001
+                        _trip_breaker(exc)
+                        return out
+                continue
+            by_mkt.setdefault(mkt, []).append({
+                "mkt": mkt, "norm": norm, "prev": ext if usable else None,
+                "on_from": _as_date(ext.get("on_from") if usable else run["window_from"]),
+                "through": _as_date(run["through"]), "start": None, "blocked": None, "blocked_on": None})
+        deadline = t0 + RS_HIST_BUDGET_SEC
+        started = False
+        stop = False
+        for src, mkt, _ex, _f in all_markets():
+            names = by_mkt.get(mkt)
+            if stop or not names:
+                continue
+            out["names"] += len(names)
+            open_ = list(names)
+            while open_:
+                for nm in list(open_):
+                    if RUNS.settlement_days_between(nm["on_from"], nm["through"]) >= RS_RUN_START_MAX_SETTLEMENT_DAYS:
+                        nm["blocked"] = "cap"
+                        open_.remove(nm)
+                if not open_:
+                    break
+                nxt = {id(nm): RUNS.prev_settlement_day(nm["on_from"] - timedelta(days=1)) for nm in open_}
+                d = max(nxt.values())
+                engaged = [nm for nm in open_ if nxt[id(nm)] == d]
+                held = _list_on(coll, mkt, d)
+                members = _members_of(held)
+                word = None
+                if members is None:
+                    if calls["n"] + len(source_markets(src)) > left or _mono() > deadline:
+                        stop = True
+                        break
+                    if started:
+                        _pause(RS_HIST_PAUSE_SEC)
+                    started = True
+                    if held is not None:
+                        age = _age_min(held.get("fetched_at"), now_et)
+                        if age is not None and age >= RS_RETRY_MIN:
+                            got = _confirm_zero_row(coll, src, mkt, held, now_iso, http=counted)
+                            members = _members_of(_list_on(coll, mkt, d)) if got == "found" else None
+                        word = None if members is not None else "error"
+                    else:
+                        got = fetch_source(src, d, http=counted)
+                        if got["result"] == "found":
+                            skip = frozenset(m for m, _e, _f in source_markets(src)
+                                             if m != mkt and _list_on(coll, m, d) is not None)
+                            _write_found(coll, src, d, got, now_iso, backfilled=True, skip=skip)
+                            members = _members_of(_list_on(coll, mkt, d))
+                            word = None if members is not None else "error"   # an unconfirmed zero-row list
+                        else:
+                            word = "missing" if got["result"] == "missing" else "error"
+                if word is not None:
+                    for nm in open_:                                    # every still-open name of the market
+                        nm["blocked"], nm["blocked_on"] = word, d
+                    open_ = []
+                    break
+                for nm in engaged:
+                    if nm["norm"] in members:
+                        nm["on_from"] = d
+                    else:
+                        nm["start"] = nm["on_from"]                     # the READ list before it lacks the name
+                        open_.remove(nm)
+            for nm in names:
+                _write_runstart(coll, nm, now_iso)
+                if nm["start"] is not None:
+                    out["resolved"] += 1
+                elif nm["blocked"] is not None:
+                    out["blocked"] += 1
+    except Exception as exc:                                   # noqa: BLE001
+        _trip_breaker(exc)
+    out["calls"] = calls["n"]
+    out["seconds"] = round(_mono() - t0, 3)
     return out
 
 
@@ -990,10 +1226,15 @@ def kick_refresh(coll, now_et: Optional[datetime] = None, *, http=None) -> bool:
                 refresh_due(coll, now_et, http=http)
             except Exception as exc:                           # noqa: BLE001
                 log.warning("reg_sho: worker failed: %s", type(exc).__name__)
+            used = 0
             try:                                               # AFTER refresh_due, never inside it
-                backfill_history(coll, now_et, http=http)
+                used = int((backfill_history(coll, now_et, http=http) or {}).get("calls") or 0)
             except Exception as exc:                           # noqa: BLE001
                 log.warning("reg_sho: history worker failed: %s", type(exc).__name__)
+            try:                                               # AFTER backfill_history: ONE call budget a round
+                extend_runs(coll, now_et, http=http, calls_left=max(0, RS_HIST_MAX_GETS - used))
+            except Exception as exc:                           # noqa: BLE001
+                log.warning("reg_sho: run-start worker failed: %s", type(exc).__name__)
         finally:
             with _bg_lock:
                 _bg["running"] = False
@@ -1117,8 +1358,20 @@ def _run_words(exchange: str, run: dict) -> tuple:
                 LABEL_RUN_PAST % (rd, CLOSEOUT_WORD, d13), title + tails)
     if st == "passed_open":
         rd = RUN_DAY_OPEN % n
-        if run.get("missing") is None:
-            title = TITLE_RUN_OPEN_WINDOW % (n, SR._md(run["window_from"]), rule, _rule_sentence())
+        if run.get("missing") is None and run.get("read_back_to"):
+            blocked = run.get("blocked")
+            if blocked is None:
+                mid = OPEN_READ_NOT_YET
+            elif blocked in ("missing", "error"):
+                mid = OPEN_READ_FAILED
+            elif blocked == "cap":
+                mid = OPEN_READ_CAP % RS_RUN_START_MAX_SETTLEMENT_DAYS
+            else:
+                raise ValueError("blocked %r" % (blocked,))
+            back = SR._md(run["read_back_to"])
+            title = TITLE_RUN_OPEN_READ % (back, n, rule, back, mid, _rule_sentence())
+        elif run.get("missing") is None:
+            title = TITLE_RUN_OPEN_WINDOW % (n, SR._md(run["window_from"]), rule, n, _rule_sentence())
         else:
             title = TITLE_RUN_OPEN_HOLE % (n, rule, exchange, SR._md(run["missing"]), _rule_sentence())
         return (CHIP_RUN_OPEN % (rd, CLOSEOUT_WORD), SHORT_RUN_OPEN % (GLYPH, CLOSEOUT_WORD, rd),
@@ -1198,6 +1451,42 @@ def _source_entry(mkt: str, exchange: str, v: dict) -> dict:
             "behind": v["behind"], "stale": v["stale"], "error": v["error"], "text": _source_text(exchange, v)}
 
 
+def _due_asks(check, items: dict, hist: dict, now_et: datetime) -> tuple:
+    """(noted, due) over the `check` names (first RS_CHECK_MAX) whose WINDOW run (`_window_run`, the one
+    `extend_runs` reads — a resolved name's served run reads `passed`) is `passed_open` with no window hole.
+    `noted` = every such name, the not-due ones first so the due ones are the newest asks (the set keeps the newest
+    RS_CHECK_MAX); `due` = the `ext_due` subset, the only names that may start a worker. A resolved name is noted too
+    (refix 2026-11-26): after an API restart empties the ask set, the worker's round can still move its `on_through`
+    up (one write, no call) — else the doc falls behind the window and the tag drops back to `day 30+`.
+    Pure over the read's own blocks; nothing while the history breaker is open. Never raises."""
+    rest, due = [], []
+    try:
+        if _hist_blocked():
+            return [], []
+        seen = set()
+        for s in list(check):
+            k = str(s or "").strip().upper()
+            if not k or k in seen:
+                continue
+            if len(seen) >= RS_CHECK_MAX:
+                break
+            seen.add(k)
+            blk = items.get(norm_symbol(k))
+            if not isinstance(blk, dict):
+                continue
+            pair = (blk["market"], blk["symbol"])
+            run = _window_run(pair[1], pair[0], hist)          # the window's run, as `extend_runs` reads it
+            if not isinstance(run, dict) or run.get("state") != "passed_open" or run.get("missing") is not None:
+                continue
+            if pair in rest or pair in due:
+                continue
+            (due if ext_due(run, _ext_of(hist, pair[0], pair[1]), now_et) else rest).append(pair)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: asked names could not be read: %s", type(exc).__name__)
+        return [], []
+    return rest + due, due
+
+
 def payload(db=_DEFAULT, now: Optional[datetime] = None, *, check=None, kick: bool = True, http=None) -> dict:
     """THE served read — Mongo reads only, never an outside call."""
     now_et = _to_et(now)
@@ -1206,16 +1495,6 @@ def payload(db=_DEFAULT, now: Optional[datetime] = None, *, check=None, kick: bo
     coll = db[RS_COLL] if db is not None else None
     loaded = load(coll) if coll is not None else {"lists": {}, "states": {}}
     hist, todo, hist_ok = _history_view(coll, loaded, now_et)
-
-    refreshing = False                                         # the latest lists — the fault line reads this one
-    hist_refreshing = False
-    if coll is not None:
-        started = False
-        if kick and (any(is_due(src, loaded, now_et) for src in SOURCES) or todo):
-            started = kick_refresh(coll, now_et if now is not None else None, http=http)
-        refreshing = bool(started or _worker_running())
-        # [C2] only while a worker can make progress: running, just started, or the floor will let the next one start
-        hist_refreshing = bool(kick and todo and (started or _worker_running() or _floor_waiting()))
 
     views = {}
     sources = []
@@ -1238,6 +1517,28 @@ def payload(db=_DEFAULT, now: Optional[datetime] = None, *, check=None, kick: bo
             blk["run"] = run
             for k in alias_keys(norm):
                 items.setdefault(k, blk)
+
+    # 2026-11-26 (sitrack §3.4): the asked names — noted in-process only
+    # every checked passed_open name is noted (a resolved one still needs its on_through moved up); only a DUE one kicks
+    noted, asks = (_due_asks(check, items, hist, now_et) if (kick and check is not None and coll is not None and hist_ok)
+                   else ([], []))
+
+    refreshing = False                                         # the latest lists — the fault line reads this one
+    hist_refreshing = False
+    if coll is not None:
+        started = False
+        tried = False
+        if kick and (any(is_due(src, loaded, now_et) for src in SOURCES) or todo):
+            tried = True
+            started = kick_refresh(coll, now_et if now is not None else None, http=http)
+        if noted:
+            _note_asks(noted)
+        if asks:
+            if not tried:                                      # ONE more attempt; the running flag and floor decide
+                started = kick_refresh(coll, now_et if now is not None else None, http=http)
+        refreshing = bool(started or _worker_running())
+        # [C2] only while a worker can make progress: running, just started, or the floor will let the next one start
+        hist_refreshing = bool(kick and (todo or asks) and (started or _worker_running() or _floor_waiting()))
 
     faulting = [s["text"] for s in sources
                 if s["faults"] and (s["status"] == "failed"

@@ -33,7 +33,8 @@ FIXTURE = BACKEND / "tests" / "fixtures" / "short_interest_blocks_2026_10_03.jso
 FIX = json.loads(FIXTURE.read_text(encoding="utf-8"))
 FIX_TODAY = date.fromisoformat(FIX["today"])
 CASES = {c["name"]: c for c in FIX["cases"]}
-SMTK_CHIP = "🩳 SI 8.9% shs out · 1.0d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13"
+# 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+SMTK_CHIP = "🩳 SI 8.9% shs out · ≤1d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13"
 
 
 def _blk(rec, doc, today=TODAY):
@@ -133,7 +134,8 @@ def test_C1_splits_never_read_nothing_refused_chip_says_unchecked():
     sp = {"status": "failed", "read_at": None, "error": "HTTPError", "error_at": "2026-11-24T19:10:00Z", "strikes": 1}
     b = _blk(_rec(), _doc(sp=sp))
     assert b["pct_of_float"] == 79.05 and b["tier"] == "extreme"
-    assert b["chip"] == "🩳 SI EXTREME 79.0% float · 1.0d · 10/30 · 📄 S-4 11/13 · ❔ share count unchecked"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI EXTREME 79.0% float · ≤1d · 10/30 · 📄 S-4 11/13 · ❔ share count unchecked"
 
 
 def test_C1_sec_failed_no_covers_keeps_the_pct_and_the_title_says_not_checked():
@@ -268,7 +270,8 @@ def test_WETO_shares_up_14x_on_the_newer_count():
     b = _blk(rec, doc)
     # 2026-11-24 later: Yahoo's newer float (11-20) is the one divided by; the shares-up mark (growth since the
     # replaced float's date) stays
-    assert b["chip"] == "🩳 SI Low 1.6% float · 1.0d · 10/30 · ⚠️ float updated · ⚠️ shares up 14×"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI Low 1.6% float · ≤1d · 10/30 · ⚠️ float updated · ⚠️ shares up 14×"
     assert b["float_source"] == SR.YAHOO_LIVE_FLOAT_SOURCE and b["float_asof"] == "2026-11-20"
     assert b["float_suspect"] is None and b["headline_basis"] == "float"
     assert b["shares_source"] == SR.YAHOO_LIVE_SHARES_SOURCE and b["shares_asof"] == "2026-11-20"

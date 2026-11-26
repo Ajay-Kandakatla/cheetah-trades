@@ -208,6 +208,20 @@ NO_DATA_ERROR = "no / insufficient price data"
 ENGINE_ERROR = "engine error"         # the fixed text a raised build shows; never str(exc)
 PX_REL_TOL = 1e-6                     # "the same price" when comparing a snapshot bar to a stored bar
 
+# 🧨 The weak lid on the room read (2026-11-26, WHLR "room +6666279%": the room
+# was measured past 13 untested bands, the first one +154% away). Additive —
+# served ONLY on a ROOM / NEAR read with an untested band under the tested
+# target; the room number, the state and every sort / gate are unchanged.
+# The chip prints WEAK_TEXT after the room part; the hover leads with
+# WEAK_TITLE. Every % in both goes through _room_pct_words (the chip's own
+# rounding, frontend/src/lib/bounceRoom.ts pct). docs/supply_demand/room_weak_lids.md
+WEAK_TEXT = "%d× band +%s%% first"
+WEAK_TITLE = ("The room is measured to the first band tested %d times or more "
+              "(%s–%s, %d touches%s%s). %d untested %s under it; the nearest is "
+              "%s–%s, +%s%% (%d touch%s). The room gate reads the tested band.")
+WEAK_TITLE_AGE = ", last tested %d sessions ago"
+WEAK_TITLE_ATR = ", %s average daily ranges away"
+
 PARAMS = {"touch_tol_pct": TOUCH_TOL_PCT, "wick_pct": WICK_PCT, "bounce_min_pct": BOUNCE_MIN_PCT,
           "strong_pct": STRONG_PCT, "lookback_sessions": LOOKBACK_SESSIONS, "near_pct": NEAR_PCT,
           "demand_near_pct": DEMAND_NEAR_PCT,
@@ -296,6 +310,28 @@ def _slim_band(band: dict, with_strength: bool = True) -> dict:
     if with_strength:
         out["strength"] = float(_f(band.get("strength")) or 0.0)
     return out
+
+
+def _room_pct_words(v) -> Optional[str]:
+    """The ONE room-% format (2026-11-26): whole % when |v| >= 10, one decimal
+    under; a half rounds AWAY from zero on the exact binary value — exactly
+    JavaScript's toFixed, which the 🧨 chip's own `pct` uses
+    (frontend/src/lib/bounceRoom.ts), so the weak-lid suffix moves as rarely
+    as the room number beside it. No sign, no '%'. None for garbage."""
+    x = _f(v)
+    if x is None:
+        return None
+    scale = 1 if abs(x) >= 10 else 10
+    n, d = abs(x).as_integer_ratio()                      # the exact binary value, no float error
+    q, r = divmod(n * scale, d)
+    if 2 * r >= d:                                        # a half rounds away from zero
+        q += 1
+    sign = "-" if x < 0 else ""
+    return "%s%d" % (sign, q) if scale == 1 else "%s%d.%d" % (sign, q // 10, q % 10)
+
+
+def _price_words(v: float) -> str:
+    return "{:,.2f}".format(float(v))
 
 
 def _iso_day(x) -> Optional[str]:
@@ -515,6 +551,18 @@ def overhead_bands(bands: list, live: float, prev_close=None) -> list:
     return out
 
 
+def _target_source(bands: list, live: float, prev_close, first: dict) -> Optional[dict]:
+    """The stored band `first` (first_overhead's pick) came from, so the weak-lid
+    hover can read its `bars_since_test` (2026-11-26). The overhead rule is
+    per band, so `overhead_bands([b], …)` IS the rule applied to `b`; the
+    first band in doc order whose slim form equals `first` is the one
+    first_overhead picked (an earlier equal one would have been picked)."""
+    for b in bands or []:
+        if isinstance(b, dict) and overhead_bands([b], live, prev_close) == [first]:
+            return b
+    return None
+
+
 def first_overhead(overhead: list, live: float) -> Optional[dict]:
     """The band price meets FIRST going up: the one containing `live` (lowest
     lo when nested), else the lowest lo above it. None = clear."""
@@ -528,7 +576,19 @@ def first_overhead(overhead: list, live: float) -> Optional[dict]:
 
 def room_read(print_px, doc: dict, near_pct: float = NEAR_PCT) -> Optional[dict]:
     """{"state", "room_pct", "atr_days", "band", "at_highs"} for a valid
-    print; None when the print is unusable."""
+    print; None when the print is unusable.
+
+    🧨 Weak lid (2026-11-26, additive): a ROOM / NEAR read with an untested
+    band (alert_gates.is_proven_band False) between the print and the tested
+    target also carries
+        weak        alert_gates.first_weak_lid(bands, px, target lo) — the
+                    engine enterable and the push text already use
+        skipped     how many such untested bands sit there
+        target_age  the tested band's stored `bars_since_test` (None unknown)
+        weak_text   WEAK_TEXT  "1× band +154% first"
+        weak_title  WEAK_TITLE (the hover)
+    No untested band under the target → the dict is exactly as before (no new
+    key). state / room_pct / atr_days / band / at_highs are computed as before."""
     px = _f(print_px)
     if px is None or px <= 0:
         return None
@@ -546,10 +606,43 @@ def room_read(print_px, doc: dict, near_pct: float = NEAR_PCT) -> Optional[dict]
                 "at_highs": at_highs}
     atr = _f(doc.get("atr14")) or 0.0
     room_pct = (first["lo"] / px - 1.0) * 100.0
-    return {"state": "NEAR" if room_pct <= near_pct else "ROOM",
-            "room_pct": round(room_pct, 2),
-            "atr_days": round((first["lo"] - px) / atr, 1) if atr > 0 else None,
-            "band": band, "at_highs": at_highs}
+    out = {"state": "NEAR" if room_pct <= near_pct else "ROOM",
+           "room_pct": round(room_pct, 2),
+           "atr_days": round((first["lo"] - px) / atr, 1) if atr > 0 else None,
+           "band": band, "at_highs": at_highs}
+    out.update(_weak_lid(doc.get("bands") or [], px, doc.get("prev_close"), first, out["atr_days"]))
+    return out
+
+
+def _weak_lid(bands: list, px: float, prev_close, first: dict, atr_days) -> dict:
+    """The five weak-lid keys for a ROOM / NEAR read, or {} when no untested
+    band sits between the print and the tested target `first`."""
+    from . import alert_gates as _gates
+    weak = _gates.first_weak_lid(bands, px, first["lo"])
+    if not isinstance(weak, dict):
+        return {}
+    src = _target_source(bands, px, prev_close, first)
+    skipped = 0
+    for b in bands:
+        if not _gates._valid_band(b) or _gates.is_proven_band(b):
+            continue
+        if px < float(b["lo"]) < first["lo"]:
+            skipped += 1
+    age = None
+    if isinstance(src, dict):
+        a = _f(src.get("bars_since_test"))
+        age = int(a) if a is not None else None
+    pct_words = _room_pct_words(weak.get("pct"))
+    wt = int(weak.get("touches") or 0)
+    tt = int(first.get("touches") or 0)
+    title = WEAK_TITLE % (
+        _gates.LID_MIN_TOUCHES, _price_words(first["lo"]), _price_words(first["hi"]), tt,
+        WEAK_TITLE_AGE % age if age is not None else "",
+        WEAK_TITLE_ATR % "{:,}".format(atr_days) if atr_days is not None else "",
+        skipped, "band" if skipped == 1 else "bands",
+        _price_words(weak["lo"]), _price_words(weak["hi"]), pct_words, wt, "" if wt == 1 else "es")
+    return {"weak": weak, "skipped": skipped, "target_age": age,
+            "weak_text": WEAK_TEXT % (wt, pct_words), "weak_title": title}
 
 
 def demand_read(print_px, doc: dict, near_pct: float = DEMAND_NEAR_PCT) -> Optional[dict]:

@@ -153,7 +153,8 @@ def test_dfl_both_floats_suspect_not_refused_for_the_split():
     assert v["refused_reasons"] == [] and v["float_refused"] is None and v["float_pct_on_file"] is None
     b = blk(rec, doc)
     assert b["pct_of_float"] is None and b["pct_of_shares_out"] == 5.0
-    assert b["chip"] == "🩳 SI 5.0% shs out · 1.0d · 10/30 · ⚠️ float updated · ✂️ split 11/10"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI 5.0% shs out · ≤1d · 10/30 · ⚠️ float updated · ✂️ split 11/10"
 
 
 def test_NEGATIVE_dfl_with_a_good_newer_float_is_judged_across_the_split():

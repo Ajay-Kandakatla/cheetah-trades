@@ -135,11 +135,23 @@ def _iso(d) -> Optional[str]:
     return d.isoformat() if d else None
 
 
+def settlement_days_between(a: date, b: date) -> int:
+    """The count of settlement days d with a <= d <= b (0 when a > b)."""
+    n = 0
+    d = a
+    while d <= b:
+        if is_settlement_day(d):
+            n += 1
+        d += timedelta(days=1)
+    return n
+
+
 def unknown_block() -> dict:
     """The run block of state "unknown": days 0, every date None."""
     return {"state": "unknown", "days": 0, "start": None, "through": None, "window_from": None,
             "day11": None, "day13": None, "day13_late": None, "start_by": None, "missing": None,
-            "rule_days": REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, "first_buy_day": first_buy_day()}
+            "rule_days": REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, "first_buy_day": first_buy_day(),
+            "read_back_to": None, "blocked": None}
 
 
 def run_for(sym: str, days_desc: list, members: dict) -> dict:
@@ -181,5 +193,59 @@ def run_for(sym: str, days_desc: list, members: dict) -> dict:
            "window_from": _iso(days_desc[-1])}
     for k in _DATE_KEYS:
         out[k] = _iso(dates[k])
-    out.update({"missing": _iso(missing), "rule_days": rule, "first_buy_day": first_buy_day()})
+    out.update({"missing": _iso(missing), "rule_days": rule, "first_buy_day": first_buy_day(),
+                "read_back_to": None, "blocked": None})
+    return out
+
+
+# ───────────────────────────────────────────── the run's first day, read past the window (2026-11-26, spec sitrack §3.4)
+# A `passed_open` run (on every list of the window) is extended by a stored "runstart" doc the worker wrote after
+# walking older lists: {"start": iso|None, "on_from": iso, "on_through": iso, "blocked": None|"missing"|"error"|"cap"}.
+# `on_from` = the oldest settlement day the name was verified ON, contiguous back from `on_through`; `start` is set only
+# when the list of the settlement day before `on_from` was READ and lacks the name (then start == on_from).
+def ext_usable(run, ext) -> bool:
+    """ext is a dict AND its `on_through` reaches today's window (`run["window_from"]`) — contiguous with it."""
+    try:
+        if not isinstance(ext, dict) or not isinstance(run, dict):
+            return False
+        on_through = _date_of(ext.get("on_through"))
+        window_from = _date_of(run.get("window_from"))
+        if on_through is None or window_from is None or _date_of(ext.get("on_from")) is None:
+            return False
+        return on_through >= window_from
+    except Exception:                                          # noqa: BLE001
+        return False
+
+
+def _date_of(s) -> Optional[date]:
+    try:
+        return date.fromisoformat(str(s)[:10]) if s else None
+    except ValueError:
+        return None
+
+
+def extend_run(run: dict, ext) -> dict:
+    """The run block read past the window. Only a `passed_open` run with no hole in its window (`missing` None) and a
+    usable `ext` changes: `ext["start"]` set → state "passed" with the true start, days and dates; `start` None →
+    state stays `passed_open`, days counted back to `on_from`, `read_back_to` = on_from, `blocked` copied. Anything
+    else → `run` unchanged."""
+    if not isinstance(run, dict) or run.get("state") != "passed_open" or run.get("missing") is not None:
+        return run
+    if not ext_usable(run, ext):
+        return run
+    through = _date_of(run.get("through"))
+    if through is None:
+        return run
+    out = dict(run)
+    start = _date_of(ext.get("start"))
+    if start is not None:
+        dates = closeout_dates(start)
+        out.update({"state": "passed", "start": _iso(start), "days": settlement_days_between(start, through),
+                    "read_back_to": None, "blocked": None})
+        for k in _DATE_KEYS:
+            out[k] = _iso(dates[k])
+        return out
+    on_from = _date_of(ext.get("on_from"))
+    out.update({"days": settlement_days_between(on_from, through),
+                "read_back_to": _iso(on_from), "blocked": ext.get("blocked")})
     return out

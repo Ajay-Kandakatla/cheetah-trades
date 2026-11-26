@@ -355,3 +355,15 @@ Not a book method. Not a buy signal. Not advice.
 `in_demand_read` and `demand_read` read the PADDED floor (`level_pad.in_band` / `under_floor`); `off_floor_pct` stays measured from the drawn lo (display). `overhead_bands`, `room_read` and `is_touch` are unchanged (resistance and touch reads keep the drawn edges).
 
 Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.
+
+## 2026-11-26 — 🧨 the weak lid on `room_read` (A7)
+
+`room_read` adds `weak`, `skipped`, `target_age`, `weak_text`, `weak_title` ONLY on a ROOM /
+NEAR read with an untested band (`alert_gates.is_proven_band` False) between the print and the
+tested target. Everything the sort and the gates read is computed exactly as before; with no
+such band the dict is byte-identical (no new key). `overhead_bands` is not edited; the tested
+band's stored `bars_since_test` is found by `_target_source` (the overhead rule applied band by
+band, first match in doc order = `first_overhead`'s pick). The percent words use `_room_pct_words` (the chip's own `toFixed` rule).
+WHLR at 0.425944: `room_pct` 6666278.68 unchanged · `weak_text` "1× band +154% first" ·
+13 skipped · target last tested 187 sessions ago. Canonical: `docs/supply_demand/room_weak_lids.md`
+§2026-11-26. Tests: `backend/tests/test_bounce_room_weak_lid_2026_11_26.py`.

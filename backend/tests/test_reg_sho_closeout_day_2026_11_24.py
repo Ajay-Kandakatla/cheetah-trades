@@ -100,6 +100,7 @@ def seam(monkeypatch):
     monkeypatch.setattr(RS, "_bg", {"running": False, "last_start": None, "thread": None})
     monkeypatch.setattr(RS, "_hist", {"blocked_until": None})
     monkeypatch.setattr(RS, "_pause", lambda s: None)
+    monkeypatch.setattr(RS, "_asks", {"seq": 0, "items": {}})       # 2026-11-26: the in-process ask set
     yield calls
     t = RS._bg.get("thread")
     if t is not None:
@@ -383,7 +384,8 @@ def test_worked_passed_open_strings():
     assert it["label"] == ("🔒 Hard to borrow · Reg SHO threshold security · Nasdaq list for 11/20 · day 30+ · "
                            "close-out day passed · still on the list")
     assert it["title"] == prefix("ZZZT") + (" On every list read for the last 30 settlement days (back to 10/8), so "
-                                            "day 13 has passed; its date is not known. " + RULE_S + "." + TAILS)
+                                            "day 13 has passed; this app has read only those 30 days, so the date is "
+                                            "not known to it. " + RULE_S + "." + TAILS)     # reworded 2026-11-26
 
 
 def test_worked_passed_open_hole_strings():
@@ -481,7 +483,7 @@ def test_load_history_reads_nothing_when_no_list_is_held():
             raise AssertionError("no read expected: %s" % flt)
     coll = NoFind()
     loaded = RS.load(StandIn())
-    assert RS.load_history(coll, loaded) == {"days": {}, "members": {}, "docs": {}, "holes": {}}
+    assert RS.load_history(coll, loaded) == {"days": {}, "members": {}, "docs": {}, "holes": {}, "ext": {}}
     assert RS.load_history(None, loaded)["days"] == {}
 
 
@@ -1098,8 +1100,11 @@ def test_the_pick_moves_with_the_rule_days(monkeypatch):
 # WIDENED 2026-11-24 (SPEC sissr §3.3, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly looking for"):
 # si_ssr_names.py reads the SAME payload(kick=False) to TAG names past their close-out date (a source of names GG's
 # rules read, HIS CALL #0) — it never kicks the worker, never reads the run engine and never gates on it.
+# WIDENED 2026-11-26 (spec sitrack WP5, main-session suite gate): si_track.py (the 🏁 SI track record) records the 🔒
+# fields with the SAME payload(kick=False) on the session's own night — display only; it never kicks, never reads the
+# run engine; pinned by test_gajjala_si_track_guards_2026_11_26.
 DISPLAY_READERS = {"chart_maps/gajjala/high_si.py", "chart_maps/gajjala/high_si_cross.py",
-                   "chart_maps/gajjala/si_ssr_names.py"}
+                   "chart_maps/gajjala/si_ssr_names.py", "chart_maps/gajjala/si_track.py"}
 
 
 def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():

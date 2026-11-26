@@ -233,3 +233,12 @@ Tests: `backend/tests/test_si_float_newer_fixes_2026_11_24.py` (cases a and b, n
 **Live re-probe, 11-24 16:49 ET (read-only, api container; this branch's `short_interest` from `/tmp/refix3_wt`, main from `/app`; 72 stored basis docs, 107 stored reads):** flags lost vs main **none**; 42 names without a newer float byte-identical to main; tiers as in round 2 (GMEX, GYGY leave High; INV EXTREME → High; BAK Moderate → Low; WETO → Low 1.64%; none enter). 🩳 High SI basis_text: **LABT, SMTK on main and on this branch**. The refusal rows of LABT, OMH and SRTM are now byte-identical to main; the 27 rows that differ are the non-refused names whose % of float uses the newer float.
 
 Tests: `backend/tests/test_si_float_newer_refix3_2026_11_24.py`; the KITT `float_pct_on_file` pins in `test_si_float_newer_2026_11_24.py` and `test_si_basis_math_2026_11_24.py` move from 12.64 to 3.69 (main's value).
+
+## 2026-11-26 — 📄 events not copies, S-11, same-day filings, the "shares up" baseline ("can we make sure in the future these # are accurate ?")
+
+Full write-up: `docs/short_interest/chip_accuracy_2026_11_26.md` (spec sitrack rev 2, package be-si-chip). What moves in THIS doc's rules:
+
+- **📄 counts events.** Stored filing rows now carry `doc` / `file` / `accn` / `with`; `basis_math.filing_events` folds one prospectus document filed under several registration files into one event, and drops it when the issuer filed a report that day (the report re-filed). WHLR `📄 424B3 11/24 +18` → `📄 8-K 3.02 11/20 +4`. Rows stored before 2026-11-26 count as before and say "not yet checked for copies".
+- **S-11 / S-11MEF** join `FILING_REGISTRATION_FORMS` (the "no kind" list above loses S-11). No F-11 form exists.
+- **The dilution window is `>=` the anchor** (was `>`): a filing ON the float's (or share count's) date is counted and labelled "same day — which came first is not known". The charter title line reads the same events.
+- **No usable float → the "shares up" baseline is the larger of the record's count and the SEC cover dated on or before it** (same split side). The float branch, step 3's count and `FLOAT_STALE_WHEN` are unchanged. `basis.growth.record_under` names the record's own count. `fell` reads the raised baseline [C8].

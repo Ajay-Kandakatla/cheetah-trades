@@ -273,7 +273,10 @@ def test_NEGATIVE_the_1_minute_pass_stores_no_prior_tail():
 
 PRIOR_RX = re.compile(r"\b(?:bars|curves|vol_avg)\d*_prior\b|\btile_prior_payload\b|\bRS_TILE_PRIOR_")
 # WIDENED 2026-11-18 (🧨 divergence spec §3.3): divergence.from_tile reads bars5_prior / curves5_prior for the backfill
-PRIOR_ALLOWED = {"bars.py", "run.py", "tab.py", "squeeze_marks.py", "constants.py", "divergence.py"}
+# WIDENED 2026-11-26 (spec sitrack WP5, main-session suite gate): si_track.py reads tile.bars5_prior for the prior
+# regular close and rebuilds the same tail through bars.tile_prior_payload in its 1-minute stand-in read — display only; pinned by
+# test_gajjala_si_track_guards_2026_11_26 (no rule / gate / alert module imports si_track)
+PRIOR_ALLOWED = {"bars.py", "run.py", "tab.py", "squeeze_marks.py", "constants.py", "divergence.py", "si_track.py"}
 
 
 def _readers(texts: dict) -> set:

@@ -39,7 +39,8 @@ NOW1 = datetime(2026, 11, 24, 19, 30, tzinfo=timezone.utc)                      
 NOW2 = NOW1 + timedelta(minutes=SB.SB_ERROR_RETRY_MIN + 1)
 KEY = "SYNTHKEYsibasis"
 ALLOWED_HOSTS = {"data.sec.gov", "api.massive.com"}
-SMTK_CHIP = "🩳 SI 8.9% shs out · 1.0d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13"
+# 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+SMTK_CHIP = "🩳 SI 8.9% shs out · ≤1d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13"
 MOVED = {"SMTK", "LABT", "KITT", "SMX"}                 # spec §7 #1 (C): the four that lose the % of float
 # 2026-11-24 later ("Is GMEX float accurate?") — the names whose captured Yahoo row holds a NEWER, different float than the
 # SI record: basis_math.newer_float makes it the one divided by (the splits read is held for all of them); the dilution

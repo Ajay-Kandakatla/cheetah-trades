@@ -18986,6 +18986,338 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🩳 chip accuracy (2026-11-26): 📄 events not copies, S-11, >= the anchor, dtc_computed, 🔒 extend_runs only in kick_refresh, 🧨 weak lid additive',
+    file: '../backend/short_interest/basis_math.py',
+    // Ajay 2026-11-26, verbatim: "can we make sure in the future these # are accurate ?" (the 🩳 / 🔒 / ⚠️ / 📄 / 🧨 chips on
+    // Gajjala cards, after WHLR and AKAN showed wrong numbers). Spec sitrack rev 2 §3.1-§3.5, §4 main-session. ONE engine
+    // per concept: basis_math.filing_events counts 📄 EVENTS (E1 one document, E2 a multi-file document on a report day is
+    // the report re-filed), read.dtc_computed is the ONE days-to-cover division (si_track reads it by name), the 🔒 walk
+    // (reg_sho.extend_runs) runs ONLY in the kick_refresh worker after backfill_history (payload stays Mongo reads only),
+    // the 🧨 weak lid is ADDITIVE on room_read (room_pct untouched; roomLabel never prints it), and the BE
+    // _room_pct_words case list equals the FE pct (toFixed). Display only.
+    checks: (bm) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyFn = (s, name) => {
+        const at = s.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return '';
+        const rest = s.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const tsFn = (s, name) => {
+        const at = s.search(new RegExp(`^(?:export )?function ${name}\\(`, 'm'));
+        if (at < 0) return '';
+        const end = s.indexOf('\n}\n', at);
+        return end < 0 ? s.slice(at) : s.slice(at, end + 2);
+      };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const count = (s, re) => (s.match(re) || []).length;
+      const S = '../backend/short_interest/';
+      const code = pyCode(bm);
+
+      // A1 — 📄 counts EVENTS, never copies
+      if (count(code, /^def filing_events\(filings, anchor, cap=None\)/gm) !== 1) errs.push('basis_math.py must define filing_events(filings, anchor, cap=None) exactly once (the ONE 📄 event counter)');
+      const fe = pyCode(pyFn(bm, 'filing_events'));
+      if (!/if len\(x\["files"\]\) >= 2 and any\(r\["with"\] for r in rs\):/.test(fe)) errs.push('filing_events lost E2 — a document under two or more files on a report day is the report re-filed (no event)');
+      if (!/out\["events"\]\.append\(_event\(rs\[0\], a, len\(rs\) - 1\)\)/.test(fe)) errs.push('filing_events lost E1 — one document = ONE event, its other rows copies');
+      const vd = pyCode(pyFn(bm, 'verdict'));
+      if (!/ev = filing_events\(filings, anchor, cap=sec\.get\("filings_cap"\)\)/.test(vd)) errs.push('basis_math.verdict must read the 📄 flag from filing_events(filings, anchor, cap=…)');
+      if (!/dil, charter = ev\["events"\], ev\["charter"\]/.test(vd)) errs.push('basis_math.verdict must count ev["events"] — never the stored rows (copies)');
+      if (/len\(filings\)/.test(vd)) errs.push('basis_math.verdict counts len(filings) — the copies come back');
+
+      // A2 — S-11 / S-11MEF are registrations; no F-11 form exists; exact families only
+      const reg = /^FILING_REGISTRATION_FORMS = \(([^)]*)\)/m.exec(code);
+      const forms = reg ? [...reg[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+      if (!reg) errs.push('basis_math.py lost FILING_REGISTRATION_FORMS = (…)');
+      for (const f of ['S-11', 'S-11MEF', 'S-1', 'F-1']) if (reg && !forms.includes(f)) errs.push(`FILING_REGISTRATION_FORMS must hold "${f}"`);
+      if (forms.includes('F-11')) errs.push('FILING_REGISTRATION_FORMS holds "F-11" — EDGAR has no F-11 form');
+      const fk = pyCode(pyFn(bm, 'filing_kind'));
+      if (!/if base in FILING_REGISTRATION_FORMS:/.test(fk)) errs.push('filing_kind must match registrations EXACTLY (base in FILING_REGISTRATION_FORMS) — "S-1" never catches "S-11" by prefix');
+      if (/startswith\(FILING_REGISTRATION_FORMS\)/.test(fk)) errs.push('filing_kind matches registrations by prefix — "S-1" would catch "S-11"');
+
+      // A3 — a filing dated ON the anchor counts (>=), labelled same day
+      if (!/if f\["filed"\] < a or /.test(fe)) errs.push('filing_events must skip only rows filed BEFORE the anchor (f["filed"] < a) — a same-day filing counts');
+      if (/f\["filed"\] <= a\b/.test(fe)) errs.push('filing_events drops a filing dated ON the anchor (<=) — AKAN\'s 11/20 F-1/A');
+      if (!/"same_day": f\["filed"\] == anchor/.test(pyCode(pyFn(bm, '_event')))) errs.push('basis_math._event must mark same_day = filed on the anchor');
+
+      // A4 — ONE days-to-cover division, FINRA's floor said in words, si_track reads it by name
+      const rd = quiet(`${S}read.py`), rdCode = pyCode(rd);
+      if (count(rdCode, /^def dtc_computed\(b\) -> Optional\[float\]:/gm) !== 1) errs.push('read.py must define dtc_computed(b) -> Optional[float] exactly once (FROZEN — si_track imports it)');
+      for (const fn of ['chip_text', 'title_text', 'rows_for']) if (!/\bdtc_computed\(/.test(pyCode(pyFn(rd, fn)))) errs.push(`read.${fn} must read days to cover through dtc_computed(`);
+      if (!/^DTC_FLOOR_NOTE = [^\n]*% \(DTC_FINRA_FLOOR, DTC_FINRA_FLOOR\)/m.test(rdCode)) errs.push('read.DTC_FLOOR_NOTE must be built from DTC_FINRA_FLOOR (no typed 1.00)');
+      const sit = quiet('../backend/chart_maps/gajjala/si_track.py'), sitCode = pyCode(sit);
+      if (!/getattr\(SR, "dtc_computed", None\)/.test(sitCode)) errs.push('si_track.py must read days to cover through SR.dtc_computed by name');
+      if (/avg_daily_volume"?\)?\s*[^\n]*\/|\/\s*[^\n]*avg_daily_volume/.test(sitCode)) errs.push('si_track.py divides by avg_daily_volume itself — a second days-to-cover formula');
+
+      // A5 — the 🔒 run-start walk: ONLY inside kick_refresh, after backfill_history; payload / _note_asks write nothing
+      const rs = quiet(`${S}reg_sho.py`), rsCode = pyCode(rs);
+      const calls = count(rsCode.replace(/^def extend_runs\(/m, ''), /\bextend_runs\(/g);
+      const kr = pyCode(pyFn(rs, 'kick_refresh'));
+      if (calls !== 1 || count(kr, /\bextend_runs\(/g) !== 1) errs.push(`reg_sho.extend_runs( must be called exactly once, inside kick_refresh (found ${calls} call(s), ${count(kr, /\bextend_runs\(/g)} in kick_refresh)`);
+      const bi = kr.search(/\bbackfill_history\(/), ei = kr.search(/\bextend_runs\(/);
+      if (bi < 0 || ei < 0 || ei < bi) errs.push('kick_refresh must run extend_runs AFTER backfill_history (ONE call budget a round)');
+      if (!/calls_left=max\(0, RS_HIST_MAX_GETS - used\)/.test(kr)) errs.push('kick_refresh must hand extend_runs the round\'s remaining budget: calls_left=max(0, RS_HIST_MAX_GETS - used)');
+      for (const fn of ['payload', 'refresh_due', 'backfill_history', '_note_asks']) {
+        if (/\bextend_runs\(/.test(pyCode(pyFn(rs, fn)))) errs.push(`reg_sho.${fn} calls extend_runs — the walk runs only in the kick_refresh worker`);
+      }
+      const WRITE = /\.(insert_one|insert_many|update_one|update_many|replace_one|delete_one|delete_many|bulk_write|find_one_and_\w+)\(|\b_write_\w+\(/;
+      for (const fn of ['payload', '_note_asks']) {
+        const body = pyCode(pyFn(rs, fn));
+        if (!body) errs.push(`reg_sho.py lost def ${fn}(`);
+        else if (WRITE.test(body)) errs.push(`reg_sho.${fn} holds a Mongo write — the read stays Mongo reads only (the asks live in the process)`);
+      }
+      const walk = (dir, out = []) => {
+        for (const e of readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true })) {
+          if (['.venv', 'tests', '__pycache__', 'node_modules', '.pytest_cache', 'data'].includes(e.name) || e.name.startsWith('.')) continue;
+          const p = `${dir}/${e.name}`;
+          if (e.isDirectory()) walk(p, out);
+          else if (e.name.endsWith('.py')) out.push(p);
+        }
+        return out;
+      };
+      for (const f of walk('../backend')) {
+        if (f.endsWith('short_interest/reg_sho.py')) continue;
+        if (/\bextend_runs\(/.test(pyCode(quiet(f)))) errs.push(`${f} calls extend_runs — only reg_sho.kick_refresh may (an outside call per read)`);
+      }
+
+      // A7 — the 🧨 weak lid is ADDITIVE: room_read keeps room_pct, the weak keys come from _weak_lid, roomLabel never prints it
+      const br = quiet('../backend/supply_demand/bounce_room.py');
+      const rr = pyCode(pyFn(br, 'room_read')), wl = pyCode(pyFn(br, '_weak_lid'));
+      if (!/"room_pct": round\(room_pct, 2\),/.test(rr)) errs.push('bounce_room.room_read must still serve "room_pct": round(room_pct, 2) — the number stays');
+      const up = rr.indexOf('out.update(_weak_lid(');
+      if (up < 0) errs.push('bounce_room.room_read must add the weak lid through out.update(_weak_lid(…))');
+      else if (/\broom_pct\b/.test(rr.slice(up + 'out.update(_weak_lid('.length).replace(/^[^\n]*\n/, ''))) errs.push('bounce_room.room_read touches room_pct after the weak lid is added');
+      if (!wl) errs.push('bounce_room.py lost def _weak_lid(');
+      if (/\broom_pct\b/.test(wl)) errs.push('bounce_room._weak_lid names room_pct — the weak lid never moves the room number');
+      if (!/_gates\.first_weak_lid\(bands, px, first\["lo"\]\)/.test(wl)) errs.push('bounce_room._weak_lid must read alert_gates.first_weak_lid (the ONE weak-lid engine)');
+      const fe2 = quiet('src/lib/bounceRoom.ts');
+      const rl = tsCode(tsFn(fe2, 'roomLabel'));
+      if (!rl) errs.push('lib/bounceRoom.ts lost roomLabel');
+      if (/weak/.test(rl)) errs.push('lib/bounceRoom.roomLabel must hold no weak_text — the Catalysts and demand-panel words do not move');
+      if (!/servedText\(room\?\.weak_text\)/.test(tsCode(tsFn(fe2, 'explosiveChipText')))) errs.push('lib/bounceRoom.explosiveChipText must print the SERVED weak_text (servedText guard)');
+
+      // A7 — the BE _room_pct_words case list equals the FE pct (|v| >= 10 → toFixed(0), else toFixed(1))
+      const pctBody = tsCode(tsFn(fe2, 'pct'));
+      const PCT = "return `${v >= 0 ? '+' : ''}${Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1)}%`;";
+      if (!pctBody.includes(PCT)) errs.push('lib/bounceRoom.pct changed — re-check it against bounce_room._room_pct_words');
+      const bt = quiet('../backend/tests/test_bounce_room_weak_lid_2026_11_26.py');
+      const cases = [];
+      for (const fn of ['test_room_pct_words_case_list', 'test_room_pct_words_matches_tofixed_on_the_binary_value']) {
+        const m = new RegExp(`@pytest\\.mark\\.parametrize\\("v, words", \\[([\\s\\S]*?)\\]\\)\\s*\\ndef ${fn}\\(`).exec(bt);
+        if (!m) { errs.push(`test_bounce_room_weak_lid_2026_11_26.py lost the ${fn} case list`); continue; }
+        for (const c of m[1].matchAll(/\((-?[\d.]+), "([^"]+)"\)/g)) cases.push([Number(c[1]), c[2]]);
+      }
+      if (cases.length < 7) errs.push(`the _room_pct_words case list holds ${cases.length} cases — expected the WP3 list (at least 7)`);
+      for (const [v, words] of cases) {
+        const js = Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(1);
+        if (js !== words) errs.push(`_room_pct_words(${v}) == "${words}" but the FE pct prints "${js}"`);
+      }
+
+      // the ✨ — his words verbatim, curly quotes, past index 100, right above the 🏁 SI track record entry
+      const ID = 'gajjala-si-chip-accuracy-2026-11-26';
+      const H = 'can we make sure in the future these # are accurate ?';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        if (lab[2] !== '2026-11-26') errs.push(`the 🩳 chip ✨ addedAt must be 2026-11-26 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala&sub=high_si') errs.push(`the 🩳 chip ✨ route must be /chart-maps?tab=gajjala&sub=high_si (found ${lab[3]})`);
+        if (!lab[1].includes(`“${H}”`)) errs.push(`the 🩳 chip ✨ must quote him verbatim in curly quotes: “${H}”`);
+        for (const w of ['+18 → +4', '2.3×', 'Not advice.']) if (!lab[1].includes(w)) errs.push(`the 🩳 chip ✨ must say ${w} (the lost ⚠️ / the 📄 drop are told, spec §6 #4)`);
+        if (/bounc/i.test(lab[1])) errs.push('the 🩳 chip ✨ must never say bounce — reversal');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-si-track-record-2026-11-26') errs.push(`the ✨ '${ID}' must sit right above the 🏁 SI track record entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // ship together
+      for (const f of ['../backend/tests/test_si_chip_accuracy_2026_11_26.py', '../backend/tests/test_reg_sho_run_start_2026_11_26.py',
+        '../backend/tests/test_bounce_room_weak_lid_2026_11_26.py', '../backend/tests/fixtures/sec_submissions_whlr_2026_11_26.json',
+        '../backend/tests/fixtures/sec_submissions_akan_2026_11_26.json', 'src/lib/bounceRoom.weak_lid_2026_11_26.test.ts',
+        'src/lib/outerChips.weak_lid_2026_11_26.test.ts', 'src/components/GajjalaWatchTags.weak_lid_2026_11_26.test.tsx',
+        '../docs/short_interest/chip_accuracy_2026_11_26.md', '../docs/supply_demand/room_weak_lids_frontend_2026_11_26.md'])
+        if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
+  {
+    name: '🏁 🩳 SI track record (2026-11-26): fenced nightly, STEPS + crontab unchanged, gajjala_state only, 7 patterns (gap_up a shape), counted = listed_before, no prior_text / signal / edge, mounted inside GgHighSiPanel',
+    file: '../backend/chart_maps/gajjala/si_track.py',
+    // Ajay 2026-11-26, verbatim: "I want us to track these patters for future from SI like a track recprd with in SI stocks
+    // itself". Spec sitrack rev 2 §3.7, §4 main-session. A DESCRIPTIVE ledger, UNMEASURED: it pushes nothing, gates nothing,
+    // sorts nothing outside its own table. record_night runs in the nightly's OWN fence after 💧 (never in errors / the exit
+    // code); STEPS and the crontab line stay as they are (the crontab is host-mounted, a deploy does not ship it); storage is
+    // gajjala_state only; seven patterns each known before the open (gap_up is a day shape [C4]); only names on the list
+    // BEFORE the day are counted [C1]; the served block carries no prior_text and never the words signal / edge; the FE
+    // section sits INSIDE GgHighSiPanel (the 🩳 sub's ⓘ fold [OC1]) and types no word.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyFn = (s, name) => {
+        const at = s.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return '';
+        const rest = s.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const tsFn = (s, name) => {
+        const at = s.search(new RegExp(`^(?:export )?function ${name}\\(`, 'm'));
+        if (at < 0) return '';
+        const end = s.indexOf('\n}\n', at);
+        return end < 0 ? s.slice(at) : s.slice(at, end + 2);
+      };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const count = (s, re) => (s.match(re) || []).length;
+      const code = pyCode(src);
+      const G = '../backend/chart_maps/gajjala/';
+
+      // 1. the nightly — ONE fence after 💧, the import inside it; STEPS + the crontab line unchanged
+      const ng = quiet(`${G}nightly.py`), ngCode = pyCode(ng);
+      const main = pyCode(pyFn(ng, 'main'));
+      const FENCE = /\n {8}try:\s*\n {12}from \. import si_track as SIT\s*\n {12}out\["gajjala_si_track"\] = SIT\.record_night\(datetime\.now\(timezone\.utc\)\)\s*\n {8}except Exception as exc:\s*\n {12}log\.exception\("gajjala nightly: the SI track record failed"\)\s*\n {12}out\["gajjala_si_track"\] = \{"error": f"record: \{type\(exc\)\.__name__\}"\}\s*\n/;
+      const fm = FENCE.exec(main);
+      if (!fm) errs.push('nightly.main must run SIT.record_night in its OWN try / except (the import inside it, the error under gajjala_si_track)');
+      const vdAt = main.indexOf('out["gajjala_vol_dried"] = {"error"');
+      if (fm && (vdAt < 0 || fm.index < vdAt)) errs.push('nightly.main must run the 🏁 SI track record AFTER the 💧 vol-dried fence');
+      if (count(main, /out\["gajjala_si_track"\]/g) !== 2) errs.push('nightly.main may set out["gajjala_si_track"] only inside the fence (twice: the record, the error)');
+      if (/si_track[^\n]*errors|errors[^\n]*si_track/.test(main)) errs.push('nightly.main lets the SI track record reach out["errors"] — never in the exit code');
+      if (/^(from|import)\s[^\n]*si_track/m.test(ngCode)) errs.push('nightly.py imports si_track at module level — a broken module would move the exit code');
+      if (!/^STEPS = \("floats", "halts", "history", "bases", "grade"\)/m.test(ngCode)) errs.push('nightly.STEPS must stay ("floats", "halts", "history", "bases", "grade") — the 🏁 SI track record is no step');
+      const night = cronCommands(quiet('../backend/crontab')).filter((l) => /chart_maps\.gajjala\.nightly\b/.test(l));
+      const CRON = '15 20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly';
+      if (night.length !== 1 || night[0].trim().split(/\s+/).join(' ') !== CRON) errs.push(`backend/crontab must carry the ONE chart_maps.gajjala.nightly line unchanged ("${CRON}") — found ${JSON.stringify(night)}`);
+      if (cronCommands(quiet('../backend/crontab')).some((l) => /si_track/.test(l))) errs.push('backend/crontab names si_track — it rides the nightly (a deploy does not ship the crontab)');
+      const at20 = /^LEDGER_GRADE_AT_ET = "(\d\d:\d\d)"/m.exec(quiet(`${G}constants.py`));
+      if (!at20) errs.push('constants.LEDGER_GRADE_AT_ET = "HH:MM" not found');
+      else if (CRON.split(' ').slice(0, 2).reverse().map((x) => x.padStart(2, '0')).join(':') !== at20[1]) errs.push(`constants.LEDGER_GRADE_AT_ET (${at20[1]}) must equal the nightly crontab time`);
+
+      // 2. gajjala_state only — no new collection, store.py names no si_track
+      const colls = [...code.matchAll(/\bST\.([A-Z_]+)\b/g)].map((m) => m[1]);
+      if (!colls.length) errs.push('si_track.py names no store collection (ST.STATE expected)');
+      for (const c of new Set(colls)) if (c !== 'STATE') errs.push(`si_track.py names ST.${c} — gajjala_state (ST.STATE) only`);
+      if (/\.db\[|get_collection\(|\bcreate_collection\(/.test(code)) errs.push('si_track.py opens a collection by hand — gajjala_state through the store only');
+      for (const m of code.matchAll(/\bst\.coll\(([^)]*)\)/g)) if (m[1].trim() !== 'ST.STATE') errs.push(`si_track.py calls st.coll(${m[1]}) — ST.STATE only`);
+      const store = quiet(`${G}store.py`);
+      if (!/^STATE = "gajjala_state"/m.test(store)) errs.push('store.STATE must stay "gajjala_state"');
+      if (/si_track/.test(pyCode(store))) errs.push('store.py names si_track — no new collection, no store edit');
+
+      // 3. seven patterns, each known before the open, in the spec's order; gap_up is a day SHAPE, never a pattern
+      const block = (name) => {
+        const m = new RegExp(`^${name} = \\(\\n([\\s\\S]*?)\\n\\)`, 'm').exec(code);
+        return m ? [...m[1].matchAll(/^ {4}\("([a-z_]+)",/gm)].map((x) => x[1]) : null;
+      };
+      const PATS = ['ssr_open', 'tier_extreme', 'regsho_on', 'regsho_past', 'dilution_before', 'split_before', 'prev_winner'];
+      const pats = block('PATTERNS'), shapes = block('SHAPES');
+      if (!pats || JSON.stringify(pats) !== JSON.stringify(PATS)) errs.push(`si_track.PATTERNS must be exactly ${JSON.stringify(PATS)} in that order (found ${JSON.stringify(pats)})`);
+      if (!shapes || !shapes.includes('gap_up')) errs.push('si_track.SHAPES must hold gap_up (it is part of the outcome — a day shape, no interval) [C4]');
+      if (pats && pats.includes('gap_up')) errs.push('si_track.PATTERNS holds gap_up — it is part of the outcome [C4]');
+      const golden = quiet('../backend/tests/fixtures/gajjala_si_track_block_golden_2026_11_26.json');
+      let gj = null;
+      try { gj = JSON.parse(golden); } catch { errs.push('the si_track golden does not parse'); }
+      if (gj) {
+        const gk = (gj.patterns || []).map((p) => p && p.key);
+        if (JSON.stringify(gk) !== JSON.stringify(PATS)) errs.push(`the golden serves the patterns ${JSON.stringify(gk)} — expected PATTERNS in order`);
+        if (gk.includes('gap_up')) errs.push('the golden serves gap_up as a pattern [C4]');
+      }
+
+      // 4. the counted cohort = listed_before True with a True / False winner; stats count it, nothing else [C1]
+      const cnt = pyCode(pyFn(src, 'counted'));
+      if (!/r\.get\("listed_before"\) is True\s*\n?\s*and isinstance\(r\.get\("winner"\), bool\)/.test(cnt)) errs.push('si_track.counted must keep rows with listed_before True AND a True / False winner [C1]');
+      const stb = pyCode(pyFn(src, 'stats'));
+      if (!/\bcnt = counted\(rows\)/.test(stb)) errs.push('si_track.stats must rate the counted cohort (cnt = counted(rows))');
+      if (!/r\.get\("listed_before"\) is False/.test(stb)) errs.push('si_track.stats must count the first-listed-that-day rows APART (listed_before False → new_today)');
+      if (/\bcarried\b/.test(code)) errs.push('si_track.py names carried — the house word means "did not qualify today", never the ledger\'s listed_before (spec §6 #25)');
+
+      // 5. no prior_text, no PRIOR; never "signal" / "edge", never "SHOWN" alone, in a served string
+      if (/prior_text|^PRIOR\b/m.test(code)) errs.push('si_track.py names prior_text / PRIOR — the study\'s cohort is not this one [C1]');
+      const strs = [];
+      const walkJ = (x) => {
+        if (typeof x === 'string') strs.push(x);
+        else if (Array.isArray(x)) x.forEach(walkJ);
+        else if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) {
+          if (k === 'prior_text') errs.push('the si_track golden carries a prior_text key');
+          walkJ(v);
+        }
+      };
+      if (gj) walkJ(gj);
+      for (const s of strs) {
+        if (/\b(signal|edge)s?\b/i.test(s)) errs.push(`a served si_track string says signal / edge: "${s.slice(0, 80)}"`);
+        if (/\bSHOWN\b/.test(s.replace(/NOT SHOWN/g, ''))) errs.push(`a served si_track string says SHOWN (the house word is never printed here, §7 #7): "${s.slice(0, 80)}"`);
+      }
+      for (const m of code.matchAll(/"([^"\n]*)"/g)) if (/\b(signal|edge)s?\b/i.test(m[1])) errs.push(`si_track.py has a string saying signal / edge: "${m[1].slice(0, 80)}"`);
+      if (/^\s*from [^\n]*\b(push|alerts|notify)\b[^\n]*import|^\s*import [^\n]*\b(push|notify)\b/m.test(code)) errs.push('si_track.py imports a push / alert module — a ledger never rings');
+
+      // 6. the served block — high_si.block, its own fence, the import inside it
+      const hs = quiet(`${G}high_si.py`), hsb = pyCode(pyFn(hs, 'block'));
+      if (!/^SI_TRACK_KEY = "si_track"/m.test(hs)) errs.push('high_si.SI_TRACK_KEY must be "si_track"');
+      if (!/try:\s*\n\s+from chart_maps\.gajjala import si_track as SIT\s*\n\s+out\[SI_TRACK_KEY\] = SIT\.served_block\(st, session, now\)\s*\n\s+except Exception as exc:[^\n]*\n[^\n]*\n\s+out\[SI_TRACK_KEY\] = \{"fault_text": SIT_FAULT_TEXT\}/.test(hsb)) errs.push('high_si.block must serve si_track in its OWN try (import inside; a raise → {"fault_text": SIT_FAULT_TEXT}; the cards stand)');
+      if (/^(from|import)\s[^\n]*si_track/m.test(pyCode(hs))) errs.push('high_si.py imports si_track at module level');
+
+      // 7. the FE — mounted ONCE, inside GgHighSiPanel right after the ⛔ new-SSR section; GgHighSiState never draws it
+      const ghs = quiet('src/components/GgHighSi.tsx');
+      const panel = tsCode(tsFn(ghs, 'GgHighSiPanel')), state = tsCode(tsFn(ghs, 'GgHighSiState'));
+      if (!/<GgSsrNewSection block=\{block\.ssr_new\} \/>\s*<GgSiTrackSection block=\{block\.si_track\} \/>/.test(panel)) errs.push('GgHighSiPanel must mount <GgSiTrackSection block={block.si_track} /> right after <GgSsrNewSection … /> (the 🩳 sub\'s ⓘ fold) [OC1]');
+      if (/GgSiTrack/.test(state)) errs.push('GgHighSiState draws the 🏁 — nothing of it on the landing [OC1]');
+      if (count(tsCode(ghs), /<GgSiTrackSection\b/g) !== 1) errs.push('GgHighSi.tsx must mount GgSiTrackSection exactly once');
+      for (const dir of ['src/components', 'src/pages']) {
+        if (!exists(dir)) continue;
+        for (const name of readdirSync(join(FRONTEND_ROOT, dir))) {
+          if (!/\.tsx$/.test(name) || /\.test\.tsx$/.test(name) || name === 'GgHighSi.tsx') continue;
+          if (/<GgSiTrackSection\b/.test(tsCode(quiet(`${dir}/${name}`)))) errs.push(`${dir}/${name} mounts GgSiTrackSection — only GgHighSiPanel does`);
+        }
+      }
+      const st = tsCode(quiet('src/components/GgSiTrack.tsx'));
+      const jsxText = [...st.matchAll(/>([^<>{}]*)[<{]/g), ...st.matchAll(/\}([^<>{}\n]*)<\//g)].map((m) => m[1]).filter((t) => /[\p{L}\p{N}\p{Extended_Pictographic}]/u.test(t) && !/=>|&&|\|\||\?|;/.test(t));
+      if (jsxText.length) errs.push(`GgSiTrack.tsx types words in its JSX: ${JSON.stringify(jsxText.slice(0, 3))} — every text node is served`);
+      if (/\.toFixed\(|toLocaleString\(|Intl\.|toPrecision\(/.test(st)) errs.push('GgSiTrack.tsx formats a number — every number is a served string');
+      if (/fetch\(|\.sort\(/.test(st)) errs.push('GgSiTrack.tsx fetches or sorts — it draws the served block in the served order');
+      if (/bounc/i.test(st)) errs.push('GgSiTrack.tsx says bounce — reversal');
+
+      // 8. the ✨ — his words verbatim; the numbers in it ARE the constants; past index 100, right above the 🚫 entry
+      const ID = 'gajjala-si-track-record-2026-11-26';
+      const H = 'I want us to track these patters for future from SI like a track recprd with in SI stocks itself';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      const ran = /^RAN_MIN_PCT = ([\d.]+)/m.exec(quiet('../backend/chart_maps/gajjala_watch/constants.py'));
+      const minN = /^MIN_NAMES = (\d+)/m.exec(code);
+      const minC = /^MIN_CLUSTERS = (\d+)/m.exec(quiet('../backend/scripts/gajjala_study.py'));
+      if (!minN || !minC || minN[1] !== minC[1]) errs.push(`si_track.MIN_NAMES (${minN && minN[1]}) must equal scripts.gajjala_study.MIN_CLUSTERS (${minC && minC[1]})`);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-26') errs.push(`the 🏁 SI ✨ addedAt must be 2026-11-26 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala&sub=high_si') errs.push(`the 🏁 SI ✨ route must be /chart-maps?tab=gajjala&sub=high_si (found ${lab[3]})`);
+        if (!L.includes(`“${H}”`)) errs.push(`the 🏁 SI ✨ must quote him verbatim in curly quotes: “${H}”`);
+        for (const w of ['open ⓘ on the 🩳 sub', 'UNMEASURED', 'Not advice.', 'too few names or days', 'only names on the list before the day count'])
+          if (!L.includes(w)) errs.push(`the 🏁 SI ✨ must say: ${w}`);
+        if (at20 && !L.includes(`at ${at20[1]} ET`)) errs.push(`the 🏁 SI ✨ must name the nightly clock = constants.LEDGER_GRADE_AT_ET (${at20[1]} ET)`);
+        if (ran && !L.includes(`+${Number(ran[1])}%`)) errs.push(`the 🏁 SI ✨ must name the winner bar = gajjala_watch.RAN_MIN_PCT (+${Number(ran[1])}%)`);
+        if (minN && !L.includes(`until ${minN[1]} names and ${minN[1]} days`)) errs.push(`the 🏁 SI ✨ must name si_track.MIN_NAMES (${minN[1]} names and ${minN[1]} days)`);
+        if (pats && !L.includes(`${pats.length} patterns`)) errs.push(`the 🏁 SI ✨ must name len(PATTERNS) (${pats.length} patterns)`);
+        for (const m of L.matchAll(/\b(\d+) patterns\b/g)) if (pats && Number(m[1]) !== pats.length) errs.push(`the 🏁 SI ✨ says ${m[0]} — PATTERNS holds ${pats.length}`);
+        if (/\b(signal|edge)s?\b/i.test(L) || /bounc/i.test(L)) errs.push('the 🏁 SI ✨ must never say signal / edge / bounce');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-potential-broker-section-2026-11-25') errs.push(`the ✨ '${ID}' must sit right above the 🚫 broker-section entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 9. ship together
+      for (const f of ['../backend/tests/test_gajjala_si_track_2026_11_26.py', '../backend/tests/test_gajjala_si_track_nightly_2026_11_26.py',
+        '../backend/tests/fixtures/gajjala_si_track_block_golden_2026_11_26.json', '../backend/scripts/gajjala_si_track_backfill.py',
+        'src/components/GgSiTrack.test.tsx', 'src/components/GgSiTrack.payload.test.tsx', 'src/styles/ggSiTrack.css',
+        '../docs/gajjala/si_track_record_2026_11_26.md', '../docs/gajjala/si_track_record_frontend_2026_11_26.md'])
+        if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

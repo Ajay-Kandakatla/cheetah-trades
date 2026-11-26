@@ -997,13 +997,21 @@ def ssr_new_block(listed, *, session, now, tf, v=None, ssr_read: Optional[Callab
 
 
 # ── the served block ────────────────────────────────────────────────────────────────────────────────────────────
+# 🏁 2026-11-26 (SPEC sitrack §3.7) — Ajay "I want us to track these patters for future from SI like a track recprd with
+# in SI stocks itself": the 🩳 block's ONE fenced key for the SI track record (chart_maps.gajjala.si_track)
+SI_TRACK_KEY = "si_track"
+SIT_FAULT_TEXT = "🏁 The SI track record could not be read this time — the next read tries again."
+
+
 def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, in_window: bool, tf: str, lim: int,
           scan_row: Callable, sess: dict, halts_by: dict, listed: dict, pass_at, flags, v, st=None,
           sho_read: Optional[Callable] = None, ssr_read: Optional[Callable] = None,
           ssr_si_read: Optional[Callable] = None) -> Optional[dict]:
     """The 🩳 sub's served block (+ `_tiles`, popped by tab.build). None ONLY when the evaluation faulted (`ev` None →
     tab serves FAULT_TEXT). `lim` is used for `shown_text` only (tab.build makes the cut; `flags` = its broker order).
-    `ssr_new` = the ⛔ new-today section (ssr_new_block), fenced on its own — it never moves a card or a text above."""
+    `ssr_new` = the ⛔ new-today section (ssr_new_block), fenced on its own — it never moves a card or a text above.
+    `si_track` (2026-11-26) = the 🏁 SI track record (si_track.served_block — Mongo reads only), fenced the same way: a
+    raise serves {"fault_text"} and the cards stand."""
     if ev is None:
         return None
     rows = list(ev.get("rows") or [])
@@ -1047,6 +1055,12 @@ def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, i
     except Exception as exc:                                        # noqa: BLE001 — the cards stand
         log.warning("gajjala high si: ssr new section failed: %s", type(exc).__name__)
         out[SSR_NEW_KEY] = ssr_new_fault()
+    try:                                                            # 🏁 2026-11-26 — the SI track record, fenced on its own
+        from chart_maps.gajjala import si_track as SIT
+        out[SI_TRACK_KEY] = SIT.served_block(st, session, now)
+    except Exception as exc:                                        # noqa: BLE001 — the cards stand
+        log.warning("gajjala high si: si track section failed: %s", type(exc).__name__)
+        out[SI_TRACK_KEY] = {"fault_text": SIT_FAULT_TEXT}
     out["_tiles"] = tiles
     return out
 
@@ -1063,4 +1077,4 @@ __all__ = ["TIERS", "STATE", "REASONS", "NOT_ADVICE", "ASK_TEXT", "RULE_LABEL", 
            "SSR_NEW_BLOCK_KEYS", "SSR_NEW_GROUP_KEYS", "SSR_NEW_ROW_KEYS", "SSR_NEW_FAULT", "SSR_NEW_SI_UNREAD",
            "SSR_NEW_LIST_UNREAD", "SSR_NEW_RULE_LABEL", "SSR_NEW_TIER_NOTE", "SSR_NEW_UNTIERED_TAIL",
            "SSR_NEW_ORDER_NOTE", "SSR_NEW_RULES_LINE", "ssr_si_text", "ssr_tiered", "ssr_new_rank", "ssr_new_fault",
-           "ssr_new_rules_line", "ssr_new_block"]
+           "ssr_new_rules_line", "ssr_new_block", "SI_TRACK_KEY", "SIT_FAULT_TEXT"]

@@ -343,6 +343,8 @@ numbers are described in served sentences, never compared. No bare 13, 11, 5, 3,
 | `RS_HIST_REASK_MIN` | 1440 | **MINE** — minutes between asks of a `missing` hole, and of an `error` hole past the tries |
 | `RS_HIST_NOT_READ_MAX` | 10 | **MINE** — unread dates listed per market in `closeout.history.not_read` |
 | `HOLE_KIND` | `nolist` | **MINE** — doc kind of a recorded hole |
+| `RS_RUN_START_MAX_SETTLEMENT_DAYS` | 250 | **MINE** (2026-11-26) — walk-back bound per asked name, about one year of settlement days (HIS CALL #11 of sitrack) |
+| `RUNSTART_KIND` | `runstart` | **MINE** (2026-11-26) — doc kind of an asked name's walked-back run start |
 | `RS_RETRY_MIN` (reused) | 30 | **MINE** (11-22) — error spacing, source cool-down, write-failure breaker |
 | `RS_KICK_MIN_SEC` (reused) | 60 | **MINE** (11-22) — served retry while only the history is pending and the floor refused the read's kick |
 
@@ -475,3 +477,55 @@ SSR..". NEW `reg_sho.past_closeout_text(run)` turns a `reg_sho_runs.run_for` blo
 The close-out day is a backstop of the rule, a rule date only — it says nothing about price. Tests:
 `backend/tests/test_reg_sho_past_closeout_2026_11_24.py` (the constant monkeypatched to 12 moves it to "day 7"; no bare
 rule number in the function; negatives marked `NEGATIVE`).
+
+## 2026-11-26 — the run's first day, read past the window (asked names only; spec sitrack §3.4 A5)
+
+Ajay 2026-11-26: "can we make sure in the future these # are accurate ?" WHLR read `🔒 … · day 30+` while it had been
+on every Nasdaq list since 9/29 — 40 settlement days, day 13 = Fri 10/16, start-by Mon 10/19. The date was knowable; the
+app read only `RS_HIST_SETTLEMENT_DAYS` (30, his call #11 — unchanged) back.
+
+- **Scope**: only names a card ASKED about through `payload(check=…)` (the `?check=` list of `GET
+  /short-interest/reg-sho`). The asks live in the API process (`_note_asks` / `_asked`, newest `RS_CHECK_MAX` kept,
+  lock-guarded, never stored), so the read stays Mongo reads only. A read with `kick=False` (the cron pass, the
+  nightly, the 🩳 sub) or without `check` notes nothing. A name is never walked because it merely sits on a list:
+  59 names were `passed_open` on 11-26; walking all of them would cost about 1,250 outside calls.
+- **Worker**: `extend_runs` runs inside `kick_refresh`, right AFTER `backfill_history`, in its own try — never in
+  `refresh_due` or `payload`. ONE call budget a round: `RS_HIST_MAX_GETS` minus what `backfill_history` just made.
+  Markets in registry order (Nasdaq first). Per market it reads one settlement day at a time, older than the oldest
+  day each open asked name was verified on: the stored list doc when held, else one fetch written with
+  `backfilled: true`. A READ list lacking the name resolves it (`start` = the next settlement day); a `missing` /
+  `error` answer blocks every still-open name of the market at that date; `RS_RUN_START_MAX_SETTLEMENT_DAYS` days
+  verified → `blocked "cap"`. **A market stops the moment its asked names are resolved or blocked**; a market with no
+  open asked name makes no call. A not-due doc whose `on_through` is older than the window's newest day is moved up
+  (one write, no call), so it stays contiguous. A raising write trips the history breaker.
+- **Doc**: `_id "runstart|{mkt}|{SYM}"`, `{kind, market, symbol, start, on_from, on_through, blocked, blocked_on,
+  tries, asked_at}`. `on_from` = the oldest settlement day verified ON, contiguous back from `on_through`.
+- **Done** (`ext_due`, the ONE definition): no usable doc → due · `start` set → resolved · `blocked "cap"` → done ·
+  `blocked "missing"` / `"error"` → the hole rule as it stands (`_hole_due`: a missing is final after
+  `RS_HIST_MAX_TRIES`, an error is re-asked on the hole clock, never faster) · neither (the round ran out of budget) →
+  due. Only a due name makes the read try ONE more `kick_refresh`; a resolved / capped / final name starts no worker
+  and serves `refreshing: false`.
+- **Refix 2026-11-26 (move-up after a restart)**: the read now NOTES every checked name whose window run is
+  `passed_open` with no hole (`_due_asks` returns `(noted, due)`; the not-due names go in first so the due ones are
+  the newest asks), and kicks only for a due one. Before, only due names were noted, so after an API restart a
+  resolved WHLR doc (`on_through` 11-20) was never moved up: five card reads left the ask set empty, and once that
+  date fell behind the window the tag dropped from `day 40` back to `day 30+`. Now the next worker round moves it up
+  with no outside call. Tests: `test_after_a_restart_card_reads_note_a_resolved_name_and_the_round_moves_its_on_through_up`
+  + three negatives.
+- **Read**: `load_history` adds ONE bounded `find` `{"kind": "runstart", "on_through": {"$gte": <window start>}}`;
+  `reg_sho_runs.extend_run` applies a doc only to a `passed_open` run with no window hole whose doc is contiguous
+  with the window (`ext_usable`: `on_through >= window_from`). A doc older than the window, or a name that left the
+  list since, reads from the window alone.
+- **Words**: `passed` carries the true day — WHLR `🔒 Hard to borrow · threshold security · 11/25 · day 40 · close-out
+  day passed Fri 10/16 · still on`, `past_closeout_text` `🔒 day 27 past close-out`. A walk not finished:
+  `TITLE_RUN_OPEN_READ` "On every list read back to 10/8 (33 settlement days), so day 13 has passed. The lists before
+  10/8 {have not been read yet | could not be read | are past the 250 settlement days this app reads back}, so the
+  first day is not known to this app." `TITLE_RUN_OPEN_WINDOW` now says "this app has read only those 30 days, so the
+  date is not known to it." Chip / short / label forms unchanged (`day 33+`).
+- **Run block**: two new keys, `read_back_to` and `blocked`, None on every state but a walked `passed_open`.
+- **Cost**: WHLR = 9 Nasdaq GETs (10/8 → 9/28; 10/13 and 10/9 were already stored) — one round. NYSE costs three GETs
+  a date. An API restart empties the ask set; the next card read refills it. A name nobody opened keeps `day 30+`.
+- **Tests**: `backend/tests/test_reg_sho_run_start_2026_11_26.py` (WHLR 9 calls → day 40; zero calls with an empty
+  ask set though 59 names are `passed_open`; an unasked 200-day name never walked; Nasdaq → NYSE → Cboe; twenty
+  reads after done start zero workers; the hole clock; cap; budget shared with the backfill; contiguity; breaker;
+  source pins). UNMEASURED. A rule date only — it says nothing about price.

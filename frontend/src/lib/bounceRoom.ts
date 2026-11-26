@@ -87,6 +87,30 @@ export type RoomRead = {
   band: RoomBand | null;
   /** print >= NEW_HIGH_TOL x high_252 (when the 52-week high is known). */
   at_highs: boolean;
+  /* 🧨 2026-11-26 (spec sitrack §3.5, A7) — the weak lid, ADDITIVE. Served by `bounce_room.room_read` for ROOM / NEAR
+   * only, and only when an untested band sits under the tested target; absent on every other read (the dict is
+   * today's). DISPLAY only: no ordering, gate or label reads them — `explosiveChipText` prints the two served strings,
+   * `roomLabel` never does. No number is formatted here. */
+  /** `alert_gates.first_weak_lid` — the nearest untested band under the target (the engine enterable serves). */
+  weak?: RoomWeakLid | null;
+  /** How many valid untested bands sit between the print and the tested target. */
+  skipped?: number | null;
+  /** The tested target band's stored `bars_since_test`. */
+  target_age?: number | null;
+  /** The served chip suffix, e.g. "1× band +154% first" (`bounce_room.WEAK_TEXT`). */
+  weak_text?: string | null;
+  /** The served hover sentence (`bounce_room.WEAK_TITLE`). */
+  weak_title?: string | null;
+};
+
+/** The weak lid `room_read` serves (2026-11-26) — `alert_gates.first_weak_lid`'s dict, verbatim. */
+export type RoomWeakLid = {
+  lo: number;
+  hi: number;
+  touches: number;
+  strength?: number | null;
+  /** % from the print to the weak band's floor, the engine's one decimal. */
+  pct: number;
 };
 
 /** 'store' = the 9:20 zone_store warm; 'ondemand' = built for this request
@@ -539,9 +563,16 @@ function floorWord(read: ExplosiveRead): string {
   return 'unknown';
 }
 
+/** A served string worth printing: a non-empty string, never a number / NaN / null (2026-11-26). */
+function servedText(x: unknown): x is string {
+  return typeof x === 'string' && x !== '';
+}
+
 /** The chip a surface prints, or null when there is nothing to say.
  *    separates  → "🧨 0.82" (+ " · next-open" under convention N)
  *    otherwise  → "🧨 room +30% · floor held" / "🧨 clear · floor held", MUTED
+ *                 + the served weak lid (2026-11-26): "🧨 room +6666279% · 1× band +154% first · floor held",
+ *                   its served `weak_title` first in the tooltip; never on the scored chip
  *  The tooltip always names the top two components, the study headline, and
  *  the closed-bar caveat; it adds the session-low caveat when today's low was
  *  not part of the read. No number is computed here — every one is served. */
@@ -556,6 +587,7 @@ export function explosiveChipText(
 
   let text: string;
   let tone: 'explosive' | 'muted';
+  let weak: string | null = null;
   if (separates && typeof read.score === 'number' && Number.isFinite(read.score)) {
     text = `🧨 ${read.score.toFixed(2)}${read.convention === 'N' ? ' · next-open' : ''}`;
     tone = 'explosive';
@@ -566,13 +598,18 @@ export function explosiveChipText(
       : room.state === 'CLEAR' ? 'clear'
       : p != null ? `room ${pct(p)}`
       : 'room n/a';
-    text = `🧨 ${roomPart ? `${roomPart} · ` : ''}${floor}`;
+    /* 🧨 2026-11-26 (spec sitrack §3.5, A7): the served weak-lid suffix, after the room part, when it is a non-empty
+     * string — anything else (absent, a number, NaN, '') appends nothing and the chip is today's byte for byte. */
+    weak = !!roomPart && servedText(room?.weak_text) ? room!.weak_text! : null;
+    text = `🧨 ${roomPart ? `${roomPart} · ` : ''}${weak ? `${weak} · ` : ''}${floor}`;
     tone = 'muted';
   }
 
   const comps = (read.components || []).slice(0, 2)
     .map((c) => c?.label).filter(Boolean) as string[];
   const bits: string[] = [];
+  /* The served weak-lid sentence leads the hover, only when the chip prints its suffix. */
+  if (weak && servedText(read.room?.weak_title)) bits.push(read.room!.weak_title!);
   if (comps.length) bits.push(comps.join(' · '));
   if (study?.headline) bits.push(study.headline);
   bits.push('closed-bar read; live volume not included');

@@ -288,6 +288,48 @@ def _dtc1(d: float) -> str:
     return "<0.1" if 0 < d < 0.05 else "%.1f" % d
 
 
+# 🩳 2026-11-26 (spec sitrack §3.2, A4) — days to cover is printed as shares short ÷ average daily volume, both from the
+# record, never the provider's floored figure. FINRA's glossary: "1.00 will be displayed for any values equal or less
+# than 1" — the provider's 1.0 is that floor, not a measurement.
+DTC_FINRA_FLOOR = 1.0
+DTC_FLOOR_NOTE = " FINRA's file shows %.2f for any value at or under %g." % (DTC_FINRA_FLOOR, DTC_FINRA_FLOOR)
+DTC_SPLIT_NOTE = " A split executed inside that window, so the average may mix share counts."
+DTC_CHIP_FLOOR = "≤%gd" % DTC_FINRA_FLOOR
+
+
+def dtc_computed(b) -> Optional[float]:
+    """Shares short ÷ average daily volume when both are positive finite numbers on the block, else None. PURE.
+    FROZEN (spec sitrack §3.2) — chart_maps.gajjala.si_track imports it."""
+    if not isinstance(b, dict):
+        return None
+    si, adv = _num(b.get("si_shares")), _num(b.get("avg_daily_volume"))
+    if si is None or adv is None or si <= 0 or adv <= 0:
+        return None
+    return si / adv
+
+
+def _dtc_notes(b: dict, calc: Optional[float]) -> str:
+    """The floor sentence (the provider's figure IS the floor and nothing computed sits above it) and the split
+    sentence (a split executed between the prior settlement and this one), each only when it applies."""
+    dtc = _num(b.get("days_to_cover"))
+    out = ""
+    if dtc == DTC_FINRA_FLOOR and (calc is None or calc < DTC_FINRA_FLOOR):
+        out += DTC_FLOOR_NOTE
+    if isinstance(_basis(b).get("change"), dict):
+        out += DTC_SPLIT_NOTE
+    return out
+
+
+def _dtc_sentence(b: dict, calc: Optional[float]) -> str:
+    """The one days-to-cover hover sentence (the card title AND the EXTREME note): the division when `calc` is a
+    number, else the provider's figure; each with `_dtc_notes`. 🩳 2026-11-26 (A4 refix) — the EXTREME hover printed
+    the provider's floored 1.0 beside a `<0.1d` chip (WHLR); both hovers now read from this one sentence."""
+    if calc is not None:
+        return ("%.2f days to cover — %s shares short ÷ %s average daily volume (the provider's window).%s"
+                % (calc, format(b["si_shares"], ","), format(b["avg_daily_volume"], ","), _dtc_notes(b, calc)))
+    return "%s days to cover (the provider's figure).%s" % (_dtc1(b["days_to_cover"]), _dtc_notes(b, None))
+
+
 def _md(iso: str) -> str:
     d = _as_date(iso)
     return "%d/%d" % (d.month, d.day) if d else str(iso)
@@ -547,8 +589,9 @@ def extreme_title(b: dict, pf: float) -> str:
         seg.append("%s of shares outstanding (%s)." % (_pct_tier(b["pct_of_shares_out"]),
                                                        _human_shares(b.get("shares_outstanding"))))
         seg.append(EXTREME_CONFIRM_NOTE % SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
-    if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
-        seg.append("%s days to cover (the provider's window)." % _dtc1(b["days_to_cover"]))
+    calc = dtc_computed(b)                           # 🩳 2026-11-26 (A4 refix) — the card title's own sentence
+    if calc is not None or (b.get("days_to_cover") is not None and b["days_to_cover"] > 0):
+        seg.append(_dtc_sentence(b, calc))
     fl = b.get("float_shares")
     note = (EXTREME_FLOAT_UPDATED_NOTE if isinstance(_basis(b).get("float_update"), dict)
             else EXTREME_FLOAT_BASIS_NOTE)
@@ -822,8 +865,13 @@ def chip_text(b: Optional[dict]) -> Optional[str]:
     parts = ["%s SI %s" % (GLYPH, head)]
     # A provider 0 next to a positive short count is not a readable figure:
     # drop the segment (the chip never shows "0.0d"); the hover keeps it.
-    if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
-        parts.append("%sd" % _dtc1(b["days_to_cover"]))
+    # 🩳 2026-11-26 (A4): shares short ÷ average daily volume when both are on file; else the provider's figure, its
+    # FINRA floor printed as "≤1d".
+    calc = dtc_computed(b)
+    if calc is not None:
+        parts.append("%sd" % _dtc1(calc))
+    elif b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
+        parts.append(DTC_CHIP_FLOOR if b["days_to_cover"] == DTC_FINRA_FLOOR else "%sd" % _dtc1(b["days_to_cover"]))
     parts.append(_md(b["settlement_date"]))
     if b.get("stale"):
         parts.append("stale")
@@ -883,13 +931,9 @@ def title_text(b: dict, v: Optional[dict] = None) -> str:
     fs = _float_sentence(b)
     if fs is not None:
         seg.append("Float check: " + fs)
-    if b.get("days_to_cover") is not None:
-        if b.get("avg_daily_volume"):
-            seg.append("%s days to cover (shares short ÷ %s average daily volume, the "
-                       "provider's window)." % (_dtc1(b["days_to_cover"]),
-                                                _human_shares(b["avg_daily_volume"])))
-        else:
-            seg.append("%s days to cover (the provider's figure)." % _dtc1(b["days_to_cover"]))
+    calc = dtc_computed(b)                           # 🩳 2026-11-26 (A4) — the division, then the provider's figure
+    if calc is not None or b.get("days_to_cover") is not None:
+        seg.append(_dtc_sentence(b, calc))
     else:
         seg.append("Days to cover: not read.")
     if b.get("stale"):
@@ -952,13 +996,17 @@ def rows_for(b: dict, v: Optional[dict] = None) -> list:
     if fs is not None:
         rows.append({"k": "Float check", "v": fs})
     dtc = b.get("days_to_cover")
-    if dtc is None:
+    calc = dtc_computed(b)                           # 🩳 2026-11-26 (A4)
+    if calc is not None:
+        v = "%.2f — %s shares short ÷ %s average daily volume (the provider's window)" % (
+            calc, format(b["si_shares"], ","), format(b["avg_daily_volume"], ","))
+    elif dtc is None:
         v = "not read"
-    elif b.get("avg_daily_volume"):
-        v = "%.2f — shares short ÷ %s average daily volume (the provider's window)" % (
-            dtc, format(b["avg_daily_volume"], ","))
     else:
         v = "%.2f — the provider's figure" % dtc
+    notes = _dtc_notes(b, calc) if (calc is not None or dtc is not None) else ""
+    if notes:
+        v += "." + notes
     rows.append({"k": "Days to cover", "v": v})
     if b.get("stale") is True:
         v = "STALE — %s" % b["stale_reason"]
@@ -1050,7 +1098,9 @@ def rules_section() -> dict:
             % (GLYPH, _ladder(), EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT, SIC.SI_EXTREME_MIN_PCT_SHARES_OUT,
                TIER_WORDS[TIER_HIGH], EXTREME_STUDY_NOTE),
             "Days to cover = shares short ÷ average daily volume, as the provider computes it; "
-            "the volume window differs between sites.",
+            "the volume window differs between sites. The chip divides the two itself when both are on file, "
+            "else prints the provider's figure (%s when it is %.2f).%s"
+            % (DTC_CHIP_FLOOR, DTC_FINRA_FLOOR, DTC_FLOOR_NOTE),
             "Every number carries its settlement date. It reads STALE once a newer "
             "settlement's publication day plus %d business days has passed and this app "
             "still holds the older one. No record shows nothing on a card and 'not read' on "

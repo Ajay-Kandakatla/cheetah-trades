@@ -1,0 +1,442 @@
+{
+ "title": "🏁 🩳 SI track record · UNMEASURED",
+ "summary_text": "🏁 SI track record · 4 of 6 ran +40%",
+ "base_text": "On the list before the day: 4 of 6 ran +40% (66.7%) · 3 names · 3 days · too few names or days for an interval",
+ "new_today_text": "First listed that day, not counted above: 0 of 1 ran — 0 of 1 listed before 09:30 · 0 of 0 after",
+ "pattern_heads": [
+  [
+   "label",
+   "Pattern"
+  ],
+  [
+   "with",
+   "With it"
+  ],
+  [
+   "without",
+   "Without"
+  ],
+  [
+   "diff",
+   "Difference"
+  ],
+  [
+   "shuffle",
+   "Shuffled"
+  ],
+  [
+   "word",
+   "Read"
+  ]
+ ],
+ "patterns": [
+  {
+   "key": "ssr_open",
+   "label": "⛔ SSR on at the open",
+   "known_text": "the evening before",
+   "with_text": "2 of 3 · 66.7%",
+   "without_text": "1 of 2 · 50.0%",
+   "diff_text": "+16.7 pp",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "1 not known",
+   "title": "⛔ SSR on at the open — known the evening before. 1 not known. UNMEASURED."
+  },
+  {
+   "key": "tier_extreme",
+   "label": "🩳 EXTREME (vs High)",
+   "known_text": "before the open",
+   "with_text": "4 of 6 · 66.7%",
+   "without_text": "0 of 0 · —",
+   "diff_text": "—",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "0 not known",
+   "title": "🩳 EXTREME (vs High) — known before the open. 0 not known. UNMEASURED."
+  },
+  {
+   "key": "regsho_on",
+   "label": "🔒 on a Reg SHO list",
+   "known_text": "the evening before",
+   "with_text": "0 of 0 · —",
+   "without_text": "4 of 6 · 66.7%",
+   "diff_text": "—",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "0 not known",
+   "title": "🔒 on a Reg SHO list — known the evening before. 0 not known. UNMEASURED."
+  },
+  {
+   "key": "regsho_past",
+   "label": "🔒 past its close-out day",
+   "known_text": "the evening before",
+   "with_text": "0 of 0 · —",
+   "without_text": "4 of 6 · 66.7%",
+   "diff_text": "—",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "0 not known",
+   "title": "🔒 past its close-out day — known the evening before. 0 not known. UNMEASURED."
+  },
+  {
+   "key": "dilution_before",
+   "label": "📄 dilution filing dated before the day",
+   "known_text": "before the open",
+   "with_text": "0 of 0 · —",
+   "without_text": "0 of 0 · —",
+   "diff_text": "—",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "6 not known",
+   "title": "📄 dilution filing dated before the day — known before the open. 6 not known. UNMEASURED."
+  },
+  {
+   "key": "split_before",
+   "label": "✂️ split in force at the open",
+   "known_text": "at the open",
+   "with_text": "0 of 0 · —",
+   "without_text": "0 of 0 · —",
+   "diff_text": "—",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "6 not known",
+   "title": "✂️ split in force at the open — known at the open. 6 not known. UNMEASURED."
+  },
+  {
+   "key": "prev_winner",
+   "label": "📅 ran the session before",
+   "known_text": "the evening before",
+   "with_text": "1 of 2 · 50.0%",
+   "without_text": "2 of 2 · 100.0%",
+   "diff_text": "−50.0 pp",
+   "shuffle_text": "—",
+   "word": "too few names or days",
+   "unknown_text": "2 not known",
+   "title": "📅 ran the session before — known the evening before. 2 not known. UNMEASURED."
+  }
+ ],
+ "where_text": "Where the 09:30–20:00 high printed — winners: first hour 3 · rest of regular hours 1 · after hours 0 — the rest: first hour 1 · rest of regular hours 1 · after hours 0",
+ "shape_rows": [
+  {
+   "label": "Opened above the prior close",
+   "win_text": "0 of 4",
+   "rest_text": "0 of 2"
+  },
+  {
+   "label": "⛔ SSR triggered that day",
+   "win_text": "1 of 3",
+   "rest_text": "1 of 2"
+  },
+  {
+   "label": "Under the 09:30 open by noon (MINE)",
+   "win_text": "0 of 4",
+   "rest_text": "0 of 2"
+  },
+  {
+   "label": "Faded by noon, then the high after hours (MINE)",
+   "win_text": "0 of 4",
+   "rest_text": "0 of 2"
+  },
+  {
+   "label": "📈 closed back above VWAP and stayed there (MINE)",
+   "win_text": "0 of 0",
+   "rest_text": "0 of 0"
+  },
+  {
+   "label": "🔀 9 / 21 EMA cross up in the first hour",
+   "win_text": "0 of 0",
+   "rest_text": "0 of 0"
+  }
+ ],
+ "heads": [
+  [
+   "ticker",
+   "Ticker"
+  ],
+  [
+   "listed",
+   "Listed"
+  ],
+  [
+   "si",
+   "SI % float / % shares"
+  ],
+  [
+   "tier",
+   "Tier"
+  ],
+  [
+   "dtc",
+   "DTC"
+  ],
+  [
+   "float",
+   "Float (date)"
+  ],
+  [
+   "ssr",
+   "⛔"
+  ],
+  [
+   "sho",
+   "🔒"
+  ],
+  [
+   "flags",
+   "Flags"
+  ],
+  [
+   "gap",
+   "Gap"
+  ],
+  [
+   "pm_vol",
+   "PM vol ×"
+  ],
+  [
+   "high",
+   "High %"
+  ],
+  [
+   "where",
+   "Where"
+  ],
+  [
+   "cross",
+   "9/21"
+  ],
+  [
+   "vwap",
+   "VWAP"
+  ],
+  [
+   "next",
+   "Next open→high / low"
+  ]
+ ],
+ "days": [
+  {
+   "date": "2026-11-20",
+   "label": "Fri 11-20",
+   "rows": [
+    {
+     "symbol": "BBB",
+     "href": "/sepa/BBB?tab=supply&tf=5m_today",
+     "win": "✅",
+     "counted": true,
+     "group": "counted",
+     "cells": {
+      "ticker": "BBB",
+      "listed": "before",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "triggered 10:18",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "—",
+      "high": "+45.0% at 15:10",
+      "where": "rest of regular hours",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "pending"
+     },
+     "chips": [],
+     "title": "BBB · 2026-11-20 · UNMEASURED"
+    },
+    {
+     "symbol": "AAA",
+     "href": "/sepa/AAA?tab=supply&tf=5m_today",
+     "win": "",
+     "counted": true,
+     "group": "counted",
+     "cells": {
+      "ticker": "AAA",
+      "listed": "before",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "on at open",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "—",
+      "high": "0.0% at 09:30",
+      "where": "first hour",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "pending"
+     },
+     "chips": [],
+     "title": "AAA · 2026-11-20 · UNMEASURED"
+    }
+   ],
+   "new_label": "first listed that day — not counted",
+   "other_label": "not counted — not graded, or listing day not on file"
+  },
+  {
+   "date": "2026-11-19",
+   "label": "Thu 11-19",
+   "rows": [
+    {
+     "symbol": "CCC",
+     "href": "/sepa/CCC?tab=supply&tf=5m_today",
+     "win": "✅",
+     "counted": true,
+     "group": "counted",
+     "cells": {
+      "ticker": "CCC",
+      "listed": "before",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "—",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "—",
+      "high": "+80.0% at 09:35",
+      "where": "first hour",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "no bars"
+     },
+     "chips": [],
+     "title": "CCC · 2026-11-19 · UNMEASURED"
+    },
+    {
+     "symbol": "AAA",
+     "href": "/sepa/AAA?tab=supply&tf=5m_today",
+     "win": "✅",
+     "counted": true,
+     "group": "counted",
+     "cells": {
+      "ticker": "AAA",
+      "listed": "before",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "on at open",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "1.65×",
+      "high": "+50.0% at 10:00",
+      "where": "first hour",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "1 → 0.0% / 0.0%"
+     },
+     "chips": [],
+     "title": "AAA · 2026-11-19 · UNMEASURED"
+    },
+    {
+     "symbol": "BBB",
+     "href": "/sepa/BBB?tab=supply&tf=5m_today",
+     "win": "",
+     "counted": true,
+     "group": "counted",
+     "cells": {
+      "ticker": "BBB",
+      "listed": "before",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "triggered 10:18",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "—",
+      "high": "+20.0% at 11:00",
+      "where": "rest of regular hours",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "1 → +45.0% / 0.0%"
+     },
+     "chips": [],
+     "title": "BBB · 2026-11-19 · UNMEASURED"
+    }
+   ],
+   "new_label": "first listed that day — not counted",
+   "other_label": "not counted — not graded, or listing day not on file"
+  },
+  {
+   "date": "2026-11-18",
+   "label": "Wed 11-18",
+   "rows": [
+    {
+     "symbol": "AAA",
+     "href": "/sepa/AAA?tab=supply&tf=5m_today",
+     "win": "✅",
+     "counted": true,
+     "group": "counted",
+     "cells": {
+      "ticker": "AAA",
+      "listed": "before",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "on at open",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "—",
+      "high": "+50.0% at 10:00",
+      "where": "first hour",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "1 → +50.0% / 0.0%"
+     },
+     "chips": [],
+     "title": "AAA · 2026-11-18 · UNMEASURED"
+    },
+    {
+     "symbol": "CCC",
+     "href": "/sepa/CCC?tab=supply&tf=5m_today",
+     "win": "",
+     "counted": false,
+     "group": "new",
+     "cells": {
+      "ticker": "CCC",
+      "listed": "07:55",
+      "si": "40.0% / 32.0%",
+      "tier": "EXTREME",
+      "dtc": "8.00",
+      "float": "2.0M (11-18)",
+      "ssr": "—",
+      "sho": "",
+      "flags": "—",
+      "gap": "0.0%",
+      "pm_vol": "—",
+      "high": "0.0% at 09:30",
+      "where": "first hour",
+      "cross": "—",
+      "vwap": "not read",
+      "next": "1 → +80.0% / 0.0%"
+     },
+     "chips": [],
+     "title": "CCC · 2026-11-18 · UNMEASURED"
+    }
+   ],
+   "new_label": "first listed that day — not counted",
+   "other_label": "not counted — not graded, or listing day not on file"
+  }
+ ],
+ "shown_text": null,
+ "pending_text": "3 next-session columns fill the night that session ends",
+ "asof_text": "recorded nightly at 20:15 ET · through 2026-11-20",
+ "rule_label": "ⓘ how this is counted",
+ "rule_text": "A name is counted when it was on the 🩳 list before the session — listed by his scanner on one of the 2 market days before it. It ran when its 09:30–20:00 high was at least +40% over the prior session's last regular 5-minute close; premarket never counts. Short interest is the settlement FINRA had published before the day (7 business days after settlement); a name with none is not recorded. ⛔ is the SSR record as of 04:00 ET that day (on at the open) and as of 20:15 ET (triggered that day); a day with no record reads not known. A pattern reads only with at least 20 names and 20 days on each side; the interval is drawn on names and on days and must clear 0 on both. Recorded at 20:15 ET; a missed day, a later bar read and the next-session columns are filled within 10 market days. Names first listed that day are shown apart and never counted.",
+ "honesty": "A ledger of what happened, not a test: only names on the list before the day are counted; the sample is small, one market regime, the same name repeats across days and the days share one market; the patterns were chosen after looking at this kind of data. The prior close is the last regular 5-minute bar, not the exchange's closing print, so a ✅ here can differ from the 📅 chip near the line. The noon fade, the after-hours ramp, the VWAP reclaim and the within-day shuffle are MINE. Days recorded late carry no 🔒 📄 ✂️ fields, and ⛔ reads not known where the SSR record was never read. UNMEASURED. Not advice.",
+ "fault_text": null,
+ "empty_text": null,
+ "n": 6,
+ "n_days": 3
+}

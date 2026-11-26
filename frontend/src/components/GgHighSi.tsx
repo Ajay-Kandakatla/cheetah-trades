@@ -19,10 +19,16 @@
  * 2026-11-24 (ggclean spec §3.6) — Ajay: "Collapse all of this too" (the 🩳 panel text). GgHighSiState: the state lines
  * the board prints OUTSIDE the closed sub fold (GgSubState) — the empty line, the listings that drew no card, the served
  * fault line and the ⛔ SSR list's served fault line — drawn by the SAME selector as the panel (`listed`), so the two
- * can never disagree. It prints only while the sub's fold is closed; open, the panel shows the same lines in place. */
+ * can never disagree. It prints only while the sub's fold is closed; open, the panel shows the same lines in place.
+ *
+ * 2026-11-26 (spec sitrack §3.7 B, [OC1]) — Ajay: "I want us to track these patters for future from SI like a track recprd
+ * with in SI stocks itself". The served 🏁 SI track record (GgSiTrackSection) is mounted in the PANEL right after the ⛔
+ * new-SSR section, on the SAME line (GgSsrNew.test.tsx pins the ⛔ mount as one digit-free line between the faults line and
+ * the rule fold) — inside the sub's closed ⓘ fold, never on the landing; GgHighSiState is unchanged. */
 import { Link } from 'react-router-dom';
 import { ggHref, type GgHighSiBlock } from '../lib/gajjala';
 import { GgSsrNewSection } from './GgSsrNew';
+import { GgSiTrackSection } from './GgSiTrack';
 import { GgSubState, type GgSubStateLine } from './GgFold';
 import '../styles/gajjala.css';
 
@@ -103,7 +109,7 @@ export function GgHighSiPanel({ block }: { block: GgHighSiBlock | null | undefin
         );
       })}
       {servedText(block.faults_text) ? <p className="gg-dv-line cm-note" data-testid="gg-hs-faults">{block.faults_text}</p> : null}
-      <GgSsrNewSection block={block.ssr_new} />
+      <GgSsrNewSection block={block.ssr_new} /><GgSiTrackSection block={block.si_track} />
       {folded ? (
         <details className="gg-dv-rule" data-testid="gg-hs-rule">
           <summary>{servedText(block.rule_label) ? block.rule_label : 'ⓘ'}</summary>

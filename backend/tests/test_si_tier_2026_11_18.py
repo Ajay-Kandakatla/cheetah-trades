@@ -163,7 +163,9 @@ def test_T3_the_confirmation_seam():
 
 # ═════════════════════════════════════════════ T4 — si_map end to end
 def test_T4_si_map_end_to_end():
-    db = FakeDB({SIC.SI_COLL: FakeColl([_akan(), _clro(), _slsn()], name=SIC.SI_COLL)})
+    # 2026-11-26 sitrack A4: SLSN read with no ADV, so its chip still prints the provider's 19.48 (the builder's ADV
+    # equals the short count, which the chip would divide into 1.0d)
+    db = FakeDB({SIC.SI_COLL: FakeColl([_akan(), _clro(), _slsn(avg_daily_volume=None)], name=SIC.SI_COLL)})
     m = SR.si_map(["AKAN", "CLRO", "SLSN", "NOPE"], db=db, today=TODAY)
     assert list(m) == ["AKAN", "CLRO", "SLSN"]
     assert (m["AKAN"]["tier"], m["AKAN"]["float_check"], m["AKAN"]["extreme"]) == ("high", "unconfirmed", None)
@@ -368,11 +370,13 @@ def test_N10_no_forecast_word_in_any_new_string():
 
 
 def test_N11_the_zero_guard():
-    for doc in (_ratio(0), _ratio(1, fl=100_000_000, so=400_000_000)):
+    # 2026-11-26 sitrack A4: 0 shares short → nothing to divide, the provider's 1.0 is FINRA's floor ('≤1d');
+    # 1 share short ÷ an ADV of 1 → 1.0d
+    for doc, dtc in ((_ratio(0), "≤1d"), (_ratio(1, fl=100_000_000, so=400_000_000), "1.0d")):
         b = _blk(doc)
         assert b["pct_of_float"] == 0.0 and b["headline_basis"] == "float"
         assert b["tier"] is None and b["float_check"] is None
-        assert b["chip"] == "🩳 SI 0.0% float · 1.0d · 10/30"
+        assert b["chip"] == "🩳 SI 0.0% float · " + dtc + " · 10/30"
         assert "Tier: not given — too few shares short to read as a share of the float." in b["title"]
     assert SR.tier_of(0) is None and SR.tier_of(0.0) is None and SR.tier_of(-1) is None
     assert SR.tier_of(None) is None and SR.tier_of(float("nan")) is None

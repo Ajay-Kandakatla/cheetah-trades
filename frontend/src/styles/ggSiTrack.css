@@ -1,0 +1,21 @@
+/* 🏁 the 🩳 SI track record fold inside the 🩳 High SI panel (2026-11-26, spec sitrack §3.7 B, WP fe-track). Ajay: "I want us
+ * to track these patters for future from SI like a track recprd with in SI stocks itself". NEUTRAL look on the house 🏁
+ * table (.gg-tr-scroll > .gg-tr-table, gajjala.css): every word in it is SERVED; the classes are CSS hooks only.
+ * Phone (430 px): the fold and every line wrap inside the panel (min-width: 0 + overflow-wrap: anywhere); the tables
+ * scroll sideways inside their own .gg-tr-scroll box, so the page never scrolls sideways (the 🏁 width rule). */
+.gg-st { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.gg-st > summary { cursor: pointer; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.gg-st-body { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; margin-top: 0.3rem; overflow-wrap: anywhere; }
+.gg-st-title { font-weight: 600; }
+.gg-st-scroll { min-width: 0; }
+.gg-st-table td small, .gg-st-known, .gg-st-unknown { display: block; color: var(--ink-subtle, #94a3b8); font-size: 0.72rem; }
+.gg-st-shape { display: flex; flex-wrap: wrap; column-gap: 0.4rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.gg-st-shape > span { min-width: 0; overflow-wrap: anywhere; }
+.gg-st-shape > span + span::before { content: "·"; margin-right: 0.4rem; opacity: 0.5; }
+.gg-st-shape-label { font-weight: 600; }
+.gg-st-day + .gg-st-day { margin-top: 0.4rem; }
+.gg-st-sym { font-weight: 600; }
+.gg-st-newhead > td { color: var(--ink-subtle, #94a3b8); font-style: italic; }
+.gg-st-table tr.gg-st-new > td { opacity: 0.75; }
+.gg-st-rule { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.gg-st-rule summary { min-width: 0; overflow-wrap: anywhere; }

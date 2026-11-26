@@ -68,7 +68,8 @@ def test_case_a_suspect_newer_float_leaves_the_record_EXTREME_30pct():
     v = BM.verdict(rec, doc, TODAY)
     assert v["float_update"] is None and "float_updated" not in _keys(v)
     b = blk(rec, doc)
-    assert b["chip"] == "🩳 SI EXTREME 30.0% float · 1.0d · 10/30"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI EXTREME 30.0% float · ≤1d · 10/30"
     assert (b["pct_of_float"], b["tier"], b["float_check"]) == (30.0, "extreme", "confirmed")
     assert (b["float_shares"], b["float_asof"], b["float_source"]) == (1000000, "2026-09-01", SR.FLOAT_SOURCE)
     assert b["float_suspect"] is None and "float_update" not in b["basis"]
@@ -81,7 +82,8 @@ def test_case_b_suspect_newer_float_keeps_the_record_floats_split_refusal():
     v = BM.verdict(rec, doc, TODAY)
     assert v["float_update"] is None and v["float_refused"] == "split"
     b = blk(rec, doc)
-    assert b["chip"] == "🩳 SI 50.0% shs out · 1.0d · 10/30 · ✂️ split 10/20"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI 50.0% shs out · ≤1d · 10/30 · ✂️ split 10/20"
     assert (b["pct_of_shares_out"], b["shares_outstanding"], b["tier"]) == (50.0, 200000, None)
     assert b["basis"]["float_refused"] == "split" and "float updated" not in b["chip"]
     assert b == blk(rec, _yahoo_none(doc))
@@ -104,7 +106,8 @@ def test_newer_ok_float_reads_EXTREME_on_the_post_split_count():
     assert v["count"] == {"shares": 200000, "as_of": "2026-11-19", "source": "yahoo", "form": None}
     assert v["pct_of_shares_out"] == 50.0 and v["count_changed"] is True
     b = blk(rec, doc)
-    assert b["chip"] == "🩳 SI EXTREME 66.7% float · 1.0d · 10/30 · ⚠️ float updated · ✂️ split 10/20"
+    # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
+    assert b["chip"] == "🩳 SI EXTREME 66.7% float · ≤1d · 10/30 · ⚠️ float updated · ✂️ split 10/20"
     assert (b["tier"], b["float_check"]) == ("extreme", "confirmed")
     assert (b["shares_outstanding"], b["shares_asof"], b["shares_source"]) == \
         (200000, "2026-11-19", SR.YAHOO_LIVE_SHARES_SOURCE)

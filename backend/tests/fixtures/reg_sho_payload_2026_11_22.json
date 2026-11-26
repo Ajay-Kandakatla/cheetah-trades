@@ -29,7 +29,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ACEM": {
@@ -55,7 +57,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ACONW": {
@@ -81,7 +85,9 @@
      "start_by": "2026-12-10",
      "missing": null,
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AGLT": {
@@ -107,7 +113,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AKAN": {
@@ -133,7 +141,9 @@
      "start_by": "2026-12-10",
      "missing": null,
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AMDL": {
@@ -159,7 +169,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AMZU": {
@@ -185,7 +197,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ARAI": {
@@ -211,7 +225,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BMNG": {
@@ -237,7 +253,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CDT": {
@@ -263,7 +281,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CENN": {
@@ -289,7 +309,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CIFG": {
@@ -315,7 +337,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CLRO": {
@@ -341,7 +365,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CRCG": {
@@ -367,7 +393,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CRIS": {
@@ -393,7 +421,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CRMG": {
@@ -419,7 +449,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CRWG": {
@@ -445,7 +477,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "DBGI": {
@@ -471,7 +505,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ELPW": {
@@ -497,7 +533,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "FFAI": {
@@ -523,7 +561,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GIPR": {
@@ -549,7 +589,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GMEX": {
@@ -575,7 +617,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GOVX": {
@@ -601,7 +645,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GP": {
@@ -627,7 +673,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GRRR": {
@@ -653,7 +701,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "HIMZ": {
@@ -679,7 +729,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "HOOG": {
@@ -705,7 +757,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "INTW": {
@@ -731,7 +785,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "IONX": {
@@ -757,7 +813,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "IONZ": {
@@ -783,7 +841,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LABT": {
@@ -809,7 +869,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LICN": {
@@ -835,7 +897,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LULG": {
@@ -861,7 +925,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LWAY": {
@@ -887,7 +953,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MSFL": {
@@ -913,7 +981,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MSTX": {
@@ -939,7 +1009,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MULL": {
@@ -965,7 +1037,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MVLL": {
@@ -991,7 +1065,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MYPS": {
@@ -1017,7 +1093,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NBIG": {
@@ -1043,7 +1121,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NBIL": {
@@ -1069,7 +1149,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NVD": {
@@ -1095,7 +1177,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NVDG": {
@@ -1121,7 +1205,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "OBX": {
@@ -1147,7 +1233,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "OKLL": {
@@ -1173,7 +1261,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "OMH": {
@@ -1199,7 +1289,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "OPNW": {
@@ -1225,7 +1317,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ORCX": {
@@ -1251,7 +1345,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "PARA": {
@@ -1277,7 +1373,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "PLTZ": {
@@ -1303,7 +1401,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "PUR": {
@@ -1329,7 +1429,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RCAX": {
@@ -1355,7 +1457,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RGTX": {
@@ -1381,7 +1485,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RGTZ": {
@@ -1407,7 +1513,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RKLX": {
@@ -1433,7 +1541,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SKDD": {
@@ -1459,7 +1569,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SKRE": {
@@ -1485,7 +1597,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SMCL": {
@@ -1511,7 +1625,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SMCX": {
@@ -1537,7 +1653,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SMCZ": {
@@ -1563,7 +1681,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SMST": {
@@ -1589,7 +1709,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SMTK": {
@@ -1615,7 +1737,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SOFX": {
@@ -1641,7 +1765,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SOLT": {
@@ -1667,7 +1793,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SOUX": {
@@ -1693,7 +1821,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "STAK": {
@@ -1719,7 +1849,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "TSDD": {
@@ -1745,7 +1877,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "TSLR": {
@@ -1771,7 +1905,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "TSMU": {
@@ -1797,7 +1933,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "WFF": {
@@ -1823,7 +1961,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "WHLR": {
@@ -1849,7 +1989,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "WORX": {
@@ -1875,7 +2017,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "XRPN": {
@@ -1901,7 +2045,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "XXII": {
@@ -1927,7 +2073,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "YMT": {
@@ -1953,7 +2101,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ZNB": {
@@ -1979,7 +2129,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "HAWK": {
@@ -2005,7 +2157,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "OPTT": {
@@ -2031,7 +2185,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "POAS": {
@@ -2057,7 +2213,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BBC": {
@@ -2083,7 +2241,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BMNZ": {
@@ -2109,7 +2269,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BTCU": {
@@ -2135,7 +2297,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "DXD": {
@@ -2161,7 +2325,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ERY": {
@@ -2187,7 +2353,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "FMIG": {
@@ -2213,7 +2381,9 @@
      "start_by": "2026-12-10",
      "missing": null,
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GMNY": {
@@ -2239,7 +2409,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "IRE": {
@@ -2265,7 +2437,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "KOLD": {
@@ -2291,7 +2465,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "KORU": {
@@ -2317,7 +2493,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LLYX": {
@@ -2343,7 +2521,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MINO": {
@@ -2369,7 +2549,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MKTN": {
@@ -2395,7 +2577,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MUZ": {
@@ -2421,7 +2605,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NUMI": {
@@ -2447,7 +2633,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NVDB": {
@@ -2473,7 +2661,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "POMG": {
@@ -2499,7 +2689,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RIOX": {
@@ -2525,7 +2717,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SALI": {
@@ -2551,7 +2745,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "TBF": {
@@ -2577,7 +2773,9 @@
      "start_by": "2026-12-10",
      "missing": null,
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "TZA": {
@@ -2603,7 +2801,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "UGLD": {
@@ -2629,7 +2829,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "USSG": {
@@ -2655,7 +2857,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "VEXC": {
@@ -2681,7 +2885,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AAOX": {
@@ -2707,7 +2913,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AMPU": {
@@ -2733,7 +2941,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "APLX": {
@@ -2759,7 +2969,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ARKY": {
@@ -2785,7 +2997,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ASTG": {
@@ -2811,7 +3025,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ASTX": {
@@ -2837,7 +3053,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ASTY": {
@@ -2863,7 +3081,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "AXTX": {
@@ -2889,7 +3109,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BEX": {
@@ -2915,7 +3137,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BMNU": {
@@ -2941,7 +3165,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "BTCZ": {
@@ -2967,7 +3193,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CBRX": {
@@ -2993,7 +3221,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CIFU": {
@@ -3019,7 +3249,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CLSX": {
@@ -3045,7 +3277,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "COHH": {
@@ -3071,7 +3305,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "COHX": {
@@ -3097,7 +3333,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "CRCD": {
@@ -3123,7 +3361,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "DDTN": {
@@ -3149,7 +3389,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "DRAL": {
@@ -3175,7 +3417,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "FLAO": {
@@ -3201,7 +3445,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GFSG": {
@@ -3227,7 +3473,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "GMEU": {
@@ -3253,7 +3501,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "INFH": {
@@ -3279,7 +3529,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "IREX": {
@@ -3305,7 +3557,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "IREZ": {
@@ -3331,7 +3585,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "KEEX": {
@@ -3357,7 +3613,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LITX": {
@@ -3383,7 +3641,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LITZ": {
@@ -3409,7 +3669,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "LUNL": {
@@ -3435,7 +3697,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MSTU": {
@@ -3461,7 +3725,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "MSTZ": {
@@ -3487,7 +3753,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NEBX": {
@@ -3513,7 +3781,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "NVDQ": {
@@ -3539,7 +3809,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "ONDL": {
@@ -3565,7 +3837,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "OUSL": {
@@ -3591,7 +3865,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "PLU": {
@@ -3617,7 +3893,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "POEL": {
@@ -3643,7 +3921,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RAM": {
@@ -3669,7 +3949,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "RAML": {
@@ -3695,7 +3977,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SK": {
@@ -3721,7 +4005,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SKHX": {
@@ -3747,7 +4033,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SNDC": {
@@ -3773,7 +4061,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SNDG": {
@@ -3799,7 +4089,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SNDU": {
@@ -3825,7 +4117,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SNK": {
@@ -3851,7 +4145,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SPCH": {
@@ -3877,7 +4173,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SPCQ": {
@@ -3903,7 +4201,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SPCU": {
@@ -3929,7 +4229,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "SSPC": {
@@ -3955,7 +4257,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "TRSY": {
@@ -3981,7 +4285,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "UMAL": {
@@ -4007,7 +4313,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "USAX": {
@@ -4033,7 +4341,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "UVIX": {
@@ -4059,7 +4369,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "UVXY": {
@@ -4085,7 +4397,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "VELL": {
@@ -4111,7 +4425,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "VIXY": {
@@ -4137,7 +4453,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    },
    "WYFL": {
@@ -4163,7 +4481,9 @@
      "start_by": null,
      "missing": "2026-11-18",
      "rule_days": 13,
-     "first_buy_day": 11
+     "first_buy_day": 11,
+     "read_back_to": null,
+     "blocked": null
     }
    }
   },

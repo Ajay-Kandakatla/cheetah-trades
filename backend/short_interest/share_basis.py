@@ -57,6 +57,10 @@ SB_QUEUE_MAX = 400
 SB_RETRY_AFTER_SEC = 20
 SB_THREAD_NAME = "si-share-basis"
 SEC_PERIODIC_PREFIXES = ("10-Q", "10-K", "20-F", "40-F")     # the forms whose accession moves `top_accn`
+# 📄 2026-11-26 (spec sitrack §3.1, A1) — the CURRENT report forms (domestic, foreign). A filing row's `with` names the
+# report the same issuer filed the SAME day (a base in SB_REPORT_FORMS or one of SEC_PERIODIC_PREFIXES), so the pure
+# half can tell a report re-filed as a prospectus under several registrations from a new offering. MINE.
+SB_REPORT_FORMS = ("8-K", "6-K")
 SEC_BLOCK_HTTP = (403, 429)
 SEEN_KEYS = ("settlement_date", "float_shares", "float_asof", "shares_outstanding", "shares_asof")
 GOOD_STATUSES = ("ok", "none", "no_cik", "absent")             # a good read (status rule)
@@ -307,9 +311,32 @@ def _default_track_fn():
     return BM.track_update
 
 
+def _str_at(arr, i) -> Optional[str]:
+    """`arr[i]` when it is a non-empty string, else None (a missing / ragged / junk array never raises)."""
+    if not isinstance(arr, list) or i >= len(arr) or not isinstance(arr[i], str):
+        return None
+    v = arr[i].strip()
+    return v or None
+
+
+def _is_report(form: str) -> bool:
+    """A current or periodic report: the base (after `/A`) in SB_REPORT_FORMS, or a SEC_PERIODIC_PREFIXES form."""
+    base = form.strip().upper()
+    if base.endswith("/A"):
+        base = base[:-2].strip()
+    return base in SB_REPORT_FORMS or base.startswith(SEC_PERIODIC_PREFIXES)
+
+
 def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=None) -> dict:
-    """{"status": "ok", "filings": [{"form", "filed", "items"}] (newest first, filed >= since, only kinds
-    `kind_fn(form, items)` names), "top_accn"} | {"status": "failed", "error", "blocked": bool}."""
+    """{"status": "ok", "filings": [{"form", "filed", "items", "doc", "file", "accn", "with"}] (newest first,
+    filed >= since, only kinds `kind_fn(form, items)` names, at most SB_FILINGS_KEPT), "top_accn"[, "cap"]}
+    | {"status": "failed", "error", "blocked": bool}.
+
+    📄 2026-11-26 (spec sitrack §3.1, A1): `doc` = primaryDocument, `file` = fileNumber, `accn` = accessionNumber
+    (each a non-empty string or None — a missing or ragged array leaves them None and the row counts as before);
+    `with` = the form of the first report (`_is_report`) in listing order the issuer filed the SAME day, read over the
+    WHOLE listing before the kind filter (an 8-K 8.01 that is not kept still marks its day), else None. `cap` =
+    SB_FILINGS_KEPT, present only when the kind-filtered list was longer than it."""
     try:
         kf = kind_fn or _default_kind_fn()
         r = _sec_get(SEC_SUBMISSIONS_URL % cik10, http)
@@ -324,13 +351,21 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
             return {"status": "failed", "error": ERR_MALFORMED, "blocked": False}
         forms, dates = rec.get("form"), rec.get("filingDate")
         items, accns = rec.get("items"), rec.get("accessionNumber")
+        docs, files = rec.get("primaryDocument"), rec.get("fileNumber")
         if not isinstance(forms, list) or not isinstance(dates, list):
             return {"status": "failed", "error": ERR_MALFORMED, "blocked": False}
         items = items if isinstance(items, list) else []
         accns = accns if isinstance(accns, list) else []
         since = _day(since_iso)
+        n = min(len(forms), len(dates))
+        report_on: dict = {}                                   # filed day → the first report's form, listing order
+        for i in range(n):
+            form = forms[i].strip() if isinstance(forms[i], str) else ""
+            filed = _day(dates[i])
+            if form and filed and filed not in report_on and _is_report(form):
+                report_on[filed] = form
         rows, top = [], None
-        for i in range(min(len(forms), len(dates))):
+        for i in range(n):
             form = forms[i].strip() if isinstance(forms[i], str) else ""
             filed = _day(dates[i])
             if not form or not filed:
@@ -343,9 +378,14 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
                 continue
             if kf(form, it) is None:
                 continue
-            rows.append({"form": form, "filed": filed, "items": it})
+            rows.append({"form": form, "filed": filed, "items": it, "doc": _str_at(docs, i),
+                         "file": _str_at(files, i), "accn": accn.strip() if accn else None,
+                         "with": report_on.get(filed)})
         rows.sort(key=lambda x: x["filed"], reverse=True)
-        return {"status": "ok", "filings": rows[:SB_FILINGS_KEPT], "top_accn": top[1] if top else None}
+        out = {"status": "ok", "filings": rows[:SB_FILINGS_KEPT], "top_accn": top[1] if top else None}
+        if len(rows) > SB_FILINGS_KEPT:
+            out["cap"] = SB_FILINGS_KEPT
+        return out
     except Exception as exc:                                   # noqa: BLE001
         return {"status": "failed", "error": _err(exc), "blocked": False}
 
@@ -503,8 +543,11 @@ def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store) -> 
         status, covers = c["status"], (c.get("covers") or [])
     else:
         status, covers = "ok", hcov
-    return _ok_sub({"status": status, "since": since, "top_accn": got.get("top_accn"),
-                    "covers": covers, "filings": got.get("filings") or []}, now_iso)
+    out = {"status": status, "since": since, "top_accn": got.get("top_accn"),
+           "covers": covers, "filings": got.get("filings") or []}
+    if got.get("cap"):                                         # 📄 2026-11-26 — the kept-row cap cut the list
+        out["filings_cap"] = got["cap"]
+    return _ok_sub(out, now_iso)
 
 
 def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None, track_fn=None, kind_fn=None,

@@ -84,10 +84,14 @@ class StandIn:
 
     def find(self, flt):
         # 2026-11-24: the close-out day's history adds exactly two window-bounded filters
+        # 2026-11-26 (sitrack §3.4): and ONE bounded read of the walked-back run starts
         ok = flt == {"kind": "state"} or (
             set(flt) == {"kind", "trade_date"} and flt["kind"] in ("list", "nolist")
             and isinstance(flt["trade_date"], dict) and set(flt["trade_date"]) == {"$gte"}
-            and isinstance(flt["trade_date"]["$gte"], str))
+            and isinstance(flt["trade_date"]["$gte"], str)) or (
+            set(flt) == {"kind", "on_through"} and flt["kind"] == RS.RUNSTART_KIND
+            and isinstance(flt["on_through"], dict) and set(flt["on_through"]) == {"$gte"}
+            and isinstance(flt["on_through"]["$gte"], str))
         assert ok, flt
         return [copy.deepcopy(d) for d in self.docs.values() if self._match(d, flt)]
 
@@ -253,6 +257,7 @@ def outside_calls(monkeypatch):
     monkeypatch.setattr(RS, "_bg", {"running": False, "last_start": None, "thread": None})
     monkeypatch.setattr(RS, "_pause", lambda s: None)
     monkeypatch.setattr(RS, "_hist", {"blocked_until": None})
+    monkeypatch.setattr(RS, "_asks", {"seq": 0, "items": {}})       # 2026-11-26: the in-process ask set
     yield calls
     t = RS._bg.get("thread")
     if t is not None:
@@ -1154,6 +1159,10 @@ REG_SHO_READERS_2026_11_23 = ("chart_maps/gajjala/high_si.py", "chart_maps/gajja
 # past their close-out date, plus the pure RSH.past_closeout_text word. It aliases the module RSH, so it has its own
 # read-only pin below (test_NEGATIVE_si_ssr_names_reads_the_stored_payload_only); nothing else may join.
 REG_SHO_READERS_2026_11_24 = ("chart_maps/gajjala/si_ssr_names.py",)
+# WIDENED 2026-11-26 (spec sitrack WP5, main-session suite gate): si_track.py (the 🏁 SI track record) records the 🔒
+# fields through the SAME stored payload(kick=False) — display only; aliases the module RSH; read-only pin in
+# test_gajjala_si_track_guards_2026_11_26. Nothing else may join.
+REG_SHO_READERS_2026_11_26 = ("chart_maps/gajjala/si_track.py",)
 
 
 def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():
@@ -1165,7 +1174,7 @@ def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():
         for f in (BACKEND / sub).rglob("*.py"):
             if "__pycache__" not in f.parts and "reg_sho" in f.read_text(errors="ignore"):
                 hits.append(f.relative_to(BACKEND).as_posix())
-    assert sorted(hits) == sorted(REG_SHO_READERS_2026_11_23 + REG_SHO_READERS_2026_11_24)
+    assert sorted(hits) == sorted(REG_SHO_READERS_2026_11_23 + REG_SHO_READERS_2026_11_24 + REG_SHO_READERS_2026_11_26)
     assert "reg_sho" not in (BACKEND / "crontab").read_text()
     ua = RS.HTTP_HEADERS["User-Agent"]
     assert "cheetah" not in ua.lower() and "@" not in ua

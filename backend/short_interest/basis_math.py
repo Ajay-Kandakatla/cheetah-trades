@@ -47,8 +47,11 @@ SEC_COVER_SAME_UNIT_TYPES = ("CS", "OS")
 # The count-fell cut is SR.SUSPECT_MAX_SHARES_OUT_FRACTION, read by name at CALL time (HIS CALL #18) [C8].
 
 # [C13] EXACT form families — no bare prefix (S-1 must not catch S-11).
+# 📄 2026-11-26 (spec sitrack §3.1, A2): S-11 / S-11MEF (real-estate registrations — WHLR's 11/10 S-11) appended. The
+# EDGAR form-type list has S-11, S-11/A and S-11MEF; there is no F-11 form, so nothing is added for it.
 FILING_REGISTRATION_FORMS = ("S-1", "S-1MEF", "S-3", "S-3ASR", "S-3MEF", "S-4",
-                             "F-1", "F-1MEF", "F-3", "F-3ASR", "F-3MEF", "F-4")
+                             "F-1", "F-1MEF", "F-3", "F-3ASR", "F-3MEF", "F-4",
+                             "S-11", "S-11MEF")
 FILING_PROSPECTUS_PREFIX = "424B"
 FILING_8K_FORM = "8-K"
 FILING_8K_DILUTION_ITEMS = ("3.02",)
@@ -71,6 +74,20 @@ SHORT_COUNT_STALE = EMOJI_WARN + " shares up %s×"
 SHORT_SPLIT = EMOJI_SPLIT + " split %s"
 SHORT_SPLIT_DUE = EMOJI_SPLIT + " split due %s"
 SHORT_FILING = EMOJI_FILING + " %s %s"
+# 📄 2026-11-26 (spec sitrack §3.1, A1 + A3) — the chip counts filing EVENTS, never copies, and says what it left out.
+SHORT_FILING_SAME_DAY = EMOJI_FILING + " %s %s · same day"
+TEXT_FILING_COPIES = (" — %d prospectus %s of same-day reports not counted (one document filed under several "
+                      "registrations)")
+TEXT_FILING_SAME_DAY = " — %s filed the same day %s was read; which came first is not known"
+ANCHOR_WORDS_FLOAT, ANCHOR_WORDS_COUNT = "the float", "the share count"
+TEXT_FILING_UNCHECKED = " — %d prospectus %s not yet checked for copies"
+TEXT_FILING_CAPPED = " — only the newest %d filings are read"
+# ⚠️ 2026-11-26 (spec sitrack §3.3, A6) — the no-usable-float baseline raised to an SEC cover count dated on or before
+# the record's own count.
+TEXT_COUNT_STALE_SEC = ("%s %s× more shares than the %s count dated on or before the record: %s (%s, %s) vs "
+                        "%s (%s) — the %% uses the newer count; the record itself carried %s (%s)")
+TITLE_SHARE_COUNTS_HEAD = "Share counts: the record carried %s (%s), under the %s count %s (%s) already dated"
+TITLE_SHARE_COUNTS_GROWTH = " — growth is read from the SEC count: %s (%s, %s) = %s×"
 SHORT_COUNT_FELL = EMOJI_CHECK + " shares fell %s×"
 SHORT_UNCHECKED = EMOJI_CHECK + " share count unchecked"
 SHORT_LAST_FAILED = EMOJI_CHECK + " last check failed"
@@ -226,8 +243,76 @@ def _filings(raw) -> list:
             items = ",".join(str(x) for x in items if isinstance(x, (str, int, float)) and not isinstance(x, bool))
         elif not isinstance(items, str):
             items = ""
-        out.append({"form": form.strip(), "filed": filed, "items": items, "kind": filing_kind(form, items)})
-    out.sort(key=lambda f: f["filed"], reverse=True)
+        out.append({"form": form.strip(), "filed": filed, "items": items, "kind": filing_kind(form, items),
+                    "doc": _opt_str(f.get("doc")), "file": _opt_str(f.get("file")), "accn": _opt_str(f.get("accn")),
+                    "with": _opt_str(f.get("with"))})
+    out.sort(key=lambda f: f["filed"], reverse=True)          # stable: the stored order stands inside one day
+    return out
+
+
+def _opt_str(v) -> Optional[str]:
+    return v.strip() if isinstance(v, str) and v.strip() else None
+
+
+def filing_label(f) -> str:
+    """The chip's name for one filing row: an 8-K Item 3.02 reads '8-K 3.02', every other form its own name."""
+    if filing_kind(f["form"], f["items"]) == KIND_UNREGISTERED and f["form"].upper().startswith(FILING_8K_FORM):
+        return "%s %s" % (FILING_8K_FORM, FILING_8K_DILUTION_ITEMS[0])
+    return f["form"]
+
+
+def _event(f, anchor: str, copies: int) -> dict:
+    return {"kind": f["kind"], "form": f["form"], "filed": f["filed"], "items": f["items"], "label": filing_label(f),
+            "same_day": f["filed"] == anchor, "copies": int(copies)}
+
+
+def filing_events(filings, anchor, cap=None) -> dict:
+    """📄 2026-11-26 (spec sitrack §3.1, A1 + A3) — the dilution and charter EVENTS filed ON or after `anchor`. PURE,
+    never raises on junk (rows go through `_filings`, so raw stored rows and `_filings` rows both work).
+
+    E1 the 424B rows of ONE day that carry the same `doc` are one document (its registration files = the distinct
+    `file`s). E2 a document under two or more files on a day the issuer also filed a report (`with`) is that report
+    re-filed: no event, every row a copy (the report itself is judged by `filing_kind` as before). Any other document
+    = one event, its other rows copies. A 424B row with no `doc` (a row stored before 2026-11-26) = one event, counted
+    in `unchecked`. Every other row = one event. Order: filed DESC, then the stored order.
+    → {"events", "charter" (each [{kind, form, filed, items, label, same_day, copies}]), "n_filings" (dilution-kind
+    rows — what the chip used to count), "n_copies", "unchecked", "cap" (the kept-row cap, else None)}."""
+    a = _iso(anchor)
+    out = {"events": [], "charter": [], "n_filings": 0, "n_copies": 0, "unchecked": 0, "cap": _pos_int(cap)}
+    if a is None:
+        return out
+    order, docs = [], {}
+    for f in _filings(filings):
+        if f["filed"] < a or f["kind"] not in DILUTION_KINDS + (KIND_CHARTER,):
+            continue
+        if f["kind"] == KIND_PROSPECTUS and f["doc"]:
+            k = (f["filed"], f["doc"])
+            g = docs.get(k)
+            if g is None:
+                g = docs[k] = {"rows": [], "files": set()}
+                order.append(("doc", g))
+            g["rows"].append(f)
+            if f["file"]:
+                g["files"].add(f["file"])
+        else:
+            order.append(("row", f))
+    for what, x in order:
+        if what == "doc":
+            rs = x["rows"]
+            out["n_filings"] += len(rs)
+            if len(x["files"]) >= 2 and any(r["with"] for r in rs):          # E2 — a report re-filed
+                out["n_copies"] += len(rs)
+                continue
+            out["n_copies"] += len(rs) - 1
+            out["events"].append(_event(rs[0], a, len(rs) - 1))
+            continue
+        if x["kind"] == KIND_CHARTER:
+            out["charter"].append(_event(x, a, 0))
+            continue
+        out["n_filings"] += 1
+        if x["kind"] == KIND_PROSPECTUS:                                     # a 424B with no `doc`
+            out["unchecked"] += 1
+        out["events"].append(_event(x, a, 0))
     return out
 
 
@@ -533,6 +618,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
 
     # ── baseline: the count in force when the float was first seen
     base = None                                     # (shares, as_of, source, form)
+    record_under = None                             # A6: the record's own count when an SEC cover raised the baseline
     carried_future = dilution_unchecked = False
     if splits_ok and is_float and track:
         if track.get("shares") and track.get("shares_asof"):
@@ -549,6 +635,14 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                     dilution_unchecked = True
     elif splits_ok and not is_float and P and Pa:
         base = (P, Pa, "record", None)
+        # ⚠️ 2026-11-26 (spec sitrack §3.3, A6) — no usable float: the baseline is the LARGER of the record's count and
+        # the newest same-unit SEC cover dated on or before it (rebased to its split side; a split ON either date
+        # leaves the record's count). The float branch above is NOT changed (HIS CALL, §7 #4).
+        cov = next((c for c in reversed(covers) if c["as_of"] <= anchor), None)
+        adj_cov = _rb(cov["shares"], cov["as_of"], basis_date, executed) if cov else None
+        if adj_cov and adj_cov > P:
+            base = (cov["shares"], cov["as_of"], "sec", cov["form"])
+            record_under = {"shares": P, "as_of": Pa}
     paired = _rb(base[0], base[1], basis_date, executed) if base else None
     if not paired:
         paired = None
@@ -584,6 +678,8 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             growth = {"ratio": round(newer[0] / paired, 3), "from_shares": paired, "from_asof": base[1],
                       "from_source": base[2], "to_shares": newer[0], "to_asof": newer[1], "to_source": newer[2],
                       "to_form": newer[3]}
+            if record_under:
+                growth["record_under"] = dict(record_under)
             if is_float:
                 si_b = rebase(si, S, basis_date, executed)
                 if stale_trigger(si_b, F, paired, newer[0]):
@@ -643,11 +739,26 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
         flags.append(_flag(FLAG_FLOAT_STALE, EMOJI_WARN, SHORT_FLOAT_STALE, text))
     if count_flag and growth:
         r = ratio_words(growth["ratio"])
-        text = ("%s %s× more shares than on the short-interest record: %s (%s, %s) vs %s (%s) — the %% uses the "
-                "newer count" % (EMOJI_WARN, r, format(growth["to_shares"], ","),
-                                 _src_words(growth["to_source"], growth["to_form"]), _md(growth["to_asof"]),
-                                 format(growth["from_shares"], ","), _md(growth["from_asof"])))
+        if growth["from_source"] == "sec" and record_under:
+            text = (TEXT_COUNT_STALE_SEC
+                    % (EMOJI_WARN, r, _src_words("sec", base[3]), format(growth["to_shares"], ","),
+                       _src_words(growth["to_source"], growth["to_form"]), _md(growth["to_asof"]),
+                       format(growth["from_shares"], ","), _md(growth["from_asof"]),
+                       format(record_under["shares"], ","), _md(record_under["as_of"])))
+        else:
+            text = ("%s %s× more shares than on the short-interest record: %s (%s, %s) vs %s (%s) — the %% uses the "
+                    "newer count" % (EMOJI_WARN, r, format(growth["to_shares"], ","),
+                                     _src_words(growth["to_source"], growth["to_form"]), _md(growth["to_asof"]),
+                                     format(growth["from_shares"], ","), _md(growth["from_asof"])))
         flags.append(_flag(FLAG_COUNT_STALE, EMOJI_WARN, SHORT_COUNT_STALE % r, text))
+    if record_under:                                   # A6 — the three counts, always, in the hover
+        head = (TITLE_SHARE_COUNTS_HEAD % (format(record_under["shares"], ","), _md(record_under["as_of"]),
+                                           _src_words("sec", base[3]), format(base[0], ","), _md(base[1])))
+        if growth:
+            head += TITLE_SHARE_COUNTS_GROWTH % (format(growth["to_shares"], ","),
+                                                 _src_words(growth["to_source"], growth["to_form"]),
+                                                 _md(growth["to_asof"]), ratio_words(growth["ratio"]))
+        title_lines.append(head + ".")
     if growth and (flags and flags[-1]["key"] in (FLAG_FLOAT_STALE, FLAG_COUNT_STALE)) and newest_after:
         prev_c = next((c for c in reversed(covers) if c["as_of"] <= anchor), None)
         if prev_c:
@@ -712,25 +823,39 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
     elif float_refused == REFUSE_DILUTED and flags and flags[0]["key"] == FLAG_FLOAT_STALE:
         float_line = flags[0]["text"]
 
-    dil = [f for f in filings if anchor and f["filed"] > anchor and f["kind"] in DILUTION_KINDS]
-    charter = [f for f in filings if anchor and f["filed"] > anchor and f["kind"] == KIND_CHARTER]
+    # 📄 2026-11-26 (spec sitrack §3.1, A1 + A3) — EVENTS on or after the anchor, never copies; a same-day filing is
+    # counted and labelled (which came first is not known).
+    ev = filing_events(filings, anchor, cap=sec.get("filings_cap"))
+    dil, charter = ev["events"], ev["charter"]
+    anchor_words = ANCHOR_WORDS_FLOAT if is_float else ANCHOR_WORDS_COUNT
 
-    def _label(f) -> str:
-        if filing_kind(f["form"], f["items"]) == KIND_UNREGISTERED and f["form"].upper().startswith(FILING_8K_FORM):
-            return "%s %s" % (FILING_8K_FORM, FILING_8K_DILUTION_ITEMS[0])
-        return f["form"]
+    def _same_day_tail(evs, words) -> str:
+        same = [words(e) for e in evs if e["same_day"]]
+        return TEXT_FILING_SAME_DAY % (" · ".join(same), anchor_words) if same else ""
+
+    def _named(e) -> str:
+        return "%s %s" % (e["label"], _md(e["filed"]))
 
     if dil:
-        short = SHORT_FILING % (_label(dil[0]), _md(dil[0]["filed"]))
-        if len(dil) > 1:
-            short += " +%d" % (len(dil) - 1)
-        if len(dil) == 1:
-            text = "%s dilution filing: %s %s" % (EMOJI_FILING, _label(dil[0]), _md(dil[0]["filed"]))
+        more = (" +%d" % (len(dil) - 1)) if len(dil) > 1 else ""
+        if all(e["same_day"] for e in dil):
+            short = SHORT_FILING_SAME_DAY % (dil[0]["label"], _md(dil[0]["filed"]) + more)
         else:
-            named = " · ".join("%s %s" % (_label(f), _md(f["filed"])) for f in dil[:3])
-            text = "%s dilution filings since %s: %s" % (EMOJI_FILING, _md(anchor), named)
+            short = SHORT_FILING % (dil[0]["label"], _md(dil[0]["filed"])) + more
+        if len(dil) == 1:
+            text = "%s dilution filing: %s" % (EMOJI_FILING, _named(dil[0]))
+        else:
+            text = "%s %d dilution filings since %s: %s" % (EMOJI_FILING, len(dil), _md(anchor),
+                                                           " · ".join(_named(e) for e in dil[:3]))
             if len(dil) > 3:
                 text += " (+%d more)" % (len(dil) - 3)
+        if ev["n_copies"]:
+            text += TEXT_FILING_COPIES % (ev["n_copies"], "copy" if ev["n_copies"] == 1 else "copies")
+        text += _same_day_tail(dil, _named)
+        if ev["unchecked"]:
+            text += TEXT_FILING_UNCHECKED % (ev["unchecked"], "filing" if ev["unchecked"] == 1 else "filings")
+        if ev["cap"]:
+            text += TEXT_FILING_CAPPED % ev["cap"]
         flags.append(_flag(FLAG_FILING, EMOJI_FILING, short, text))
 
     def _charter_words(f) -> str:
@@ -739,7 +864,8 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
 
     if charter:
         title_lines.append("Charter filing (a reverse split is filed under this item; so are other charter "
-                           "changes): %s." % "; ".join(_charter_words(f) for f in charter))
+                           "changes): %s%s." % ("; ".join(_charter_words(f) for f in charter),
+                                               _same_day_tail(charter, _charter_words)))
     if fell:
         r = ratio_words(fell["ratio"])
         text = ("%s share count fell %s× with no split on file: %s (%s, %s) vs %s (%s) — a split the splits read "
@@ -803,7 +929,8 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
     return {"float_refused": float_refused, "refused_reasons": refused_reasons, "float_pct_on_file": fpof,
             "count": count, "count_changed": bool(count_changed), "pct_of_shares_out": pct_so, "no_pct": bool(no_pct),
             "growth": growth, "fell": fell, "change": change, "splits": split_list,
-            "filings": [{"form": f["form"], "filed": f["filed"], "items": f["items"], "kind": f["kind"]} for f in dil],
+            "filings": [{"form": f["form"], "filed": f["filed"], "items": f["items"], "kind": f["kind"],
+                         "copies": f["copies"], "same_day": f["same_day"]} for f in dil],
             "charter": [{"form": f["form"], "filed": f["filed"], "items": f["items"]} for f in charter],
             "flags": flags, "status": "partial" if partial else "ok", "sources": sources,
             "checked_at": _ts_iso(doc.get("checked_at")), "tier_text": tier_text,

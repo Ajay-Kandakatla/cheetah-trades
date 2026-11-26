@@ -782,6 +782,37 @@ export type GgHighSiBlock = {
   /** 🩳 2026-11-24 (spec sidilute §3.6): the served line naming the names High / EXTREME on the float on file whose float is
    *  stale or across a split (not tiered, so not listed); null when none, absent on an older API. */
   basis_text?: string | null;
+  /** 🏁 2026-11-26 (spec sitrack §3.7 B, [OC1]): the 🩳 SI track record — served by si_track.served_block in its own try;
+   *  absent on an older API, null when not served (no section). Drawn INSIDE the panel, so it lives in the sub's ⓘ fold. */
+  si_track?: GgSiTrackBlock | null;
+};
+/** 🏁 one served column head, `[key, label]` (`pattern_heads` / `heads`); the label is printed, the key picks the cell. */
+export type GgSiTrackHead = [string, string];
+/** 🏁 one row of the pattern table, in the SERVED order — every piece served and printed as handed (no number formatted
+ *  here). `title` is the row's hover. */
+export type GgSiTrackPattern = { key?: string | null; label?: string | null; known_text?: string | null;
+  with_text?: string | null; without_text?: string | null; diff_text?: string | null; shuffle_text?: string | null;
+  word?: string | null; unknown_text?: string | null; title?: string | null };
+/** 🏁 one name-day of a day table. `counted` true = on the list before the day (in the rates); any other value is drawn
+ *  under the day's served `new_label`. `cells` is keyed by the served head keys; `win` is the served ✅ (or ''). */
+export type GgSiTrackRow = { symbol?: string | null; href?: string | null; win?: string | null; counted?: boolean | null;
+  group?: string | null; cells?: Record<string, string | null> | null; chips?: string[] | null; title?: string | null };
+/** 🏁 one served session, newest first; `new_label` heads the rows first listed that day (not counted); `other_label`
+ *  (2026-11-26 refix) heads the rows served with `group` "other" — on the list before the day but not graded, or with no
+ *  listing day on file — so they are never drawn under `new_label`. */
+export type GgSiTrackDay = { date?: string | null; label?: string | null; rows?: GgSiTrackRow[] | null;
+  new_label?: string | null; other_label?: string | null };
+/** 🏁 one served day-shape count line: the label, the winners' count, the rest's count. */
+export type GgSiTrackShape = { label?: string | null; win_text?: string | null; rest_text?: string | null };
+/** 🏁 the 🩳 SI track record block (si_track.served_block, 2026-11-26). A descriptive ledger, UNMEASURED: never a gate, a
+ *  sort outside its own table, a push or a lane input. Every word and number is SERVED; `n` / `n_days` are never printed. */
+export type GgSiTrackBlock = {
+  title?: string | null; summary_text?: string | null; base_text?: string | null; new_today_text?: string | null;
+  pattern_heads?: GgSiTrackHead[] | null; patterns?: GgSiTrackPattern[] | null; where_text?: string | null;
+  shape_rows?: GgSiTrackShape[] | null; heads?: GgSiTrackHead[] | null; days?: GgSiTrackDay[] | null;
+  shown_text?: string | null; pending_text?: string | null; asof_text?: string | null; rule_label?: string | null;
+  rule_text?: string | null; honesty?: string | null; fault_text?: string | null; empty_text?: string | null;
+  n?: number | null; n_days?: number | null;
 };
 /** ⛔ one row of the new-SSR list — every piece served and printed as handed (no number formatted here). */
 export type GgSsrNewRow = { symbol?: string | null; href?: string | null; at_text?: string | null; drop_text?: string | null;

@@ -90,7 +90,9 @@ def test_clro_pin_text_short_basis_and_title():
     assert b["status"] == "ok" and b["headline_basis"] == "float"
     assert b["pct_of_float"] == 44.05 and b["pct_of_shares_out"] == 14.62
     assert b["tier"] == "extreme" and b["float_check"] == "confirmed"
-    assert b["chip"] == "🩳 SI EXTREME 44.0% float · 1.0d · 10/30"
+    # 2026-11-26 sitrack A4: the chip divides 391,224 shares short by the builder's ADV 193,414 → 2.0d; A4 refix: the
+    # EXTREME title prints the same division (the card title's sentence), never the provider's 1.0
+    assert b["chip"] == "🩳 SI EXTREME 44.0% float · 2.0d · 10/30"
     e = b["extreme"]
     assert set(e) == {"text", "short", "title", "basis"}
     assert e["text"] == b["chip"]                                   # one engine: the note IS the chip
@@ -103,12 +105,14 @@ def test_clro_pin_text_short_basis_and_title():
         "high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules).")
     for want in ("at or above 20% of the float", "SI_HIGH_PCT", "not one of GG's rules", "888,130",
                  "too small to call either way", "not a forecast", "Not advice.",
-                 "14.6% of shares outstanding (2.7M)", "1.0 days to cover",
+                 "14.6% of shares outstanding (2.7M)",
+                 "2.02 days to cover — 391,224 shares short ÷ 193,414 average daily volume",   # 2026-11-26 A4 refix
                  "at or above the 10% of shares outstanding that confirms the float",
                  "SI_EXTREME_MIN_PCT_SHARES_OUT"):
         assert want in t, want
     for never in ("band", "did not run"):
         assert never not in t.lower()
+    assert "1.0 days to cover" not in t                               # 2026-11-26 A4 refix: not the provider's 1.0
 
 
 def test_exactly_at_the_cut_gets_the_note():
@@ -123,7 +127,8 @@ def test_NEGATIVE_below_the_cut_is_none_and_the_chip_is_unchanged():
     assert b["pct_of_float"] == 19.99
     assert b["extreme"] is None
     # 2026-11-18 sitier: the word High, and the seam prints 2-dp — never "20.0%" next to no note.
-    assert b["chip"] == "🩳 SI High 19.99% float · 1.0d · 10/30"
+    # 2026-11-26 sitrack A4: 19,990 ÷ the builder's ADV 193,414 → 0.1d
+    assert b["chip"] == "🩳 SI High 19.99% float · 0.1d · 10/30"
     assert "EXTREME" not in b["chip"] and "EXTREME" not in b["title"]
 
 
@@ -176,7 +181,8 @@ def test_NEGATIVE_the_clients_dtc_disjunction_is_not_mirrored():
 
 @pytest.mark.parametrize("dtc", [0, 0.0, None, float("nan")])
 def test_NEGATIVE_a_zero_or_missing_dtc_drops_the_segment(dtc):
-    b = SR.si_block(_clro(days_to_cover=dtc), TODAY)               # 2026-11-18 sitier: CLRO shape
+    # 2026-11-26 sitrack A4: read with no ADV — with one, the chip divides and prints a figure
+    b = SR.si_block(_clro(days_to_cover=dtc, avg_daily_volume=None), TODAY)   # 2026-11-18 sitier: CLRO shape
     e = b["extreme"]
     assert e["text"] == "🩳 SI EXTREME 44.0% float · 10/30"
     assert "0.0d" not in e["text"] and "days to cover" not in e["title"]
@@ -239,7 +245,7 @@ def test_si_map_carries_extreme_and_absent_names_stay_absent():
                                                       float_shares=854_034)], name=SIC.SI_COLL)})
     m = SR.si_map(["CLRO", "GP", "NOPE"], db=db, today=TODAY)
     assert list(m) == ["CLRO", "GP"]
-    assert m["CLRO"]["extreme"]["text"] == "🩳 SI EXTREME 44.0% float · 1.0d · 10/30"
+    assert m["CLRO"]["extreme"]["text"] == "🩳 SI EXTREME 44.0% float · 2.0d · 10/30"   # 2026-11-26 sitrack A4
     assert m["GP"]["tier"] == "low" and m["GP"]["chip"].startswith("🩳 SI Low 4.1% float")
     assert m["GP"]["pct_of_float"] == 4.06 and m["GP"]["extreme"] is None
     assert "NOPE" not in m

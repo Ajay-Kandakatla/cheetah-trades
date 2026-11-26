@@ -256,10 +256,12 @@ def test_the_fixture_chips_match_the_spec_by_hand():
     # 2026-11-18 sitier: float-basis ok chips lead with the tier word; three new cases.
     assert chip["eose_v2_float"] == "🩳 SI EXTREME 33.6% float · 4.1d · 9/15"
     assert chip["bynd_v2_float"] == "🩳 SI Low 1.0% float · 4.7d · 9/15"
-    assert chip["fcg_v2_no_denoms"] == "🩳 SI 440.3K sh · 1.0d · 9/15"
+    # 2026-11-26 sitrack A4: 440,253 ÷ 878,632 = 0.50 — the provider's 1.0 is FINRA's floor
+    assert chip["fcg_v2_no_denoms"] == "🩳 SI 440.3K sh · 0.5d · 9/15"
     assert chip["eose_v1_legacy_stale"].endswith("· 8/31 · stale")
     assert chip["no_record_miss"] is None
-    assert chip["dtc_missing"] == "🩳 SI EXTREME 33.6% float · 9/15"
+    # 2026-11-26 sitrack A4: no provider figure, but the ADV is on the record → shares short ÷ ADV
+    assert chip["dtc_missing"] == "🩳 SI EXTREME 33.6% float · 4.1d · 9/15"
     assert chip["akan_shape_unconfirmed"] == "🩳 SI High 36.4% float · float unconfirmed · 1.0d · 9/15"
     assert chip["clro_shape_extreme"] == "🩳 SI EXTREME 44.0% float · 1.0d · 9/15"
     assert chip["float_unchecked"] == "🩳 SI High 36.0% float · 1.0d · 9/15"
@@ -333,16 +335,20 @@ def test_NEGATIVE_bad_float_AND_shares_fall_back_to_the_share_count(bad):
 
 
 def test_NEGATIVE_a_zero_days_to_cover_never_prints_0_0d():
-    b = SR.si_block(_eose(days_to_cover=0.0), FIX_TODAY)
+    # 2026-11-26 sitrack A4: with an ADV on the record the chip divides (4.1d) — the provider-figure path is read with
+    # no ADV, where a provider 0 still prints no segment
+    b = SR.si_block(_eose(days_to_cover=0.0, avg_daily_volume=None), FIX_TODAY)
     assert b["days_to_cover"] == 0.0
     # 2026-11-18 sitier: the EXTREME word leads (33.59% of float, 33.18% of shares outstanding — confirmed).
     assert "0.0d" not in b["chip"] and b["chip"] == "🩳 SI EXTREME 33.6% float · 9/15"
-    tiny = SR.si_block(_eose(days_to_cover=0.03), FIX_TODAY)
+    tiny = SR.si_block(_eose(days_to_cover=0.03, avg_daily_volume=None), FIX_TODAY)
     assert tiny["chip"] == "🩳 SI EXTREME 33.6% float · <0.1d · 9/15"
+    assert SR.si_block(_eose(days_to_cover=0.0), FIX_TODAY)["chip"] == "🩳 SI EXTREME 33.6% float · 4.1d · 9/15"
 
 
 def test_NEGATIVE_nan_days_to_cover_is_none_and_drops_the_segment():
-    b = SR.si_block(_eose(days_to_cover=float("nan")), FIX_TODAY)
+    # 2026-11-26 sitrack A4: read with no ADV (with one, the chip divides)
+    b = SR.si_block(_eose(days_to_cover=float("nan"), avg_daily_volume=None), FIX_TODAY)
     assert b["days_to_cover"] is None
     assert not re.search(r"\dd\b", b["chip"]) and "0.0d" not in b["chip"]
     assert "Days to cover: not read." in b["title"]
@@ -508,8 +514,9 @@ def test_THREE_calls_on_a_new_settlement_write_v2_docs(monkeypatch, sleeps):
     assert d1["shares_outstanding"] is None and d1["pct_of_shares"] is None
     # the served read of a freshly written doc
     b = SR.si_block(d0, date(2026, 9, 28))
-    # 2026-11-18 sitier: 10.0% of float reads High.
-    assert b["chip"] == "🩳 SI High 10.0% float · 2.0d · 9/15" and b["status"] == "ok"
+    # 2026-11-18 sitier: 10.0% of float reads High. 2026-11-26 sitrack A4: shares short ÷ ADV = 2,000 ÷ 500 (the
+    # fake provider's 2.0 is not what the chip prints)
+    assert b["chip"] == "🩳 SI High 10.0% float · 4.0d · 9/15" and b["status"] == "ok"
 
 
 @pytest.mark.parametrize("label,fail,ref_fail,bulk_latest", [

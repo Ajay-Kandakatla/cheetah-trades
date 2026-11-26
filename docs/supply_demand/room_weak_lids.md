@@ -64,3 +64,39 @@ Change (wording only — the target, the states and the 5% floor are byte-identi
 Tests: `backend/tests/test_deep_gabbar_review_fixes_2026_09_14.py` (`test_d1_*`) — the CLEAR
 case names the lid, the proven-set caller is unchanged, a proven lid is never "weak", a lid
 under the print is never named, and the board stat on a deep row.
+
+## 2026-11-26 — the 🧨 chip's room read (`bounce_room.room_read`) names the weak lid too (A7)
+
+Ajay 2026-11-26: *"can we make sure in the future these # are accurate ?"* — WHLR's 🧨 chip
+read `room +6666279%`. The room was measured to the first TESTED band (28,395.04–29,406.56,
+2 touches, last tested 187 sessions ago) past 13 untested bands; the nearest, 1.08–1.12
+(1 touch), is +154% away. `bounce_room.room_read` (the row path's room block, the one
+`explosive.read` carries to the chip) had no weak-lid key; `alert_gates.room_read` (the push)
+already did.
+
+Change (additive, wording only): a ROOM / NEAR read with an untested band between the print
+and the tested target also carries
+
+| key | value |
+|---|---|
+| `weak` | `alert_gates.first_weak_lid(bands, print, target lo)` — the same engine as the push |
+| `skipped` | how many valid bands failing `is_proven_band` sit with print < lo < target lo |
+| `target_age` | the tested band's stored `bars_since_test` (None when the doc predates it) |
+| `weak_text` | `WEAK_TEXT` — WHLR: `1× band +154% first` |
+| `weak_title` | `WEAK_TITLE` — the hover; tested count = `alert_gates.LID_MIN_TOUCHES` by name |
+
+ONE number format, `bounce_room._room_pct_words`: whole % at 10 and over, one decimal under,
+a half rounded away from zero on the exact binary value — JavaScript's `toFixed`, the chip's
+own `pct` (`frontend/src/lib/bounceRoom.ts`). The text and the hover both use it; the served
+`weak.pct` keeps the engine's one decimal (153.6). Case list: 153.6 → 154, 153.5 → 154,
+12.5 → 13, 10 → 10, 9.96 → 10.0, 3.44 → 3.4, 0.44 → 0.4.
+
+NOT changed: `state`, `room_pct`, `atr_days`, `band`, `at_highs`, `room_ok`, `room_rank`,
+`into_supply`, `room_group`, `bounce_room_key`, `explosive_key`, the enterable and
+band-structure reads, `alert_gates`, `explosive`, `enterable`, `band_structure`, `room_floor`.
+No untested band under the target, CLEAR, IN_BAND or a garbage print → the dict is exactly
+as before (no new key). WHLR still sorts first on room-sorted boards (unchanged on purpose;
+his call, spec §7 #2–#3).
+
+Tests: `backend/tests/test_bounce_room_weak_lid_2026_11_26.py` (WHLR's stored
+`bounce_room_zones` doc of 2026-11-25, 19 bands, inline).
