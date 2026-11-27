@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🤖 Gajjala's Watch — the auto section on the board (2026-11-17, watch-auto spec §3.6 / §4 WP-C).
  * Ajay: "Can you add more stocks in to watch list basically I need portentials from Gajjals's 1 min and regular and also
  * Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing".

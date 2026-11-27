@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 📈📐 👀 Gajjala's Watch — frames 1 / 5 / 15 · VWAP · daily supply & demand zones, the FE (2026-11-23, vwapzones spec §3.9).
  * Ajay 2026-11-23: "can you add vwap and supply demand zone in the daily time frame on the watch list please" · "I think we
  * have 15 mins too" · "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board" · "Add vwap and

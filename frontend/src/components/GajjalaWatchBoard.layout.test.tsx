@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 👀 Gajjala's Watch — bigger tiles + ⤢ stretch (2026-11-16). Ajay: "I need bigger may be 2 on each screen side by side
  * its not clear and give me a strech button to see full chart" · "I wanna see all 3 of one stock for stretch like 5, 3
  * and 1" · "right now its hard to see but on regular view two charts to fit the screen".

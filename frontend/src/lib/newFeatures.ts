@@ -1089,6 +1089,21 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-27, verbatim (four messages, all in the label). Spec watch5m rev 2 (scratchpad watch5m/spec.md §3, §4
+  // main-session). FE only: lib/ggwFrames.ts (GGW_FRAME_DEFAULT '5m', GGW_DENSE_ORDER / GGW_DENSE_DEFAULT, the density
+  // rule on GGW_DENSE_MIN_COL_PX + GGW_FIT_ROW_MIN_PX), hooks/useGgwFrames.tsx, components/GgwFramesMenu.tsx,
+  // styles/ggwFrames.css, the opt-in frames / one / volAvg / framesMenu props on GajjalaWatchTile.tsx + PatternChart.tsx,
+  // GajjalaWatchLayout.tsx options / disabled, the mounts in GajjalaWatchBoard.tsx. Every served frame still folds live
+  // from page open (C1); per= keeps the 3-frame layout (C2); the 🚩 / 🧪 card click passes no frames (C4). Display only —
+  // FRAMES, PUSH_FRAMES, the stretch order, pushes untouched. Pinned by scripts/contracts.mjs ("👀 Watch 5-min grid +
+  // frames multi-select (2026-11-27)"). PLACED past index 100, right above the 📚 Playbook entry (moved 2026-11-27 on rebase:
+  // 📚 / 🧘 / 🧮 landed first and 🧮 → 📅 runners is pinned; tape → 📚 was not pinned adjacent): no NEW_FEATURES[n] pin moves. Docs docs/gajjala/watch_5m_grid_2026_11_27.md.
+  {
+    id: 'gajjala-watch-5m-grid-2026-11-27',
+    label: "👀 Watch: 5-minute charts, more names at once — you said: “This is how I want our watch list to be designed.. So I can look at 5 mins charts like 6 in one go...” · “its not about the visual to look like but the intention is for me to look at more on my watch at a one point of time” · “Also on the expanded view I need 5 mins by default to look in detail and not sure what the line on volume is its blocking my story..” · “Give me a drop down or multi select like button to toggle 1 mins and 15 mins 5 mins by default..”. Every Watch tile now opens on its 5-minute chart alone, 6 per screen (3 × 2); the per-screen pick goes 6 · 9 · 12 · 16 · 20 — a pick this window cannot show whole is greyed — and every name is still in the one scroll. The frames button on the board (and inside ⤢) ticks 1-min and 15-min back on — one frame always stays on, and each choice is remembered in this browser. While they are off, their captions are off the tile too (their K5 ✓ / ✕, 9/21 dot and sentence, the 1-min 🔕 chip); a tick brings them back with the candle they were building all along. ⤢ opens on one full-height 5-minute chart. The line across the volume bars was the 50-bar average volume; it is off on Watch tiles and in ⤢ now (the 📅 runner chart keeps it) — tick “Average volume line” in the same menu to bring it back. Display only: no alert, rule or push changed.",
+    addedAt: '2026-11-27',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-27 ~02:15 ET, verbatim: "I loved the video can you move them under our replay tab with a PLaybook learning
   // and also add it to the playbook tab too with videos". Spec playbookvid rev 2 (scratchpad playbookvid/spec.md §3.9).
   // BE chart_maps/replays/playbook.py (the listing engine) + playbook_api.py (two owner-only routes, included by api.py);

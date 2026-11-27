@@ -150,7 +150,7 @@ const ctxGutterTone = (kind: string): 'zone_demand' | 'zone_supply' | null =>
     : kind === 'board_supply' || kind === 'supply' ? 'zone_supply' : null;
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look, candleLook }: {
+  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look, candleLook, volAvg }: {
     tile: CmTile; height?: number;
     /** 👀 The viewBox width (default PATTERN_CHART_VIEW_W). Gajjala's Watch passes its box's width / GGW_TEXT_SCALE so a
      *  full-width chart keeps its text and markers at their size (2026-11-16: "All the charts are shrinked too much"). */
@@ -201,6 +201,11 @@ export const PatternChart = memo(function PatternChart(
      *  2 device px keeps the previous anti-aliased body (0.8 of the slot) in the 1m colours. Hover, markers,
      *  curves, zones and the volume pane are untouched. Absent → byte-identical. */
     candleLook?: '1m';
+    /** 👀 2026-11-27 (Ajay: "not sure what the line on volume is its blocking my story"): `false` draws no 50-bar
+     *  average line in the volume pane (no `path.pc-vol-sma`, solid or flat dashed), scales the pane to the tallest
+     *  bar (a served average never lifts it) and titles it `volume · tallest bar …`. Columns, the corner label, the
+     *  hairline and the price pane are untouched. Absent / `true` → byte-identical. */
+    volAvg?: boolean;
   },
 ) {
   const location = useLocation();
@@ -687,9 +692,11 @@ export const PatternChart = memo(function PatternChart(
             // its scale is the tallest bar exactly as before.
             const avg = paneVolumeAverage(
               vols, (tile as CmTile & { vol_avg?: ServedVolAvg | null }).vol_avg);
-            const sma = avg.values;
+            // volAvg={false}: no line at all, so nothing to fit — the scale is the tallest bar.
+            const avgOff = volAvg === false;
+            const sma = avgOff ? [] : avg.values;
             const win = avg.win;
-            const top = avg.served
+            const top = avg.served && !avgOff
               ? sma.reduce<number>((m, v) => (v != null && v > m ? v : m), volMax)
               : volMax;
             const yV = (v: number) => pane.volBot - (v / top) * paneH;
@@ -718,7 +725,9 @@ export const PatternChart = memo(function PatternChart(
               ? `scale top ${shortVol(top)} · tallest bar ${shortVol(volMax)}`
               : `tallest bar ${shortVol(volMax)}`;
             // No line drawn → the pane's title does not name an average.
-            const paneTitle = segs.length || flat != null
+            const paneTitle = avgOff
+              ? `volume · ${scale}`
+              : segs.length || flat != null
               ? `${title} · ${scale}`
               : `volume · ${scale} · average not drawn (a bar in the window has no volume)`;
             return (

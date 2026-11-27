@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 👀 Gajjala's Watch LIVE on the board (2026-11-16, watch-live spec §3.5, WP-D).
  * Ajay: "Can you make the watch list charts live please" · "Realtime updates.. Like the 1 min chart I need it to be live
  * live.. per sec change" · "Also on the Watch list I need live volume to be shown at the bottom" · "Of each chart".

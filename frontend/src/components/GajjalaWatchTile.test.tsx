@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🚩 / 👀 the shared tile + ⤢ full-screen view (2026-11-16, ggcard3 spec §3.3 / §4 WP-A). A PURE MOVE out of
  * GajjalaWatchBoard.tsx plus opt-in additions for the 🚩 card view — Ajay 2026-11-16: "Also when I click on a card from
  * any of the Gajjala I would like us to open the 3 chart extension like in the Watch list..." → "Actually instead of 3

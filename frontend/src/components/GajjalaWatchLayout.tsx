@@ -12,7 +12,12 @@
  *   - `groups` on GgwPager (🗂 2026-11-22, spec watch_org §3.5 — Ajay: "Manual ones I add them need to be on top then
  *     auto intraday.."): the served section words inline at the first item of each section, items `[🎯?, SYM]`.
  * The FE composes no word about a stock here: the pager titles are the GGW_PAGER control words, the × title is the
- * served remove_title / remove_label, the rest are structural glyphs. docs/gajjala/watch_layout_shared_2026_11_18.md. */
+ * served remove_title / remove_label, the rest are structural glyphs. docs/gajjala/watch_layout_shared_2026_11_18.md.
+ *
+ * 👀 2026-11-27 (spec watch5m §3.6, WP tile) — Ajay: "So I can look at 5 mins charts like 6 in one go...". GgwLayoutPick
+ * gains opt-in `options` (the picks drawn; absent → GGW_LAYOUT_ORDER), `disabled` (picks drawn greyed, never removed, so
+ * the head's width never follows the offer) + `disabledTitle`, and `layout: null` (no pick lit). Absent → the card grid's
+ * and the Watch's 1 · 2 · 4 · 9 byte-identical. docs/gajjala/watch_5m_grid_2026_11_27.md. */
 import { useEffect, useState, type RefObject } from 'react';
 import {
   GGW_LAYOUT_ORDER, GGW_PAGER, ggwFitRowHeight, type GgwLayout, type GgwRowAplus, type GgwRowAuto, type GgwSection,
@@ -47,20 +52,35 @@ export function useGgwFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<H
 }
 
 /** The "1 · 2 · 4 · 9 per screen" pick (the caller guards rows / phone). */
-export function GgwLayoutPick({ layout, onPick, testidPrefix = 'ggw-layout' }: {
-  layout: GgwLayout; onPick: (l: GgwLayout) => void;
+export function GgwLayoutPick<T extends number = GgwLayout>({
+  layout, onPick, options, disabled, disabledTitle, testidPrefix = 'ggw-layout',
+}: {
+  /** The lit pick; null → none lit (2026-11-27: the dense board when the window fits no pick). */
+  layout: T | null; onPick: (l: T) => void;
+  /** 2026-11-27: the picks drawn, in order; absent → GGW_LAYOUT_ORDER exactly. */
+  options?: ReadonlyArray<T>;
+  /** 2026-11-27: picks drawn with the `disabled` attribute (greyed, a click does nothing); absent → none. */
+  disabled?: ReadonlyArray<T>;
+  /** 2026-11-27: appended to a disabled pick's title (`{l} per screen — {disabledTitle}`). */
+  disabledTitle?: string;
   /** Renames the testids (`{prefix}`, `{prefix}-{l}`); absent → the Watch's `ggw-layout` exactly. */
   testidPrefix?: string;
 }) {
+  const picks = options ?? (GGW_LAYOUT_ORDER as ReadonlyArray<number> as ReadonlyArray<T>);
   return (
     <span className="ggw-layout" role="group" aria-label="Charts per screen" data-testid={testidPrefix}>
-      {GGW_LAYOUT_ORDER.map((l) => (
-        <button key={l} type="button" className={`ggw-btn ggw-layout-btn${l === layout ? ' is-on' : ''}`}
-                aria-pressed={l === layout} title={`${l} per screen`} data-testid={`${testidPrefix}-${l}`}
-                onClick={() => onPick(l)}>
-          {String(l)}
-        </button>
-      ))}
+      {picks.map((l) => {
+        const off = !!disabled && disabled.includes(l);
+        const title = off && disabledTitle ? `${l} per screen — ${disabledTitle}` : `${l} per screen`;
+        return (
+          <button key={l} type="button" className={`ggw-btn ggw-layout-btn${l === layout ? ' is-on' : ''}`}
+                  aria-pressed={l === layout} title={title} data-testid={`${testidPrefix}-${l}`}
+                  disabled={off || undefined}
+                  onClick={() => { if (!off) onPick(l); }}>
+            {String(l)}
+          </button>
+        );
+      })}
       <span className="ggw-layout-label">per screen</span>
     </span>
   );

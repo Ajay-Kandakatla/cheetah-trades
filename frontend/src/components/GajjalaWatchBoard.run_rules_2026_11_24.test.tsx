@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* ▶ Run Gajjala's rules from the 👀 Watch — the REAL board (2026-11-24, spec ggrun §3.5 / §4 fe-run).
  * Ajay 2026-11-24: "On the Watch list I need a run button to run against Gajjalas rules of a stock to see for patterns of
  * 5 patterns he has especially reversal squeeze.. so can check for patterns mid day when I can add a small slide in in

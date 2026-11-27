@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch — "per screen" = columns, every tile in one scroll (2026-11-25)
 
+> **2026-11-27 — built (frontend, branch `feat/watch-5m-grid-2026-11-27`).** Now, while exactly one frame is on (its default: the 5-min chart alone) the per-screen pick is 6 · 9 · 12 · 16 · 20, offered only when the whole count fits at both floors (`GGW_DENSE_MIN_COL_PX` = the `.cm-grid` 420 px, `GGW_FIT_ROW_MIN_PX`); two or three frames on → 1 · 2 · 4 · 9 exactly as here. `per=` still means this doc's layout; the dense pick is per browser. See [watch_5m_grid_2026_11_27.md](watch_5m_grid_2026_11_27.md).
+
 Ajay 2026-11-25 ~11:30 ET, on the 👀 Gajjala's Watch tab (screenshot: per-screen pick `1 · 2 · 4 · 9` with 2 lit, pager
 `▶ 1 / 21`, two tiles BTDR + EMBC showing), verbatim:
 

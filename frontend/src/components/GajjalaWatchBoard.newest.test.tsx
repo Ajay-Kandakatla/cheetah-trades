@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🆕 Gajjala's Watch — new names ACTIVE, ON TOP, WITH CHARTS (2026-11-19, watch-newest spec §3.4, WP-FE-board).
  * Ajay: "When I add a new ticket they are gettinf added in to que but not active … charts are not loading I amhaving to
  * click on the chips again". The real board, fetch stubbed, fake clocks:

@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 📐 👀 Gajjala's Watch — the REAL payload (2026-11-23, vwapzones spec §3.9 [C3]).
  * Ajay 2026-11-23: "can you add vwap and supply demand zone in the daily time frame on the watch list please" · "Add vwap
  * and supply demand too".

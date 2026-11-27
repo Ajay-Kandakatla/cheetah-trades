@@ -20196,6 +20196,120 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '👀 Watch 5-min grid + frames multi-select (2026-11-27)',
+    file: 'src/lib/ggwFrames.ts',
+    // Ajay 2026-11-27, verbatim: "This is how I want our watch list to be designed.. So I can look at 5 mins charts like 6
+    // in one go..." · "its not about the visual to look like but the intention is for me to look at more on my watch at a
+    // one point of time" · "Also on the expanded view I need 5 mins by default to look in detail and not sure what the line
+    // on volume is its blocking my story.." · "Give me a drop down or multi select like button to toggle 1 mins and 15 mins
+    // 5 mins by default..". Spec watch5m rev 2 §3, §4 main-session. Display only: FRAMES / PUSH_FRAMES / the stretch order
+    // / pushes untouched; every served frame keeps folding live (C1); per= keeps the 3-frame layout (C2); the 🚩 / 🧪 card
+    // click passes no frames (C4); the legacy seam lives in test files only (C5).
+    checks: (lib) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const code = tsCode(lib);
+
+      // 1. the lib — the defaults, the two floors reused by name
+      if (!/export const GGW_FRAME_DEFAULT = '5m';/.test(code)) errs.push("lib/ggwFrames.ts: GGW_FRAME_DEFAULT must be '5m' (his \"5 mins by default\")");
+      if (!/export const GGW_DENSE_DEFAULT: GgwDense = 6;/.test(code)) errs.push('lib/ggwFrames.ts: GGW_DENSE_DEFAULT must be 6 (his "6 in one go")');
+      const dense = /export const GGW_DENSE = \{([\s\S]*?)\} as const;/.exec(code);
+      const shapes = dense ? [...dense[1].matchAll(/(\d+):\s*\{\s*cols:\s*(\d+),\s*rows:\s*(\d+)\s*\}/g)].map((m) => [+m[1], +m[2], +m[3]]) : [];
+      if (!shapes.length) errs.push('lib/ggwFrames.ts must declare GGW_DENSE as { N: { cols, rows } } as const');
+      for (const [n, c, r] of shapes) if (c * r !== n) errs.push(`lib/ggwFrames.ts: GGW_DENSE ${n} is ${c} × ${r} — cols × rows must equal the pick`);
+      const ord = /export const GGW_DENSE_ORDER: ReadonlyArray<GgwDense> = \[([^\]]*)\];/.exec(code);
+      const order = ord ? ord[1].split(',').map((x) => Number(x.trim())) : [];
+      if (!order.length) errs.push('lib/ggwFrames.ts must declare GGW_DENSE_ORDER');
+      if (order.join(',') !== shapes.map((s) => s[0]).join(',')) errs.push(`lib/ggwFrames.ts: GGW_DENSE_ORDER (${order.join(',')}) must list the GGW_DENSE keys in order (${shapes.map((s) => s[0]).join(',')})`);
+      if (!order.includes(6)) errs.push('lib/ggwFrames.ts: GGW_DENSE_ORDER must hold the default 6');
+      const colPx = /export const GGW_DENSE_MIN_COL_PX = (\d+);/.exec(code);
+      const cm = /\.cm-grid\s*\{[^}]*minmax\((\d+)px,\s*1fr\)/.exec(quiet('src/styles.css'));
+      if (!colPx || !cm) errs.push('GGW_DENSE_MIN_COL_PX and the .cm-grid minmax(…px, 1fr) must both exist');
+      else if (colPx[1] !== cm[1]) errs.push(`GGW_DENSE_MIN_COL_PX (${colPx[1]}) must equal the .cm-grid minmax px (${cm[1]}) — a reused floor, never a new one`);
+      if (!/import \{[^}]*\bGGW_FIT_ROW_MIN_PX\b[^}]*\} from '\.\/gajjalaWatch';/.test(code)) errs.push('lib/ggwFrames.ts must import GGW_FIT_ROW_MIN_PX from ./gajjalaWatch (the row floor by name)');
+      if (/\b200\b/.test(code)) errs.push('lib/ggwFrames.ts must never type 200 — the row floor is GGW_FIT_ROW_MIN_PX');
+      if (/\bggwMetasOn\b|\bggwLiveTfs\b|\bggwPerParam\b/.test(code)) errs.push('lib/ggwFrames.ts must not export ggwMetasOn / ggwLiveTfs / ggwPerParam (C1, C2)');
+
+      // 2. the board — the two frame choices, live fold and link untouched
+      const board = tsCode(quiet('src/components/GajjalaWatchBoard.tsx'));
+      if (!board.includes('frames={fx.board}')) errs.push('GajjalaWatchBoard.tsx must pass frames={fx.board} to the tiles');
+      if (!/<GgwStretch\b[\s\S]*?frames=\{fx\.stretch\}/.test(board)) errs.push('GajjalaWatchBoard.tsx must pass frames={fx.stretch} to <GgwStretch>');
+      if (!board.includes('ggwFrameMetas(load.p.rows)')) errs.push('GajjalaWatchBoard.tsx must keep ggwFrameMetas(load.p.rows) — every served frame folds live from page open (C1)');
+      for (const bad of ['ggwMetasOn', 'ggwLiveTfs']) if (board.includes(bad)) errs.push(`GajjalaWatchBoard.tsx must not use ${bad} — the live fold is never gated by the ticked frames (C1)`);
+      if (!board.includes('setParams((prev) => ggwViewParams(prev, { layout, pick, page: 0 })')) errs.push('GajjalaWatchBoard.tsx must keep the unwrapped setParams((prev) => ggwViewParams(prev, { layout, pick, page: 0 }) — per= is the 3-frame layout only (C2)');
+      if (board.includes('ggwPerParam')) errs.push('GajjalaWatchBoard.tsx must not use ggwPerParam — the dense pick never reaches the link (C2)');
+      const hook = tsCode(quiet('src/hooks/useGgwFrames.tsx'));
+      if (/\bggwPerParam\b|window\.location/.test(hook)) errs.push('hooks/useGgwFrames.tsx must never read the link (no ggwPerParam, no window.location) (C2)');
+
+      // 3. the 🚩 / 🧪 card click — today's three frames + the average line (C4)
+      const card = tsCode(quiet('src/components/GgCardView.tsx'));
+      if (/\bframes=/.test(card)) errs.push('GgCardView.tsx must pass no frames= (the card click keeps three frames, C4)');
+      if (/from '\.\.\/lib\/ggwFrames'/.test(card) || /\bggwFrames\b/.test(card)) errs.push('GgCardView.tsx must not import ggwFrames (C4)');
+
+      // 4. the legacy seam — test files only, no frame literal (C5)
+      const SEAM = 'src/test/ggwFramesLegacy.ts';
+      const seam = quiet(SEAM);
+      if (/'\d+m'/.test(seam)) errs.push(`${SEAM} must hold no frame literal — it returns the lib's own GGW_FRAMES_EVERY`);
+      const walk = (dir, out) => {
+        for (const d of readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true })) {
+          const p = `${dir}/${d.name}`;
+          if (d.isDirectory()) walk(p, out);
+          else if (/\.(ts|tsx)$/.test(d.name)) out.push(p);
+        }
+        return out;
+      };
+      for (const f of walk('src', [])) {
+        if (f === SEAM || !quiet(f).includes('ggwFramesLegacy')) continue;
+        if (!/\.test\.tsx?$/.test(f)) errs.push(`${f} imports ggwFramesLegacy — the seam is for *.test files only (C5)`);
+      }
+
+      // 5. the stretch order unchanged
+      if (!quiet('src/lib/gajjalaWatch.ts').includes("export const GGW_STRETCH_ORDER = ['15m', '5m', '1m'] as const;")) errs.push("lib/gajjalaWatch.ts must keep GGW_STRETCH_ORDER = ['15m', '5m', '1m']");
+
+      // 6. the ✨ — his four messages verbatim, the numbers from the constants, past index 100 right above the 📚 Playbook entry
+      const ID = 'gajjala-watch-5m-grid-2026-11-27';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-27') errs.push(`the 👀 5-min ✨ addedAt must be 2026-11-27 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala_watch') errs.push(`the 👀 5-min ✨ route must be /chart-maps?tab=gajjala_watch (found ${lab[3]})`);
+        for (const q of ['This is how I want our watch list to be designed.. So I can look at 5 mins charts like 6 in one go...',
+          'its not about the visual to look like but the intention is for me to look at more on my watch at a one point of time',
+          'Also on the expanded view I need 5 mins by default to look in detail and not sure what the line on volume is its blocking my story..',
+          'Give me a drop down or multi select like button to toggle 1 mins and 15 mins 5 mins by default..']) {
+          if (!L.includes(`“${q}”`)) errs.push(`the 👀 5-min ✨ must quote him verbatim inside curly quotes: ${q}`);
+        }
+        if (!L.includes('on Watch tiles and in ⤢')) errs.push('the 👀 5-min ✨ must say the average line is off "on Watch tiles and in ⤢" (the 📅 runner chart keeps it, C8)');
+        if (order.length && !L.includes(`the per-screen pick goes ${order.join(' · ')}`)) errs.push(`the 👀 5-min ✨ must list the picks from GGW_DENSE_ORDER (${order.join(' · ')})`);
+        const d6 = shapes.find((s) => s[0] === 6);
+        if (d6 && !L.includes(`6 per screen (${d6[1]} × ${d6[2]})`)) errs.push(`the 👀 5-min ✨ must state the default as GGW_DENSE[6] (6 per screen (${d6[1]} × ${d6[2]}))`);
+        const sma = /export const VOLUME_SMA_LEN = (\d+);/.exec(quiet('src/lib/volumePane.ts'));
+        if (!sma) errs.push('lib/volumePane.ts must export VOLUME_SMA_LEN');
+        else {
+          if (!L.includes(`the ${sma[1]}-bar average volume`)) errs.push(`the 👀 5-min ✨ must name the line as the ${sma[1]}-bar average volume (VOLUME_SMA_LEN)`);
+          for (const m of L.matchAll(/(\d+)-bar/g)) if (m[1] !== sma[1]) errs.push(`the 👀 5-min ✨ says ${m[0]} — VOLUME_SMA_LEN is ${sma[1]}`);
+        }
+        const vw = /volAvg: '([^']+)'/.exec(code);
+        if (vw && !L.includes(`“${vw[1]}”`)) errs.push(`the 👀 5-min ✨ must name the menu item by GGW_FRAMES_WORDS.volAvg (“${vw[1]}”)`);
+        if (!L.includes('Display only: no alert, rule or push changed.')) errs.push('the 👀 5-min ✨ must say Display only: no alert, rule or push changed.');
+        if (/\bedges?\b/i.test(L) || /bounc/i.test(L)) errs.push('the 👀 5-min ✨ must never say edge / bounce');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'chart-maps-playbook-videos-2026-11-27') errs.push(`the ✨ '${ID}' must sit right above the 📚 Playbook entry (moved 2026-11-27 on rebase: 📚 / 🧘 / 🧮 landed first and 🧮 → 📅 runners is pinned) (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 7. the doc and the new files
+      for (const f of ['../docs/gajjala/watch_5m_grid_2026_11_27.md', 'src/hooks/useGgwFrames.tsx', 'src/components/GgwFramesMenu.tsx',
+        'src/styles/ggwFrames.css', SEAM, 'src/lib/newFeatures.watch_5m_grid.test.ts']) if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

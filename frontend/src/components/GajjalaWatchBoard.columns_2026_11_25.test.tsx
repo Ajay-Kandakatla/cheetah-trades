@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* ▦ 👀 Gajjala's Watch — "per screen" = columns, every tile in one scroll (2026-11-25, spec ggwcols §3.3 / §3.4, WP board).
  * Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I scroll." ·
  * "Can you fix that instead of removing the other?"

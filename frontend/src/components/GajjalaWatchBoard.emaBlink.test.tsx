@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🔀 9/21 EMA cross blinker on the 👀 Gajjala's Watch (2026-11-15, SPEC blinker §3.5 / §3.9, WP-E (c), C9).
  * Ajay: "On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9 crossing over 21 EMA
  * please.." · FRAME "Each chart's own frame". Each frame serves its OWN `ema_blink` (frame-level, beside `ema_cross`);

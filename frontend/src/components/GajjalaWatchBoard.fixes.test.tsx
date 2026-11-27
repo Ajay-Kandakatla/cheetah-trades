@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 👀 Gajjala's Watch — the four review fixes (2026-11-15).
  *   #1 the tile is always dark, so it carries the replay text palette (light theme painted SYM / ✕ / Yahoo ↗ dark on dark);
  *   #2 emaStyle="bold": the right-edge '9 EMA' / '21 EMA' labels take the EMA_BOLD colours of the lines they name;

@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 👀 Gajjala's Watch — toggle tickers, 1 per screen, × on every ticker (2026-11-16).
  * Ajay: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove from these give
  * me an x option to remove as well". NEGATIVES: toggling every name off returns to every name (never an empty board; 2026-11-25: no pages); a

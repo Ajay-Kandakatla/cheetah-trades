@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 👀 GajjalaWatchBoard (2026-11-15, gajjala-watch spec §3.8, WP-C). Ajay: "I need dashboard to add tickers to Gajjalas
  * watch dashboard. I wanna be able to remove and add remove tickers from the dashboard. When I add a ticker I need 1 min
  * 3 min and 5 min charts... Not the SEPA" · "I have a 27 inch monitor I wanna fit 3x3 tikers on watch".

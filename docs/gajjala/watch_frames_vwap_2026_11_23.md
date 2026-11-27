@@ -1,5 +1,7 @@
 # 👀 Watch — frames 1 / 5 / 15 and 📈 VWAP (2026-11-23, backend)
 
+> **2026-11-27 — built, display only (frontend, branch `feat/watch-5m-grid-2026-11-27`).** The server still serves all three frames (`FRAMES` and `PUSH_FRAMES` unchanged); now Watch tiles and the Watch's ⤢ show the 5-min frame by default, and a frames menu ticks 1-min / 15-min back on. See [watch_5m_grid_2026_11_27.md](watch_5m_grid_2026_11_27.md).
+
 Spec: `vwapzones` rev 2, package **be-watch**. The daily supply & demand zones are their own doc
 (`watch_daily_zones_2026_11_23.md`); the FE side is `watch_vwap_zones_frontend_2026_11_23.md`.
 

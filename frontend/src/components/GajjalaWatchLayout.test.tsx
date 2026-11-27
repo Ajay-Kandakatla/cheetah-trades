@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 👀 the Watch's per-screen pick, pager and fitted-row hook, shared (2026-11-18, cardview spec §3.3 / §4 WP-A). A PURE
  * MOVE out of GajjalaWatchBoard.tsx so the 🚩 / 🧪 card grid draws the SAME controls — Ajay 2026-11-18: "I need the watch
  * list kinda chart formant view video view as default here too from the tabs pages".

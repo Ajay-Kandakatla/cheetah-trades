@@ -127,7 +127,19 @@
  * after A+". When the server serves `runners`, GgwRunRoster draws the light 📅 roster UNDER the tiles. It gets ONLY
  * `onChanged` (the served text → the head message, then ONE full re-GET — the useGgwBrokerMark precedent); its × is its
  * own hook on its own route. write('DELETE') below is not edited and is never handed to it [C4]. No `runners` key → this
- * board is byte-equal to before. */
+ * board is byte-equal to before.
+ *
+ * 👀 2026-11-27 (spec watch5m rev 2 §3.7, WP board) — Ajay: "This is how I want our watch list to be designed.. So I can
+ * look at 5 mins charts like 6 in one go..." · "Also on the expanded view I need 5 mins by default to look in detail and
+ * not sure what the line on volume is its blocking my story.." · "Give me a drop down or multi select like button to
+ * toggle 1 mins and 15 mins 5 mins by default..". ONE hook (useGgwFrames) holds the board's frames, the ⤢ frames, the
+ * average-volume opt-in and the dense pick (per browser, lib/ggwFrames). The head carries the frames menu (GgwFramesMenu,
+ * phone too); with exactly ONE frame on (ggwDenseMode) every tile is one chart and the per-screen pick is 6 · 9 · 12 · 16
+ * · 20 — a pick this window cannot show whole at both floors is greyed (ggwDenseOffered over useGgwGridBox), never
+ * removed. Two or three frames on → the tile and the 1 · 2 · 4 · 9 pick above, unchanged. ⤢ has its OWN menu and choice.
+ * NOT edited: the live fold (ggwFrameMetas over every served frame — a tick never restarts a candle, spec C1) and the
+ * link write (`per` keeps meaning the 3-frame layout; the dense pick never reaches the link, spec C2). Display only.
+ * docs/gajjala/watch_5m_grid_2026_11_27.md. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -145,6 +157,13 @@ import {
 } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
 import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
+/* 👀 2026-11-27 (spec watch5m §3.7): the frames choice, the dense pick and the average-volume opt-in. */
+import {
+  GGW_DENSE_ORDER, GGW_FRAMES_WORDS, ggwDenseMaxCols, ggwDenseMaxRows, ggwDenseMode, ggwDenseOffered, ggwDenseShown,
+  ggwFrameOptions, ggwFramesOn, type GgwDense,
+} from '../lib/ggwFrames';
+import { useGgwFrames, useGgwGridBox } from '../hooks/useGgwFrames';
+import { GgwFramesMenu } from './GgwFramesMenu';
 /* ▦ 2026-11-25 (spec ggwcols §3.1 / §3.2): the near-window live gate, the scroll hold and the ← → row-group step. */
 import { useGgwHold, useGgwNear } from '../hooks/useGgwScroll';
 import { ggwStepNow } from '../lib/ggwScroll';
@@ -195,6 +214,8 @@ export default function GajjalaWatchBoard() {
   const [layout, setLayoutState] = useState<GgwLayout>(() => (params.get(GGW_URL.per)
     ? parseGgwLayout(params.get(GGW_URL.per)) : readGgwLayout()));
   const [stretched, setStretched] = useState<string | null>(null);
+  /* 👀 2026-11-27: the board's frames, the ⤢ frames, the average line and the dense pick (this browser, never the link). */
+  const fx = useGgwFrames();
   const pendingFocus = useRef<string | null>(null);
   /** 2026-11-16 — the names HE toggled on (null = no filter: every name shown). */
   const [pick, setPick] = useState<string[] | null>(() => (params.has(GGW_URL.show)
@@ -252,6 +273,10 @@ export default function GajjalaWatchBoard() {
   /* The pick (his toggled names still on the list) and its grid; no pick → the layout's own grid. */
   const rowsNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows : null;
   const listNow = rowsNow ? rowsNow.map((r) => r.symbol) : [];
+  /* 👀 2026-11-27: the served frames (first row with frames, served labels) and THE dense rule (one frame on). */
+  const opts = ggwFrameOptions(rowsNow ?? []);
+  const served = opts.map((o) => o.tf);
+  const dense = ggwDenseMode(served, fx.board);
   /* 🗂 2026-11-22 — org mode (served sections) and the PHONE's folded sections (served keys, remembered here). */
   const orgNow = load.phase === 'loaded' && load.p.state === 'ok' && ggwSectionsOn(load.p);
   const [collapsed, setCollapsed] = useState<ReadonlyArray<string>>(() => readGgwCollapsed());
@@ -310,7 +335,14 @@ export default function GajjalaWatchBoard() {
   }, [rowsKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const picked = pick ? pick.filter((s) => listNow.includes(s)) : [];
   const usePick = picked.length > 0;
-  const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols, GGW_LAYOUTS[layout].rows) : GGW_LAYOUTS[layout];
+  /* 👀 2026-11-27 [C3, C6]: one frame on → the dense grid that shows EXACTLY the lit pick under both floors (the grid's
+   * width and free height, measured on a desktop only); else the layout's own grid, as before. */
+  const box = useGgwGridBox(gridRef, headRef, !phone && dense, load);
+  const maxCols = box ? ggwDenseMaxCols(box.width, box.colGap) : null;
+  const maxRows = box ? ggwDenseMaxRows(box.free, box.rowGap) : null;
+  const dg = ggwDenseShown(fx.dense, maxCols, maxRows);
+  const base = dense ? dg : GGW_LAYOUTS[layout];
+  const grid = usePick ? ggwPickGrid(picked.length, base.cols, base.rows) : base;
   /* ▦ 2026-11-25: one screen row group = the grid's columns × its fitted rows (read by ← → at key time). */
   const perRef = useRef(1);
   perRef.current = grid.cols * grid.rows;
@@ -634,6 +666,14 @@ export default function GajjalaWatchBoard() {
   const addLabel = p.add_label ?? '';
   /* A name removed (here or on another device) while stretched simply closes the full-screen view. */
   const stretchRow = stretched ? p.rows.find((r) => r.symbol === stretched) ?? null : null;
+  /* 👀 2026-11-27: ⤢ has its OWN frames choice and menu (the row's own served frames); state lives here, so ◀ ▶ keep it. */
+  const sOpts = stretchRow ? ggwFrameOptions([stretchRow]) : [];
+  const stretchServed = sOpts.map((o) => o.tf);
+  const stretchMenu = stretchRow ? (
+    <GgwFramesMenu options={sOpts} on={fx.stretch} onToggle={(tf) => fx.toggleStretch(stretchServed, tf)}
+                   volAvg={fx.volAvg} onVolAvg={fx.toggleVolAvg} testid="ggw-sframes"
+                   title={GGW_FRAMES_WORDS.stretchTitle} />
+  ) : null;
   /* ▦ 2026-11-25: no pages — with no filter every name is shown (the phone's rule, now the only one). */
   const onPage = (i: number) => !usePick || picked.includes(p.rows[i].symbol);
   /* 2026-11-16 — a ticker button toggles that name; the names on screen now are the base. */
@@ -700,8 +740,10 @@ export default function GajjalaWatchBoard() {
           focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={openStretch}
           offPage={!shown(r, i)} live={liveOf(r, shown(r, i) && isNear(r.symbol))} siNote tags={tagsOf(r)} compact={org}
           actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />}
-          run={runOf(r)} />
+          run={runOf(r)} frames={fx.board} one={dense} volAvg={fx.volAvg} />
   );
+  /* 👀 2026-11-27: the dense picks this window can show whole (the rest are greyed, never removed — §6.14). */
+  const offered = ggwDenseOffered(maxCols, maxRows);
   return (
     <div className="ggw-board" data-testid="ggw-board" ref={boardRef}>
       <div className="ggw-head" ref={headRef}>
@@ -756,9 +798,20 @@ export default function GajjalaWatchBoard() {
         <GgHardToBorrowFault testid="ggw-htb-fault" className="ggw-line ggw-warn" inline />
         {feedWord ? <span className="ggw-line ggw-warn" data-testid="ggw-feed-word">{feedWord}</span> : null}
         {org ? null : legend}
-        {p.rows.length && !phone ? (
-          <GgwLayoutPick layout={layout} onPick={setLayout} />
+        {/* 👀 2026-11-27: the frames menu (phone too); a tick never re-GETs, never POSTs, never writes the link. */}
+        {p.rows.length ? (
+          <GgwFramesMenu options={opts} on={fx.board} onToggle={(tf) => fx.toggleBoard(served, tf)}
+                         volAvg={fx.volAvg} onVolAvg={fx.toggleVolAvg} testid="ggw-frames"
+                         title={GGW_FRAMES_WORDS.boardTitle} />
         ) : null}
+        {p.rows.length && !phone ? (dense ? (
+          <GgwLayoutPick<GgwDense> layout={dg.pick} options={GGW_DENSE_ORDER}
+                                   disabled={GGW_DENSE_ORDER.filter((d) => !offered.includes(d))}
+                                   disabledTitle={GGW_FRAMES_WORDS.tooSmall}
+                                   onPick={(d) => { markView(); setPick(null); fx.setDense(d); }} />
+        ) : (
+          <GgwLayoutPick layout={layout} onPick={setLayout} />
+        )) : null}
         {orgInfo || (p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text
           || p.info.vwap_text || p.info.zones_text)) ? (
           <details className="ggw-info">
@@ -788,7 +841,8 @@ export default function GajjalaWatchBoard() {
       ) : null}
       {p.rows.length ? (
         <div className={`ggw-grid ggw-grid--cols${grid.cols}${fit ? ' ggw-grid--fit' : ''}${phone ? '' : ' ggw-grid--all'}`}
-             ref={gridRef} data-layout={layout} data-pick={usePick ? picked.length : undefined}
+             ref={gridRef} data-layout={dense ? (dg.pick ?? 'fit') : layout} data-pick={usePick ? picked.length : undefined}
+             data-frames={ggwFramesOn(served, fx.board).join(',')}
              style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
           {p.rows.map((r, i) => {
             const sec = headAt ? headAt.get(i) ?? null : null;
@@ -814,7 +868,8 @@ export default function GajjalaWatchBoard() {
       {stretchRow ? (
         <GgwStretch row={lateRow(stretchRow)} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
                  onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote tags={tagsOf(stretchRow)}
-                 compact={org} run={runOf(stretchRow)} />
+                 compact={org} run={runOf(stretchRow)}
+                 frames={fx.stretch} volAvg={fx.volAvg} framesMenu={stretchMenu} />
       ) : null}
     </div>
   );

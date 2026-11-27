@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /**
  * 📱 👀 Gajjala's Watch on the phone and on his 27-inch monitor (2026-11-15, gajjala-watch spec §3.8). Ajay reads the app
  * at 430 px (iPhone 14 Pro Max) and asked: "I have a 27 inch monitor I wanna fit 3x3 tikers on watch at any given time on

@@ -80,6 +80,7 @@ import {
   ggwFitViewW, ggwSplitFrames, ggwStretchFrames, ggwStretchTitle, type GgwFrame, type GgwRow,
 } from '../lib/gajjalaWatch';
 import { ggwLiveFrame, ggwSeedLive, type GgwLiveBar, type GgwLiveSym } from '../lib/ggwLive';
+import { ggwFramesShown } from '../lib/ggwFrames';
 import { GgSiExtremeNote } from './GgSiExtremeNote';
 import { GgHardToBorrowChip } from './GgHardToBorrow';
 import { GgSsrChip } from './GgSsr';
@@ -134,12 +135,15 @@ function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): { w: number; h
   return h;
 }
 
-export function Frame({ f, phone, fit, style, live, seed }: {
+export function Frame({ f, phone, fit, style, live, seed, volAvg }: {
   f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties;
   /** This frame's forming bars (lib/ggwLive), or undefined → the stored frame exactly as served. */
   live?: GgwLiveBar[];
   /** 📈 2026-11-23: the row's 1-min frame + its live 1-min bars — folded by ggwSeedLive ONLY when GGW_SEED_FORMING is on. */
   seed?: { f1: GgwFrame | null; live1?: GgwLiveBar[] };
+  /** 👀 2026-11-27 (spec watch5m §3.5): the 50-bar average-volume line on this chart — forwarded to PatternChart's `volAvg`.
+   *  ABSENT → not passed at all (today's pane, the line drawn). */
+  volAvg?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const fitH = useFitBox(box, fit);
@@ -164,7 +168,8 @@ export function Frame({ f, phone, fit, style, live, seed }: {
           <PatternChart tile={shown.tile} chartOnly emaStyle="bold" axis={shown.axis}
                         candleLook={f.tf === '1m' ? '1m' : undefined}
                         viewW={fit && fitH ? fitH.w : undefined}
-                        height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)} />
+                        height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)}
+                        {...(volAvg === undefined ? {} : { volAvg })} />
         )}
       </div>
       <figcaption className="ggw-cap">
@@ -198,7 +203,7 @@ export function Frame({ f, phone, fit, style, live, seed }: {
 }
 
 export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote,
-  stack, extra, tags, actions, compact, drawerOpen, run }: {
+  stack, extra, tags, actions, compact, drawerOpen, run, frames, one, volAvg, framesMenu }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
   live?: GgwLiveSym;
@@ -234,14 +239,30 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   /** ▶ 2026-11-24 (spec ggrun): the Watch's run button + its slide-in panel (open → drawn in the chart window). Absent →
    *  today's DOM (the 🚩 / 🧪 card grid and GgCardView never pass it). */
   run?: GgwRunSlot;
+  /** 👀 2026-11-27 (spec watch5m §3.5, Ajay: "Only 5 mins may be give me option in our existing Watch charts to disable all
+   *  15 and all 1 min"): the frames ticked on (lib/ggwFrames — read ONLY through ggwFramesShown). ABSENT → every served
+   *  frame (the 🚩 / 🧪 card grid and the card click never pass it → their DOM is byte-identical). */
+  frames?: ReadonlyArray<string>;
+  /** 👀 2026-11-27: the BOARD's dense flag (ggwDenseMode — one rule, never re-derived here). With exactly one frame shown on
+   *  a board tile (not ⤢, not `stack`) → the one-chart tile (`ggw-tile--one`, `ggw-one-charts`). Absent → today's tile. */
+  one?: boolean;
+  /** 👀 2026-11-27: forwarded to every Frame (false → no average-volume line). Absent → today's line. */
+  volAvg?: boolean;
+  /** 👀 2026-11-27: the frames menu (GgwFramesMenu), drawn in the action group right after the ▶ Rules button. Absent →
+   *  nothing. */
+  framesMenu?: ReactNode;
 }) {
   const [open, setOpen] = useState<boolean>(!!drawerOpen);
-  const { top, pair } = ggwSplitFrames(row.frames);
+  /* 👀 2026-11-27: the frames this tile draws; `f1` / `seedOf` keep reading the SERVED row.frames (the 5-min seed is
+   * unchanged whether the 1-min chart is shown or not). */
+  const shownFrames = frames ? ggwFramesShown(row.frames, frames) : row.frames;
+  const { top, pair } = ggwSplitFrames(shownFrames);
   /* 📈 2026-11-23: every non-1m frame gets the row's 1-min frame + its live bars as `seed` when `live` is given (folded only
    * when GGW_SEED_FORMING is on — Frame). The 1-min frame itself never seeds. */
   const f1 = row.frames.find((x) => x.tf === '1m') ?? null;
   const seedOf = (f: GgwFrame) => (live && f !== f1 ? { f1, live1: live.by[f1?.tf ?? ''] } : undefined);
   const stacked = !onUnstretch && !!stack;
+  const isOne = !!one && !onUnstretch && !stack && shownFrames.length === 1;
   const runOpen = !!run?.open;
   /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
   const rm = row.auto?.remove_title ?? (removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol);
@@ -249,7 +270,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
     ? [row.auto.added_text, row.auto.volume_text, row.auto.leaving_text].filter(Boolean).join(' · ') || undefined
     : undefined;
   return (
-    <section className={`ggw-tile${compact ? ' ggw-tile--compact' : ''}${focused ? ' ggw-tile-focus' : ''}`}
+    <section className={`ggw-tile${compact ? ' ggw-tile--compact' : ''}${focused ? ' ggw-tile-focus' : ''}${isOne ? ' ggw-tile--one' : ''}`}
              id={onUnstretch ? undefined : `ggw-${row.symbol}`}
              data-testid={onUnstretch ? `ggw-stretch-tile-${row.symbol}` : `ggw-tile-${row.symbol}`} data-state={row.state}
              hidden={offPage || undefined}>
@@ -299,6 +320,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         <span className="ggw-actions">
           {actions && !onUnstretch ? actions : null}
           {run?.button ?? null}
+          {framesMenu ?? null}
           {compact ? (
             <button type="button" className="ggw-btn ggw-drawer-btn" aria-expanded={open}
                     aria-controls={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`}
@@ -355,13 +377,13 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
       {/* 📐 2026-11-23: the served daily-zones line — under the head here; inside the ⋯ drawer on a compact tile. */}
       {compact ? null : <GgwLevelsLine row={row} />}
       {compact ? <GgwDrawer row={row} open={open} tags={tags} domId={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`} /> : null}
-      {(onUnstretch || stacked) && row.frames.length ? (
-        <div className={`ggw-dark ggw-charts ggw-charts--stretch${stacked ? ' ggw-charts--stack' : ''}${runOpen ? ' ggw-charts--run' : ''}`}
-             data-testid={stacked ? 'ggw-stack-charts' : 'ggw-stretch-charts'}>
-          {ggwStretchFrames(row.frames, order).map((f) => (
+      {(onUnstretch || stacked || isOne) && shownFrames.length ? (
+        <div className={`ggw-dark ggw-charts ${isOne ? 'ggw-charts--one' : 'ggw-charts--stretch'}${stacked ? ' ggw-charts--stack' : ''}${runOpen ? ' ggw-charts--run' : ''}`}
+             data-testid={stacked ? 'ggw-stack-charts' : isOne ? 'ggw-one-charts' : 'ggw-stretch-charts'}>
+          {ggwStretchFrames(shownFrames, order).map((f) => (
             <Frame key={f.tf} f={f} phone={phone} fit={fit}
                    style={fit ? { flexGrow: stacked && f.tile.bars.length === 0 && f.empty_text ? 0 : 1 } : undefined}
-                   live={live?.by[f.tf]} seed={seedOf(f)} />
+                   live={live?.by[f.tf]} seed={seedOf(f)} volAvg={volAvg} />
           ))}
           {runOpen ? run!.panel : null}
         </div>
@@ -369,11 +391,14 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         <div className={runOpen ? 'ggw-dark ggw-charts ggw-charts--run' : 'ggw-dark ggw-charts'}>
           {top ? (
             <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined}
-                   live={live?.by[top.tf]} />
+                   live={live?.by[top.tf]} volAvg={volAvg} />
           ) : null}
           {pair.length ? (
-            <div className="ggw-frame-pair" style={fit ? { flexGrow: GGW_FIT_GROW.pair } : undefined}>
-              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} seed={seedOf(f)} />)}
+            /* 👀 2026-11-27: with `frames` given, a pair of ONE frame is full width → its share is that frame's own
+               GGW_CHART_H height (GGW_FIT_GROW.pair is the half-width pair's). No `frames` → today's share. */
+            <div className="ggw-frame-pair"
+                 style={fit ? { flexGrow: frames && pair.length === 1 ? ggwChartHeight(pair[0].tf, false) : GGW_FIT_GROW.pair } : undefined}>
+              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} seed={seedOf(f)} volAvg={volAvg} />)}
             </div>
           ) : null}
           {runOpen ? run!.panel : null}
@@ -391,7 +416,8 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
 /** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
  *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
  *  the board's own rows, so the minute GET keeps moving its bars. */
-export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote, tags, compact, run }: {
+export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote, tags, compact, run,
+  frames, volAvg, framesMenu }: {
   row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
   live?: GgwLiveSym;
   /** The frame order, top to bottom (absent → GGW_STRETCH_ORDER). */
@@ -406,6 +432,12 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
   compact?: boolean;
   /** ▶ 2026-11-24: forwarded to the Tile (the Watch passes it; a 🚩 card does not). */
   run?: GgwRunSlot;
+  /** 👀 2026-11-27 (spec watch5m §3.5, Ajay: "on the expanded view I need 5 mins by default"): forwarded to the Tile (never
+   *  `one`) — the frames on, the average line, the frames menu. The Watch's ⤢ passes them; the 🚩 / 🧪 card click passes
+   *  none → today's three frames, today's line, no menu. */
+  frames?: ReadonlyArray<string>;
+  volAvg?: boolean;
+  framesMenu?: ReactNode;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -428,6 +460,7 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
       <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
         <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
               onRemove={() => {}} onUnstretch={onClose} live={live} order={order} siNote={siNote} tags={tags} run={run}
+              frames={frames} volAvg={volAvg} framesMenu={framesMenu}
               {...(compact ? { compact: true, drawerOpen: true } : {})}
               onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
       </div>

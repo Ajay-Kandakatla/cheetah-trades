@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch — two stocks a screen, pager, ⤢ full screen (2026-11-16)
 
+> **2026-11-27 — built (frontend, branch `feat/watch-5m-grid-2026-11-27`).** Now the Watch's ⤢ opens on one full-height 5-min chart; a frames menu in the ⤢ head ticks 15-min / 1-min back on (order stays 15 / 5 / 1) and the average volume line is off there by default. The 🚩 / 🧪 card click ⤢ is unchanged. See [watch_5m_grid_2026_11_27.md](watch_5m_grid_2026_11_27.md).
+
 > **2026-11-25 — changed.** On a desktop the pick is no longer the page size: it sets the columns and row height, every tile is shown in one scroll, ◀ ▶ are greyed, ← → scroll a row group (⤢ unchanged). See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
 
 Ajay, verbatim:

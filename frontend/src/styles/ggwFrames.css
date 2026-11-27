@@ -1,0 +1,62 @@
+/* 👀 Gajjala's Watch — 5-min tiles, the dense per-screen picks and the frames dropdown (2026-11-27, spec watch5m rev 2
+ * §3.3). Ajay: "This is how I want our watch list to be designed.. So I can look at 5 mins charts like 6 in one go..." ·
+ * "Give me a drop down or multi select like button to toggle 1 mins and 15 mins 5 mins by default..".
+ * EVERY new rule of this build lives here (nothing is added to gajjalaWatch.css). Each grid rule wins by specificity
+ * (0,2,0), never by sheet order; the phone (640 px and under) is one column, restated for each new class (the
+ * gajjalaWatch.css pattern). 430 px (the phone gotcha): the menu wraps and never widens the page. */
+
+/* 12 / 16 = 4 columns, 20 = 5 columns (lib/ggwFrames GGW_DENSE). */
+.ggw-grid.ggw-grid--cols4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ggw-grid.ggw-grid--cols5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 640px) { .ggw-grid.ggw-grid--cols4 { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .ggw-grid.ggw-grid--cols5 { grid-template-columns: 1fr; } }
+
+/* The frames button + its dropdown (board head and the ⤢ tile head).
+ * The menu carries its OWN scope with the .ggw-tile values (gajjalaWatch.css .ggw-tile): the board head (.ggw-head)
+ * is outside every .ggw-tile / .ggw-dark, so --cm-card fell back to dark while the light theme's page --ink
+ * (tokens.css #1A1A1A) painted the labels dark on dark — the gajjalaWatch.css .ggw-tile bug, on the menu. */
+.ggw-frames { position: relative; display: inline-flex; align-items: center; min-width: 0; }
+.ggw-frames-btn[aria-expanded="true"] { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
+.ggw-frames-menu {
+  --ink: rgb(225, 228, 232); --rule: rgb(38, 43, 52); --cm-card: rgb(22, 26, 34);
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
+  display: flex; flex-direction: column; flex-wrap: wrap; gap: 0.3rem;
+  min-width: 10rem; max-width: calc(100vw - 24px); box-sizing: border-box;
+  padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--cm-card); color: var(--ink);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 0.76rem; white-space: normal;
+}
+/* Inside a tile the menu anchors to the WHOLE action group, not to the frames button. .ggw-actions sits at the head's
+ * right edge (its margin-left: auto); the button can sit near the LEFT of that group (⤢ on the 430 px phone: ▶ Rules,
+ * the frames button, ⤡), and a 10rem menu right-aligned to the button could run past the left edge. Right-aligned
+ * to the group it opens leftward from the tile's right edge. No :has() → .ggw-frames is static, the menu anchors to
+ * the next positioned box (the tile), still right-aligned. */
+.ggw-actions:has(> .ggw-frames) { position: relative; }
+.ggw-actions > .ggw-frames { position: static; }
+.ggw-actions .ggw-frames-menu { left: auto; right: 0; }
+.ggw-frames-item {
+  display: flex; align-items: center; gap: 0.4rem; min-width: 0; cursor: pointer;
+  white-space: normal; overflow-wrap: anywhere; color: var(--ink);
+}
+.ggw-frames-item input { margin: 0; flex: none; }
+.ggw-frames-item input:disabled { cursor: default; }
+.ggw-frames-item--vol { border-top: 1px solid var(--rule); padding-top: 0.35rem; margin-top: 0.05rem; }
+
+/* Two frames on: a lone 5- or 15-min in the pair takes the full width. */
+.ggw-frame-pair > .ggw-frame:only-child { grid-column: 1 / -1; }
+
+/* Dense tile (one frame on, desktop): the head is ONE line — the fitted one-line caption rule applied to the head;
+ * a chip that does not fit is cut with "…" (its full words: hover, the ⋯ drawer, ⤢). SYM and the actions never shrink. */
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-tile--one .ggw-tile-head { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .ggw-grid--fit .ggw-tile--one .ggw-tile-head > * {
+    flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ggw-grid--fit .ggw-tile--one .ggw-tile-head > .ggw-sym,
+  .ggw-grid--fit .ggw-tile--one .ggw-tile-head > .ggw-actions { flex-shrink: 0; overflow: visible; }
+}
+/* With a mouse: 🚫 mark · ▶ Rules · TV ↗ · Yahoo ↗ show on tile hover or keyboard focus; ⋯ ⤢ ✕ always show. */
+@media (min-width: 641px) and (hover: hover) {
+  .ggw-grid--fit .ggw-tile--one:not(:hover):not(:focus-within) .ggw-actions > :not(.ggw-drawer-btn):not(.ggw-stretch-btn):not(.ggw-remove) { display: none; }
+}

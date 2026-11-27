@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch LIVE — a per-second candle and a live volume column on every Watch chart (2026-11-16)
 
+> **2026-11-27 — built (frontend, branch `feat/watch-5m-grid-2026-11-27`); data path unchanged.** Every served frame keeps folding its live candle from page open, shown or not, so a frame ticked back on in the new frames menu shows the candle it was building all along; no per-frame subscription exists. With it, the 50-bar average volume line is off on Watch tiles and in ⤢ (opt-in in the menu). See [watch_5m_grid_2026_11_27.md](watch_5m_grid_2026_11_27.md).
+
 > **2026-11-25 — changed.** The live render gate is now "shown and in or near the window" (one IntersectionObserver), not "on the page"; the data path is unchanged. See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
 
 Ajay 2026-11-16, on the 👀 Gajjala's Watch tab, four messages in a row:

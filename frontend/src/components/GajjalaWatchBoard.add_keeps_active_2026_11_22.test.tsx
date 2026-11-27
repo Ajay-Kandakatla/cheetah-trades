@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🐛 2026-11-22 (Ajay ~22:39 ET): "There is a bug, I added WETO as new one to watch list everything got de activated from
  * watch list". The real board, fetch stubbed, the live board's shape (org sections: 👤 his names, 🎯 A+, 🤖 auto). This
  * browser held a SAVED pick (`ggw.pick`) whose names had ALL left the list (only HIS × on this browser pruned it), so it

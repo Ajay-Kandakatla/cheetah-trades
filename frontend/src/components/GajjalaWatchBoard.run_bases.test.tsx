@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 📶 GG's base count on the 👀 Gajjala's Watch 5-min chart (spec ggbase rev 2 WP-E, 2026-11-15).
  * Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I need that tracked in
  * to Gajjala's". The 5-min frame serves `run_bases` (backend build.run_bases_keys → the ONE engine's card_block — the

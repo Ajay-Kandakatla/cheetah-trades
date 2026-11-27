@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🔢 the float chip on the REAL 👀 Watch board (2026-11-21, spec watchfloat §3.5, WP fe-float).
  * Ajay 2026-11-21: "can you add the current float value also to the tickers on the watch list."
  * The 2026-11-17 auto fixture cloned with a served `float` on every row (his rows, 🤖 rows, a 🎯 row, a carded row)

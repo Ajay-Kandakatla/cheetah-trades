@@ -1,3 +1,4 @@
+vi.mock('../lib/ggwFrames', async (orig) => (await import('../test/ggwFramesLegacy')).ggwFramesLegacy(orig));
 /* 🔗 Gajjala's Watch — the view lives in the link + this browser (2026-11-16).
  * Ajay: "Can you make the board persist please... Like the 1 selection and the stock selection too.. So I can share with
  * someone". `per` / `show` / `page` in the URL (a link wins over the browser), `ggw.layout` / `ggw.pick` in the browser.
