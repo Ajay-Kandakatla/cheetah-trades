@@ -87,6 +87,10 @@ SHO_KEYS = ("regsho_on", "regsho_state", "regsho_day", "regsho_day13", "regsho_s
             "regsho_list_date")
 SHO_PAST_STATES = ("passed", "passed_open")
 FILING_KEYS = ("dilution_before", "split_before", "dilution", "split", "flag_shorts")
+# 2026-11-26 (spec sishares §3.5, C9): a served filing of these kinds never sets the pattern `dilution_before` — the
+# pattern keeps ONE definition for every stored row (rows are never rewritten). Typed once here, pinned equal to
+# (basis_math.KIND_FOREIGN_ISSUANCE,) by a test. The 20:15 chip flags (`dilution`, `flag_shorts`) are untouched.
+FILING_KINDS_NOT_IN_PATTERN = ("foreign_issuance",)
 
 ROW_KEYS = (
     "date", "symbol",
@@ -173,8 +177,13 @@ VWAP_WORDS = {"reclaimed": "back above {t}", "under": "under", "never_under": "n
 SHO_WORDS = {"on": "on", "past": "past close-out"}
 BLOCK_KEYS = ("title", "summary_text", "base_text", "new_today_text", "pattern_heads", "patterns", "where_text",
               "shape_rows", "heads", "days", "shown_text", "pending_text", "asof_text", "rule_label", "rule_text",
-              "honesty", "fault_text", "empty_text", "n", "n_days")
-NIGHT_KEYS = ("session", "rows", "late", "next_filled", "loads", "split_calls", "deferred_cap", "stats", "faults")
+              "honesty", "fault_text", "empty_text", "n", "n_days", "follow")
+NIGHT_KEYS = ("session", "rows", "late", "next_filled", "loads", "split_calls", "deferred_cap", "stats", "faults",
+              "follow")
+# 2026-11-26 (spec sishares §3.5, C15): the day table's ONE forward column — +LEDGER_SPAN_SESSIONS sessions (si_follow's
+# DAY_HORIZON, the same constant by name; a test pins them equal). +1 is the existing `next` column; +10 lives only in
+# the follow fold. Its cell is si_follow.cells(row, fwd), a dash when the follow could not be read.
+FOLLOW_HEAD = ["f%d" % GC.LEDGER_SPAN_SESSIONS, "+%d sessions" % GC.LEDGER_SPAN_SESSIONS]
 
 
 # ── small helpers ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -575,7 +584,8 @@ def filing_facts(b, session) -> dict:
     """The served share basis → {dilution_before, split_before, dilution, split, flag_shorts}. dilution_before = a
     served dilution filing dated BEFORE the session (strict), None unless the SEC read landed; split_before = an
     executed split dated on or before the session, None unless the splits read landed. dilution / split = the 20:15
-    flags (stored, never a pattern)."""
+    flags (stored, never a pattern). A served filing whose kind is in FILING_KINDS_NOT_IN_PATTERN (a full-text-search 6-K, 2026-11-26) never
+    sets dilution_before."""
     from short_interest import basis_math as BM
     out = dict.fromkeys(FILING_KEYS)
     basis = b.get("basis") if isinstance(b, dict) and isinstance(b.get("basis"), dict) else None
@@ -585,7 +595,8 @@ def filing_facts(b, session) -> dict:
     src = basis.get("sources") if isinstance(basis.get("sources"), dict) else {}
     filings = [f for f in basis.get("filings") or [] if isinstance(f, dict) and isinstance(f.get("filed"), str)]
     if src.get("sec") in ("ok", "none", "units"):
-        out["dilution_before"] = any(f["filed"][:10] < s_iso for f in filings)
+        out["dilution_before"] = any(f["filed"][:10] < s_iso for f in filings
+                                     if f.get("kind") not in FILING_KINDS_NOT_IN_PATTERN)
     splits = [s for s in basis.get("splits") or [] if isinstance(s, dict)]
     if src.get("splits") == "ok":
         out["split_before"] = any(s.get("when") == "executed" and isinstance(s.get("execution_date"), str)
@@ -772,6 +783,28 @@ def _tile(doc, key):
     tile = doc.get("tile") if isinstance(doc, dict) else None
     v = tile.get(key) if isinstance(tile, dict) else None
     return v if isinstance(v, list) else []
+
+
+# ── 2026-11-26 (spec sishares §3.5): the bar readers the 🏁 follow-up (si_follow) uses — the house engines, named here
+# only, so the follow module names no other package for them ───────────────────────────────────────────────────────
+def day_bars(doc, day) -> list:
+    """The day's 5-minute bars of a read doc (runners.bars_of — finite o/h/l/c > 0, time order)."""
+    return RN.bars_of(doc, _iso(day))
+
+
+def bar_start(b: dict) -> str:
+    """A right-labelled 5-minute bar's START, ET HH:MM (runners._bar_start)."""
+    return RN._bar_start(b)
+
+
+def extended_bars(bars: list) -> list:
+    """The 09:30–20:00 bars — `s` absent or after hours (runners._ext, fill_next's own filter)."""
+    return RN._ext(bars)
+
+
+def clock_words() -> dict:
+    """runners.clock_words — {open, end, …}, every clock built."""
+    return RN.clock_words()
 
 
 def outcome(ctx: Ctx, sym: str, session: date, *, read_doc, prev_read_doc, scan_doc, avg_vol_50) -> dict:
@@ -1255,8 +1288,19 @@ def all_rows(st) -> list:
 def write_stats(st, now) -> dict:
     """RAISES ReadFault on an index / session read fault — never stores the stats of a faulted read."""
     dates = index_dates(st)
-    s = stats(all_rows(st))
+    rows = all_rows(st)
+    s = stats(rows)
     s.update(computed_at=_stamp(now), through=dates[-1] if dates else None, version=VERSION)
+    s["follow"], s["names"], s["pinned"] = None, None, None
+    try:                                                        # 2026-11-26 the follow-up counts, in their own try
+        from chart_maps.gajjala import si_follow as SF
+        facts = SF.read_facts(st, SF.fact_days(dates, now))
+        s["follow"] = SF.follow_stats(rows, facts, now)
+        s["names"] = SF.names(rows, facts)
+        s["pinned"] = SF.pinned(SF.pins(st), rows, facts)
+    except Exception as exc:                                    # noqa: BLE001 — never costs the ledger's stats
+        log.warning("si track: the follow-up stats failed: %s", type(exc).__name__)
+        s["follow"], s["names"], s["pinned"] = None, None, None
     st.set_state(STATS_ID, s)
     return s
 
@@ -1284,9 +1328,10 @@ def _has_reads(st, d: date) -> bool:
 
 def record_night(now, *, store=None, **seams) -> dict:
     """Tonight's session, then the late sessions of the look-back, the next columns and the retry-state rows, then
-    the stats. One MAX_LOADS budget for 1-minute loads and outside split lookups. Never raises."""
+    the follow-up facts (si_follow.fill_night — its OWN MAX_LOADS budget, its own fence; 2026-11-26), then the stats.
+    One MAX_LOADS budget for the ledger's 1-minute loads and outside split lookups. Never raises."""
     out = {"session": None, "rows": 0, "late": [], "next_filled": 0, "loads": 0, "split_calls": 0,
-           "deferred_cap": 0, "stats": False, "faults": []}
+           "deferred_cap": 0, "stats": False, "faults": [], "follow": None}
     try:
         from chart_maps.gajjala import store as ST
         st = store if store is not None else ST.default()
@@ -1340,6 +1385,14 @@ def record_night(now, *, store=None, **seams) -> dict:
             except Exception as exc:                            # noqa: BLE001
                 log.warning("si track: retry of %s failed: %s", d, type(exc).__name__)
                 out["faults"].append("retry:%s:%s" % (d.isoformat(), type(exc).__name__))
+        try:                                                    # 2026-11-26 the follow-up: its OWN budget, own fence
+            from chart_maps.gajjala import si_follow as SF
+            out["follow"] = SF.fill_night(st, now, load_1m=seams.get("load_1m"),
+                                          split_lookup=seams.get("split_lookup"), max_loads=seams.get("max_loads"),
+                                          share=ctx)
+        except Exception as exc:                                # noqa: BLE001 — never costs the ledger
+            log.warning("si track: the follow-up failed: %s", type(exc).__name__)
+            out["faults"].append("follow:%s" % type(exc).__name__)
         try:
             if "index_read" in out["faults"]:
                 raise ReadFault(INDEX_ID)
@@ -1479,10 +1532,25 @@ def _row_group(r: dict) -> str:
     return "new" if r.get("listed_before") is False else "other"
 
 
-def _day_rows(rows: list) -> list:
+def _follow_cell(r: dict, fwd_by) -> dict:
+    """{FOLLOW_HEAD key: text} — si_follow.cells on the row's forward read; a dash when the follow was not read."""
+    key = FOLLOW_HEAD[0]
+    if not isinstance(fwd_by, dict):
+        return {key: DASH}
+    try:
+        from chart_maps.gajjala import si_follow as SF
+        got = SF.cells(r, fwd_by.get((r.get("date"), r.get("symbol"))))
+        return {key: got.get(key, DASH) if isinstance(got, dict) else DASH}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("si track: the follow cell failed: %s", type(exc).__name__)
+        return {key: DASH}
+
+
+def _day_rows(rows: list, fwd_by=None) -> list:
     """Inside a day: the counted rows, then the first-listed-that-day rows, then the other not-counted rows; each part
     winners first, then high_pct DESC. The flags print ONCE, in the Flags column (`cells.flags`): `chips` is served
-    empty (2026-11-26 refix — the Ticker cell printed every flag a second time)."""
+    empty (2026-11-26 refix — the Ticker cell printed every flag a second time). 2026-11-26 (sishares): `cells` gains
+    the ONE follow-up column (FOLLOW_HEAD) from `fwd_by` {(date, symbol): forward}."""
     def k(r):
         return (0 if r.get("winner") is True else 1, -(_f(r.get("high_pct")) or -1e18), r.get("symbol") or "")
     out = []
@@ -1490,7 +1558,7 @@ def _day_rows(rows: list) -> list:
         for r in sorted([r for r in rows if _row_group(r) == g], key=k):
             out.append({"symbol": r.get("symbol"), "href": _href(r.get("symbol") or ""),
                         "win": "✅" if r.get("winner") is True else "", "counted": g == "counted", "group": g,
-                        "cells": _cells(r), "chips": [],
+                        "cells": dict(_cells(r), **_follow_cell(r, fwd_by)), "chips": [],
                         "title": "%s · %s · %s" % (r.get("symbol"), r.get("date"), UNMEASURED_WORD)})
     return out
 
@@ -1536,10 +1604,15 @@ def _pattern_rows(st_doc: dict) -> list:
     return out
 
 
+def day_heads() -> list:
+    """DAY_HEADS + the ONE follow-up column (2026-11-26, C15)."""
+    return [list(h) for h in DAY_HEADS] + [list(FOLLOW_HEAD)]
+
+
 def _empty_block() -> dict:
     out = dict.fromkeys(BLOCK_KEYS)
     out.update(title=TITLE, summary_text=EMPTY_SUMMARY, empty_text=EMPTY_TEXT.format(at=GC.LEDGER_GRADE_AT_ET),
-               pattern_heads=PATTERN_HEADS, patterns=[], shape_rows=[], heads=DAY_HEADS, days=[],
+               pattern_heads=PATTERN_HEADS, patterns=[], shape_rows=[], heads=day_heads(), days=[],
                rule_label=RULE_LABEL, rule_text=rule_text(), honesty=honesty(), n=0, n_days=0)
     return out
 
@@ -1547,7 +1620,8 @@ def _empty_block() -> dict:
 def served_block(st, session, now) -> Optional[dict]:
     """The 🩳 block's `si_track` key. Mongo reads only (the index, the stats doc, the last SPAN_SESSIONS session docs).
     No stored doc → the empty block (not a fault). RAISES on a read fault (ReadFault on the index or a session doc;
-    high_si serves FAULT_TEXT)."""
+    high_si serves FAULT_TEXT). 2026-11-26 (sishares): `follow` = si_follow.served and the day table's ONE follow-up
+    column, in their own fence — a fault there serves `follow` None and a dash in that column, the rest unchanged."""
     if st is None:
         from chart_maps.gajjala import store as ST
         st = ST.default()
@@ -1581,10 +1655,19 @@ def served_block(st, session, now) -> Optional[dict]:
                            "rest_text": SHAPE_COUNT.format(k=int(z.get("k") or 0), n=int(z.get("n") or 0))})
     recent = sorted(dates)[-SPAN_SESSIONS:][::-1]
     by_day = _rows_for_days(st, recent)
+    fwd_by, follow = None, None
+    try:                                                        # 2026-11-26 the follow-up — its own fence
+        from chart_maps.gajjala import si_follow as SF
+        cf = SF.cell_facts(st, by_day, now)                     # the follow facts read ONCE for this build
+        fwd_by = SF.forwards(st, by_day, now, facts=cf)
+        follow = SF.served(st, dates, by_day, now, facts=cf)
+    except Exception as exc:                                    # noqa: BLE001 — the ledger block stands without it
+        log.warning("si track: the follow-up block failed: %s", type(exc).__name__)
+        fwd_by, follow = None, None
     days, total, pend = [], 0, 0
     for iso, rows in by_day:
         pend += sum(1 for r in rows if (r.get("next") or {}).get("state") in NEXT_RETRY)
-        drows = _day_rows(rows)
+        drows = _day_rows(rows, fwd_by)
         if total + len(drows) > ROWS_MAX:
             drows = drows[:max(0, ROWS_MAX - total)]
         total += len(drows)
@@ -1604,12 +1687,12 @@ def served_block(st, session, now) -> Optional[dict]:
                                      b=int(ww.get(WHERE[1]) or 0), c=int(ww.get(WHERE[2]) or 0),
                                      d=int(wr.get(WHERE[0]) or 0), e=int(wr.get(WHERE[1]) or 0),
                                      f=int(wr.get(WHERE[2]) or 0)),
-        shape_rows=shape_rows, heads=DAY_HEADS, days=days,
+        shape_rows=shape_rows, heads=day_heads(), days=days,
         shown_text=SHOWN_TEXT.format(lim=ROWS_MAX, n=n_rows) if n_rows > ROWS_MAX else None,
         pending_text=PENDING_TEXT.format(k=pend) if pend else None,
         asof_text=ASOF_TEXT.format(at=GC.LEDGER_GRADE_AT_ET, date=dates[-1]),
         rule_label=RULE_LABEL, rule_text=rule_text(), honesty=honesty(), fault_text=None, empty_text=None,
-        n=n, n_days=len(dates))
+        n=n, n_days=len(dates), follow=follow)
     return out
 
 
@@ -1620,7 +1703,8 @@ def fault_block() -> dict:
 __all__ = ["STATE_FMT", "INDEX_ID", "STATS_ID", "VERSION", "WIN_PCT", "FIRST_HOUR_END", "NOON_ET", "SSR_OPEN_AT",
            "NIGHT_AT", "LOOKBACK_SESSIONS", "MAX_LOADS", "ROWS_MAX", "SPAN_SESSIONS", "MIN_NAMES", "BASIS_SRCS",
            "PATTERNS", "SHAPES", "WORDS", "ROW_KEYS", "BLOCK_KEYS", "FAULT_TEXT", "EMPTY_SUMMARY", "EMPTY_TEXT",
-           "NEW_LABEL", "OTHER_LABEL", "DAY_GROUPS",
+           "NEW_LABEL", "OTHER_LABEL", "DAY_GROUPS", "FILING_KINDS_NOT_IN_PATTERN", "FOLLOW_HEAD", "day_heads",
+           "day_bars", "bar_start", "extended_bars", "clock_words",
            "ReadFault", "OnFile", "state_read", "index_dates", "session_doc",
            "pit_block", "pit_blocks", "cohort", "prior_close_of", "grade", "session_facts", "minute_facts",
            "ssr_facts", "sho_facts", "filing_facts", "record_session", "fill_next", "retry_session", "shuffle_share",

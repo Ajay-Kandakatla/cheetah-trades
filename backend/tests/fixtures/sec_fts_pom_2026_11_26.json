@@ -1,0 +1,844 @@
+{
+"captured": "2026-11-26",
+"host": "efts.sec.gov",
+"answers": {
+"phrase": {
+"took": 121,
+"timed_out": false,
+"_shards": {
+"total": 50,
+"successful": 50,
+"skipped": 0,
+"failed": 0
+},
+"hits": {
+"total": {
+"value": 2,
+"relation": "eq"
+},
+"max_score": 13.875404,
+"hits": [
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116021:ea0310863-6k_pomdoctor.htm",
+"_score": 13.875404,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-04",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": 1,
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-04",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116021",
+"film_num": [
+"261523817"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "6-K",
+"ma_i_individual": null,
+"file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116021:ea031086301ex10-1.htm",
+"_score": 13.01613,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-04",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": "2",
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-04",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116021",
+"film_num": [
+"261523817"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "EX-10.1",
+"ma_i_individual": null,
+"file_description": "DEBT CONVERSION AGREEMENT, DATED NOVEMBER 2, 2026, BY AND AMONG POMDOCTOR LIMITED, GUANGZHOU QILEKANG DIGITAL HEALTH MEDICAL TECHNOLOGY CO., LTD. AND ZHENYANG SHI",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+}
+]
+},
+"aggregations": {
+"entity_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "POMDOCTOR Ltd  (POM)  (CIK 0001877971)",
+"doc_count": 2
+}
+]
+},
+"sic_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "5900",
+"doc_count": 2
+}
+]
+},
+"biz_states_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": []
+},
+"form_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "6-K",
+"doc_count": 2
+}
+]
+}
+},
+"query": {
+"_source": {
+"exclude": [
+"doc_text"
+]
+},
+"query": {
+"bool": {
+"must": [],
+"must_not": [],
+"should": [
+{
+"match_phrase": {
+"doc_text": "agreed to issue"
+}
+},
+{
+"match_phrase": {
+"doc_text": "issued an aggregate"
+}
+},
+{
+"match_phrase": {
+"doc_text": "private placement"
+}
+},
+{
+"match_phrase": {
+"doc_text": "registered direct"
+}
+},
+{
+"match_phrase": {
+"doc_text": "securities purchase agreement"
+}
+},
+{
+"match_phrase": {
+"doc_text": "debt conversion"
+}
+},
+{
+"match_phrase": {
+"doc_text": "at-the-market"
+}
+},
+{
+"match_phrase": {
+"doc_text": "exercise of warrants"
+}
+},
+{
+"match_phrase": {
+"doc_text": "subscription agreement"
+}
+}
+],
+"filter": [
+{
+"terms": {
+"root_forms": [
+"6-K"
+]
+}
+},
+{
+"terms": {
+"ciks": [
+"0001877971"
+]
+}
+},
+{
+"range": {
+"file_date": {
+"gte": "2026-09-01",
+"lte": "2026-11-26"
+}
+}
+}
+],
+"minimum_should_match": 1
+}
+},
+"from": 0,
+"size": 100,
+"aggregations": {
+"form_filter": {
+"terms": {
+"field": "root_forms",
+"size": 30
+}
+},
+"entity_filter": {
+"terms": {
+"field": "display_names.raw",
+"size": 30
+}
+},
+"sic_filter": {
+"terms": {
+"field": "sics",
+"size": 30
+}
+},
+"biz_states_filter": {
+"terms": {
+"field": "biz_states",
+"size": 30
+}
+}
+}
+}
+},
+"number": {
+"took": 240,
+"timed_out": false,
+"_shards": {
+"total": 50,
+"successful": 50,
+"skipped": 0,
+"failed": 0
+},
+"hits": {
+"total": {
+"value": 2,
+"relation": "eq"
+},
+"max_score": 23.979057,
+"hits": [
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116021:ea0310863-6k_pomdoctor.htm",
+"_score": 23.979057,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-04",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": 1,
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-04",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116021",
+"film_num": [
+"261523817"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "6-K",
+"ma_i_individual": null,
+"file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116021:ea031086301ex10-1.htm",
+"_score": 21.238556,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-04",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": "2",
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-04",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116021",
+"film_num": [
+"261523817"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "EX-10.1",
+"ma_i_individual": null,
+"file_description": "DEBT CONVERSION AGREEMENT, DATED NOVEMBER 2, 2026, BY AND AMONG POMDOCTOR LIMITED, GUANGZHOU QILEKANG DIGITAL HEALTH MEDICAL TECHNOLOGY CO., LTD. AND ZHENYANG SHI",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+}
+]
+},
+"aggregations": {
+"entity_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "POMDOCTOR Ltd  (POM)  (CIK 0001877971)",
+"doc_count": 2
+}
+]
+},
+"sic_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "5900",
+"doc_count": 2
+}
+]
+},
+"biz_states_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": []
+},
+"form_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "6-K",
+"doc_count": 2
+}
+]
+}
+},
+"query": {
+"_source": {
+"exclude": [
+"doc_text"
+]
+},
+"query": {
+"bool": {
+"must": [
+{
+"match_phrase": {
+"doc_text": "33,185,841"
+}
+}
+],
+"must_not": [],
+"should": [],
+"filter": [
+{
+"terms": {
+"ciks": [
+"0001877971"
+]
+}
+},
+{
+"range": {
+"file_date": {
+"gte": "2026-10-30",
+"lte": "2026-11-26"
+}
+}
+}
+]
+}
+},
+"from": 0,
+"size": 100,
+"aggregations": {
+"form_filter": {
+"terms": {
+"field": "root_forms",
+"size": 30
+}
+},
+"entity_filter": {
+"terms": {
+"field": "display_names.raw",
+"size": 30
+}
+},
+"sic_filter": {
+"terms": {
+"field": "sics",
+"size": 30
+}
+},
+"biz_states_filter": {
+"terms": {
+"field": "biz_states",
+"size": 30
+}
+}
+}
+}
+},
+"ordinary_shares": {
+"took": 962,
+"timed_out": false,
+"_shards": {
+"total": 50,
+"successful": 50,
+"skipped": 0,
+"failed": 0
+},
+"hits": {
+"total": {
+"value": 6,
+"relation": "eq"
+},
+"max_score": 5.864767,
+"hits": [
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-106373:ea0307400-6k_pomdoc.htm",
+"_score": 5.864767,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-10-02",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": 1,
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-10-02",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-106373",
+"film_num": [
+"261436339"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "6-K",
+"ma_i_individual": null,
+"file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-110501:ea0308609-6k_pomdoctor.htm",
+"_score": 5.8133955,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-10-19",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": 1,
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-10-19",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-110501",
+"film_num": [
+"261467654"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "6-K",
+"ma_i_individual": null,
+"file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116021:ea031086301ex10-1.htm",
+"_score": 5.1685934,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-04",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": "2",
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-04",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116021",
+"film_num": [
+"261523817"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "EX-10.1",
+"ma_i_individual": null,
+"file_description": "DEBT CONVERSION AGREEMENT, DATED NOVEMBER 2, 2026, BY AND AMONG POMDOCTOR LIMITED, GUANGZHOU QILEKANG DIGITAL HEALTH MEDICAL TECHNOLOGY CO., LTD. AND ZHENYANG SHI",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-114970:ea031029501ex99-1.htm",
+"_score": 5.039007,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-02",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": "2",
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-02",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-114970",
+"film_num": [
+"261512819"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "EX-99.1",
+"ma_i_individual": null,
+"file_description": "PRESS RELEASE, DATED NOVEMBER 2, 2026",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116902:ea031126901ex99-1.htm",
+"_score": 4.428467,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-06",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": "2",
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-06",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116902",
+"film_num": [
+"261532255"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "EX-99.1",
+"ma_i_individual": null,
+"file_description": "PRESS RELEASE DATED NOVEMBER 6, 2026",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+},
+{
+"_index": "edgar_file",
+"_id": "0001213900-26-116021:ea0310863-6k_pomdoctor.htm",
+"_score": 4.4008427,
+"_source": {
+"ciks": [
+"0001877971"
+],
+"period_ending": "2026-11-04",
+"file_num": [
+"001-42749"
+],
+"display_names": [
+"POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+],
+"xsl": null,
+"sequence": 1,
+"root_forms": [
+"6-K"
+],
+"file_date": "2026-11-04",
+"biz_states": [],
+"sics": [
+"5900"
+],
+"form": "6-K",
+"adsh": "0001213900-26-116021",
+"film_num": [
+"261523817"
+],
+"biz_locations": [
+"Guangzhou"
+],
+"file_type": "6-K",
+"ma_i_individual": null,
+"file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+"inc_states": [
+"E9"
+],
+"items": []
+}
+}
+]
+},
+"aggregations": {
+"entity_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "POMDOCTOR Ltd  (POM)  (CIK 0001877971)",
+"doc_count": 6
+}
+]
+},
+"sic_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "5900",
+"doc_count": 6
+}
+]
+},
+"biz_states_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": []
+},
+"form_filter": {
+"doc_count_error_upper_bound": 0,
+"sum_other_doc_count": 0,
+"buckets": [
+{
+"key": "6-K",
+"doc_count": 6
+}
+]
+}
+},
+"query": {
+"_source": {
+"exclude": [
+"doc_text"
+]
+},
+"query": {
+"bool": {
+"must": [
+{
+"match_phrase": {
+"doc_text": "ordinary shares"
+}
+}
+],
+"must_not": [],
+"should": [],
+"filter": [
+{
+"terms": {
+"root_forms": [
+"6-K"
+]
+}
+},
+{
+"terms": {
+"ciks": [
+"0001877971"
+]
+}
+},
+{
+"range": {
+"file_date": {
+"gte": "2026-10-01",
+"lte": "2026-11-26"
+}
+}
+}
+]
+}
+},
+"from": 0,
+"size": 100,
+"aggregations": {
+"form_filter": {
+"terms": {
+"field": "root_forms",
+"size": 30
+}
+},
+"entity_filter": {
+"terms": {
+"field": "display_names.raw",
+"size": 30
+}
+},
+"sic_filter": {
+"terms": {
+"field": "sics",
+"size": 30
+}
+},
+"biz_states_filter": {
+"terms": {
+"field": "biz_states",
+"size": 30
+}
+}
+}
+}
+}
+}
+}

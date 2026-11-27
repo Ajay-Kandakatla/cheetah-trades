@@ -83,6 +83,8 @@ export type SiBasis = {
   float_refused?: string | null;
   refused_reasons?: string[] | null;
   flags?: SiFlag[] | null;
+  /** 🩳 2026-11-26 (spec sishares §3.2): the served 6-K issuances — read only through siIssuances. */
+  issuances?: unknown[] | null;
   [k: string]: unknown;
 };
 
@@ -125,6 +127,36 @@ export function siFlags(read: ShortInterestRead | null | undefined): SiFlag[] {
     if (typeof r.short !== 'string' || !r.short.trim()) continue;
     if (typeof r.emoji !== 'string' || typeof r.text !== 'string') continue;
     out.push({ key: r.key, emoji: r.emoji, short: r.short, text: r.text });
+  }
+  return out;
+}
+
+/** 🩳 6-K issuance link (2026-11-26, spec sishares §3.6). Ajay: "Fix the POM chip and the 6-K dilution check." The served
+ *  `basis.issuances` rows (backend basis_math.issuances) carry the SEC filing link built by basis_math.SEC_ARCHIVE_URL; a
+ *  link is kept ONLY when it starts with this prefix (https, the www.sec.gov host, the EDGAR archive path) — anything else
+ *  (http, another host, a look-alike host, javascript:) is no link. The served label / text are printed verbatim. */
+export const SI_FILING_URL_PREFIX = 'https://www.sec.gov/Archives/edgar/data/';
+
+/** 🩳 one served issuance, shaped for the panel: the served label, the served text, the filing link or null. */
+export type SiIssuance = { label: string; text: string; url: string | null };
+
+function filingUrl(v: unknown): string | null {
+  if (typeof v !== 'string' || !v.startsWith(SI_FILING_URL_PREFIX)) return null;
+  if (/[\s"'<>\\]/.test(v)) return null;
+  return v;
+}
+
+/** The served issuances, well-formed entries only (a non-empty served `label`) — `[]` for anything else (no read, no
+ *  basis, an older API, a non-array). `url` is the served link only when it carries SI_FILING_URL_PREFIX, else null. */
+export function siIssuances(read: ShortInterestRead | null | undefined): SiIssuance[] {
+  const b = basisOf(read);
+  if (!b || !Array.isArray(b.issuances)) return [];
+  const out: SiIssuance[] = [];
+  for (const x of b.issuances as unknown[]) {
+    if (!x || typeof x !== 'object' || Array.isArray(x)) continue;
+    const r = x as Record<string, unknown>;
+    if (typeof r.label !== 'string' || !r.label.trim()) continue;
+    out.push({ label: r.label, text: typeof r.text === 'string' ? r.text : '', url: filingUrl(r.url) });
   }
   return out;
 }

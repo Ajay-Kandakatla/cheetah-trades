@@ -1089,6 +1089,25 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-26 ~21:10 ET, verbatim: "Fix the POM chip and the 6-K dilution check. Also find alternative srouces for
+  // this share count, I think the short interest theory is actually working may be its a bias for me on the ones its
+  // working out but lets track them in our list of SI. and maintain a track record of our stocks". Spec sishares rev 2
+  // (scratchpad sishares/spec.md §3, §4.5). BE short_interest/basis_math (FLOAT_FRESH_WHEN "issuance_before_float" —
+  // HIS CALL #1; issuance_proof, filings_known, share_counts, issuances), short_interest/sec_fts.py (efts.sec.gov,
+  // FTS_WHEN — HIS CALL #3), share_basis (the two Massive counts, the 6-K reports, state|fts), read.BASIS_KEYS;
+  // chart_maps/gajjala/si_follow.py (HORIZONS 1 / LEDGER_SPAN_SESSIONS / LEDGER_SPAN_SESSIONS_LONG, its own
+  // SIT.Budget(SIT.MAX_LOADS)) + the hooks in si_track.py + scripts/gajjala_si_follow_backfill.py; FE GgSiTrack.tsx
+  // (the follow fold), ShortInterestPanel.tsx + lib/shortInterest.siIssuances (the 6-K link). Display + record only.
+  // Pinned by scripts/contracts.mjs ("🩳 share counts · 6-K · 🏁 follow (2026-11-26)"). PLACED past index 100, right
+  // above the 📅 runners entry (the 💧 / ✅ way): no NEW_FEATURES[n] pin moves. Docs
+  // docs/short_interest/share_count_sources_2026_11_26.md, sixk_issuance_2026_11_26.md, docs/gajjala/si_follow_2026_11_26.md,
+  // si_follow_frontend_2026_11_26.md.
+  {
+    id: 'gajjala-si-share-count-6k-follow-2026-11-26',
+    label: "🩳 POM's chip, the 6-K check, more share counts and a follow-up on every 🩳 name — you said: “Fix the POM chip and the 6-K dilution check. Also find alternative srouces for this share count, I think the short interest theory is actually working may be its a bias for me on the ones its working out but lets track them in our list of SI. and maintain a track record of our stocks”. POM: its 6-K of 11/4 states the 33,185,841 shares it issued, filed before the older float was read, so the share count read with that float was already out of date — after its next share-count refresh POM reads Moderate 5.0% float instead of 0.2% shs out · ⚠️ float stale (Moderate is not on the 🩳 list); ⚠️ shares up stays. A newer float is used only when a filing proves it that way; a missing, failed or paused read keeps today's chip. A foreign issuer's 6-K that the SEC full-text search matches for issuance words now counts as a 📄 filing — never twice on an offering day — and links to the SEC filing in the 🩳 panel. The 🩳 panel adds a Share counts row: the short-interest record, Yahoo, the SEC cover, Massive's two counts (marked read date — Massive gives no as-of) and the number a filing states; no free, dated second float source was found. 🏁 now follows each name the 🩳 list held for 10 sessions after it was listed — open ⓘ on the 🩳 sub, then 🏁: a +5 sessions column in the day table and a follow fold with +1 / +5 / +10 counts of another +40% day, a new high and a close above the base. Winners and losers both count; a listing day is counted only once every name on it is read, so the days before today show no counts until a one-off load you decide. Names off the 🩳 list are not followed, so it cannot say whether short interest made the difference — your bias question stays open. Display and record only — no alert, gate or sort changed. UNMEASURED. Not advice.",
+    addedAt: '2026-11-26',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-26, verbatim: "I want you to have continous charts for previous day runners we have some examples with
   // traderview charts with couple of indicators can you set that up? I wanna able to horizontal scroll tp check continuity
   // like he does". Spec runcharts rev 2 (scratchpad runcharts/spec.md §3, §4.5, Appendix A.1). BE

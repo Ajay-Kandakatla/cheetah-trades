@@ -34,12 +34,29 @@ Display only; UNMEASURED. Nothing here gates, sorts, sizes or enters a lane.
 from __future__ import annotations
 
 import math
+import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 # HIS CALL #1 — one of FLOAT_STALE_MODES; an unknown value → nothing is refused for dilution.
 FLOAT_STALE_WHEN = "added_exceeds_float"
 FLOAT_STALE_MODES = ("any_increase", "added_exceeds_float", "tier_moves")
+# 🩳 2026-11-26 (spec sishares §3.2) HIS CALL #1 — one of FLOAT_FRESH_MODES; an unknown value behaves as "off" (today's
+# refusal). When a newer Yahoo float read WITH or AFTER the larger share count would be refused as stale:
+#   "off"                   always refused (the 11-24 rule).
+#   "issuance_before_float" not refused ONLY when an SEC filing dated strictly BEFORE the older float's date prints the
+#                           exact number of shares added — the count read with the older float was already out of date.
+#   "co_dated_no_filing"    not refused when no 📄 dilution event is on file since the older float and every filing
+#                           read answered (`filings_known`) — rests on an absence.
+FLOAT_FRESH_WHEN = "issuance_before_float"
+FLOAT_FRESH_MODES = ("off", "issuance_before_float", "co_dated_no_filing")
+FLOAT_FRESH_MODE_WORDS = {
+    "off": "never — it is refused as stale",
+    "issuance_before_float": ("only when an SEC filing dated before the older float was read states the exact number "
+                              "of shares added"),
+    "co_dated_no_filing": ("when no dilution filing is on file since the older float was read and every filing read "
+                           "answered"),
+}
 # HIS CALL #17 [C4] — measured: split-scaled float matches sit at <= 1.8e-5 relative error, the next nearest 3.0e-3.
 CARRY_REL_TOL = 1e-4
 # HIS CALL #19 [P1] — any other Massive reference type: the SEC cover is not compared.
@@ -58,7 +75,13 @@ FILING_8K_DILUTION_ITEMS = ("3.02",)
 FILING_8K_CHARTER_ITEMS = ("5.03", "3.03")
 KIND_REGISTRATION, KIND_PROSPECTUS, KIND_UNREGISTERED, KIND_CHARTER = (
     "registration", "prospectus", "unregistered_sale", "charter")
-DILUTION_KINDS = (KIND_REGISTRATION, KIND_PROSPECTUS, KIND_UNREGISTERED)
+# 📄 2026-11-26 (spec sishares §3.2) — a 6-K the SEC full-text search matched for issuance words (`sec.fts`, written by
+# share_basis / sec_fts) is a dilution filing of its own kind. `filing_kind` is NOT changed: a bare 6-K names no kind.
+FILING_6K_FORM = "6-K"
+FTS_ISSUANCE = "issuance"
+FTS_KNOWN_STATUSES = ("ok", "none_6k")
+KIND_FOREIGN_ISSUANCE = "foreign_issuance"
+DILUTION_KINDS = (KIND_REGISTRATION, KIND_PROSPECTUS, KIND_UNREGISTERED, KIND_FOREIGN_ISSUANCE)
 
 REFUSE_SPLIT_SAME_DAY, REFUSE_SPLIT, REFUSE_DILUTED = "split_same_day", "split", "diluted"
 REFUSAL_ORDER = (REFUSE_SPLIT_SAME_DAY, REFUSE_SPLIT, REFUSE_DILUTED)
@@ -102,6 +125,24 @@ FLAG_FLOAT_UPDATED = "float_updated"
 SOURCE_YAHOO = "yahoo"
 SHORT_FLOAT_UPDATED = EMOJI_WARN + " float updated"
 TEXT_FLOAT_UPDATED = SHORT_FLOAT_UPDATED + " — %s (Yahoo %s) replaced %s (%s)"   # new, its M/D, old, its M/D
+# 🩳 2026-11-26 (spec sishares §3.2) — a newer float judged fresh (FLOAT_FRESH_WHEN), the 6-K words, the archive LINK.
+SEC_ARCHIVE_URL = "https://www.sec.gov/Archives/edgar/data/%d/%s/%s"     # a LINK for his browser; never fetched
+TEXT_COUNT_BEFORE_FLOAT = ("%s %s× more shares than the count read with the older float: %s (%s, %s) vs %s (%s) — "
+                           "%s filed %s, before that float was read, states %s shares (%s + %s = %s), so the older "
+                           "count was already out of date; the %% of float uses the newer float %s (Yahoo %s)")
+TEXT_COUNT_WITH_FLOAT = ("%s %s× more shares than when the older float was read: %s (%s, %s) vs %s (%s) — the newer "
+                         "float %s (Yahoo %s) was read with that count and no dilution filing is on file since, so "
+                         "the %% of float uses it")
+TEXT_FILING_SAME_DAY_6K = " — %d same-day 6-K not counted (the report of an offering already counted that day)"
+TEXT_CHECK_FTS = " · 6-K issuance search (SEC full-text): %s"            # the 4th clause of the check sentence
+ROW_SHARE_COUNTS, ROW_SHARE_ISSUANCE = "Share counts", "Share issuance"
+SHARE_COUNT_LABELS = {"record": "Short-interest record", "yahoo": "Yahoo, current row", "sec_cover": "SEC %s cover",
+                      "massive_class": "Massive ticker details, this share class",
+                      "massive_weighted": "Massive ticker details, all classes converted", "filing": "%s %s states"}
+SHARE_COUNT_WORDS = {"record": "short-interest record", "yahoo": "Yahoo", "massive_class": "Massive, this class",
+                     "massive_weighted": "Massive, all classes"}
+TEXT_NO_AS_OF = " — the provider gives no as-of"
+TEXT_NO_COVER = "SEC cover: none on file"
 FLAG_ROW_LABEL = {FLAG_FLOAT_STALE: "Float stale", FLAG_COUNT_STALE: "Shares up", FLAG_SPLIT: "Split",
                   FLAG_FILING: "Dilution filing", FLAG_COUNT_FELL: "Shares fell", FLAG_UNCHECKED: "Check",
                   FLAG_FLOAT_UPDATED: "Float updated"}
@@ -243,11 +284,25 @@ def _filings(raw) -> list:
             items = ",".join(str(x) for x in items if isinstance(x, (str, int, float)) and not isinstance(x, bool))
         elif not isinstance(items, str):
             items = ""
-        out.append({"form": form.strip(), "filed": filed, "items": items, "kind": filing_kind(form, items),
+        # 📄 2026-11-26 (spec sishares §3.2, C14) — the full-text marker is RE-EMITTED, so `_filings(_filings(raw))`
+        # equals `_filings(raw)`: kept only on a 6-K / 6-K/A, dropped on any other form.
+        fts = FTS_ISSUANCE if (f.get("fts") == FTS_ISSUANCE and _form_base(form) == FILING_6K_FORM) else None
+        out.append({"form": form.strip(), "filed": filed, "items": items,
+                    "kind": KIND_FOREIGN_ISSUANCE if fts else filing_kind(form, items),
                     "doc": _opt_str(f.get("doc")), "file": _opt_str(f.get("file")), "accn": _opt_str(f.get("accn")),
-                    "with": _opt_str(f.get("with"))})
+                    "with": _opt_str(f.get("with")), "fts": fts})
     out.sort(key=lambda f: f["filed"], reverse=True)          # stable: the stored order stands inside one day
     return out
+
+
+def _form_base(form) -> Optional[str]:
+    """An SEC form name upper-cased with one trailing '/A' dropped (6-K/A → 6-K), else None."""
+    if not isinstance(form, str):
+        return None
+    base = form.strip().upper()
+    if base.endswith("/A"):
+        base = base[:-2].strip()
+    return base or None
 
 
 def _opt_str(v) -> Optional[str]:
@@ -275,10 +330,15 @@ def filing_events(filings, anchor, cap=None) -> dict:
     re-filed: no event, every row a copy (the report itself is judged by `filing_kind` as before). Any other document
     = one event, its other rows copies. A 424B row with no `doc` (a row stored before 2026-11-26) = one event, counted
     in `unchecked`. Every other row = one event. Order: filed DESC, then the stored order.
+    📄 2026-11-26 (spec sishares §3.2, C13) — a 6-K the full-text search marked (kind KIND_FOREIGN_ISSUANCE) filed on a
+    day that yields a COUNTED event of another dilution kind is the report of that offering: not an event, counted in
+    `n_filings` and `n_reports`. On an E2 day (the 424B rows are the report re-filed, no 424B event) the 6-K IS the
+    event. Otherwise it is one event.
     → {"events", "charter" (each [{kind, form, filed, items, label, same_day, copies}]), "n_filings" (dilution-kind
-    rows — what the chip used to count), "n_copies", "unchecked", "cap" (the kept-row cap, else None)}."""
+    rows — what the chip used to count), "n_copies", "unchecked", "n_reports", "cap" (the kept-row cap, else None)}."""
     a = _iso(anchor)
-    out = {"events": [], "charter": [], "n_filings": 0, "n_copies": 0, "unchecked": 0, "cap": _pos_int(cap)}
+    out = {"events": [], "charter": [], "n_filings": 0, "n_copies": 0, "unchecked": 0, "n_reports": 0,
+           "cap": _pos_int(cap)}
     if a is None:
         return out
     order, docs = [], {}
@@ -296,6 +356,14 @@ def filing_events(filings, anchor, cap=None) -> dict:
                 g["files"].add(f["file"])
         else:
             order.append(("row", f))
+    counted_days = set()                       # C13: days with a counted event of another dilution kind
+    for what, x in order:
+        if what == "doc":
+            g = x["rows"]
+            if not (len(x["files"]) >= 2 and any(r["with"] for r in g)):
+                counted_days.add(g[0]["filed"])
+        elif x["kind"] in DILUTION_KINDS and x["kind"] != KIND_FOREIGN_ISSUANCE:
+            counted_days.add(x["filed"])
     for what, x in order:
         if what == "doc":
             rs = x["rows"]
@@ -310,6 +378,9 @@ def filing_events(filings, anchor, cap=None) -> dict:
             out["charter"].append(_event(x, a, 0))
             continue
         out["n_filings"] += 1
+        if x["kind"] == KIND_FOREIGN_ISSUANCE and x["filed"] in counted_days:     # C13 — the offering's report
+            out["n_reports"] += 1
+            continue
         if x["kind"] == KIND_PROSPECTUS:                                     # a 424B with no `doc`
             out["unchecked"] += 1
         out["events"].append(_event(x, a, 0))
@@ -539,6 +610,244 @@ def change_across_split(si, s_iso, prev_si, prev_iso, executed) -> Optional[dict
                         format(int(round(adj)), ","))}
 
 
+# ───────────────────────────────────────────── 🩳 2026-11-26 (spec sishares §3.2 / §3.4) — fresh floats, 6-Ks, counts
+_ACCN_RE = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}")
+_DOC_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+_CIK_RE = re.compile(r"[0-9]{1,10}")
+
+
+def _exact_int(v) -> Optional[int]:
+    """A positive whole count as stored (an int, never a bool / float / string) — compared to the share, never
+    rounded."""
+    return v if (isinstance(v, int) and not isinstance(v, bool) and v > 0) else None
+
+
+def fts_of(sec) -> dict:
+    """The SEC full-text search sub-doc `sec.fts` (spec §3.1) when it is a dict, else {}."""
+    v = sec.get("fts") if isinstance(sec, dict) else None
+    return v if isinstance(v, dict) else {}
+
+
+def filings_known(sec) -> bool:
+    """[C1] True ONLY when every filing read answered: the SEC read is ok / none with no error and no kept-row cap, and
+    the 6-K full-text search is in FTS_KNOWN_STATUSES with no error and no cap. A missing, failed, blocked or switched
+    off read is never "no filing"."""
+    if not isinstance(sec, dict) or _status(sec) not in ("ok", "none") or sec.get("error") or sec.get("filings_cap"):
+        return False
+    fts = fts_of(sec)
+    return _status(fts) in FTS_KNOWN_STATUSES and not fts.get("error") and not fts.get("cap")
+
+
+def _number_of(fts, growth) -> tuple:
+    """(n, 6-K hits) of the exact-number answer when it was asked for THIS growth (n = to − from, to the share), else
+    (None, [])."""
+    num = fts.get("number") if isinstance(fts, dict) else None
+    if not isinstance(num, dict) or not isinstance(growth, dict):
+        return None, []
+    fs, ts = _exact_int(growth.get("from_shares")), _exact_int(growth.get("to_shares"))
+    n, nf, nt = _exact_int(num.get("n")), _exact_int(num.get("from")), _exact_int(num.get("to"))
+    if fs is None or ts is None or n is None or nf is None or nt is None:
+        return None, []
+    if n != ts - fs or nf != fs or nt != ts:
+        return None, []
+    hits = []
+    for h in num.get("hits") if isinstance(num.get("hits"), list) else []:
+        if not isinstance(h, dict) or _form_base(h.get("form")) != FILING_6K_FORM:
+            continue
+        filed = _iso(h.get("filed"))
+        if filed is None:
+            continue
+        hits.append({"accn": _opt_str(h.get("accn")), "filed": filed, "doc": _opt_str(h.get("doc")),
+                     "form": h["form"].strip()})
+    hits.sort(key=lambda h: h["filed"])
+    return n, hits
+
+
+def issuance_proof(sec, growth, anchor, basis_date, executed) -> Optional[dict]:
+    """[C6] {"n", "accn", "filed", "doc", "form"} — the OLDEST 6-K the SEC full-text search found printing the exact
+    number of shares this growth added, filed STRICTLY before `anchor` (the older float's date) on the same split side
+    as `basis_date`; else None. Needs the SEC read ok / none and the full-text read ok (a held answer with `error` set
+    still counts — a filed document does not change). PURE."""
+    if not isinstance(sec, dict) or _status(sec) not in ("ok", "none"):
+        return None
+    fts = fts_of(sec)
+    if _status(fts) != "ok":
+        return None
+    a = _iso(anchor)
+    n, hits = _number_of(fts, growth)
+    if a is None or n is None:
+        return None
+    for h in hits:                                             # oldest first
+        if h["filed"] < a and same_side(h["filed"], basis_date, executed):
+            return dict(h, n=n)
+    return None
+
+
+def float_fresh(upd, growth, sec, events, *, anchor, basis_date, executed) -> Optional[dict]:
+    """[C1][C6] Whether a newer Yahoo float the stale cut would refuse is used instead, under FLOAT_FRESH_WHEN (read at
+    call time). None = refused as today. Else {"mode", "proof" (issuance_proof's dict, or None in the second mode)}.
+    Every mode needs: the growth's count dated ON or BEFORE the newer float, on its split side, and the newer float's
+    own Yahoo row carrying at least that count (rebased to `basis_date`)."""
+    mode = FLOAT_FRESH_WHEN
+    if mode == "off" or mode not in FLOAT_FRESH_MODES:
+        return None
+    if not isinstance(upd, dict) or not isinstance(growth, dict):
+        return None
+    ta, ua, ts = _iso(growth.get("to_asof")), _iso(upd.get("as_of")), _pos_int(growth.get("to_shares"))
+    if ta is None or ua is None or ts is None or ta > ua or not same_side(ta, ua, executed):
+        return None
+    pr = _rb(upd.get("paired_shares"), ua, basis_date, executed)
+    if pr is None or pr < ts:
+        return None
+    if mode == "issuance_before_float":
+        proof = issuance_proof(sec, growth, anchor, basis_date, executed)
+        return {"mode": mode, "proof": proof} if proof else None
+    if events or not filings_known(sec):
+        return None
+    return {"mode": mode, "proof": None}
+
+
+def filing_url(cik, accn, doc) -> Optional[str]:
+    """The SEC archive LINK of one filed document (opened in his browser, never fetched), or None unless the CIK is
+    digits, the accession is NNNNNNNNNN-NN-NNNNNN and the document a plain file name."""
+    if isinstance(cik, bool):
+        return None
+    if isinstance(cik, int):
+        c = cik
+    elif isinstance(cik, str) and _CIK_RE.fullmatch(cik.strip()):
+        c = int(cik.strip())
+    else:
+        return None
+    if c <= 0 or not isinstance(accn, str) or not _ACCN_RE.fullmatch(accn) or not isinstance(doc, str) \
+            or not _DOC_RE.fullmatch(doc):
+        return None
+    return SEC_ARCHIVE_URL % (c, accn.replace("-", ""), doc)
+
+
+def issuances(doc, growth, anchor) -> list:
+    """The 6-Ks the SEC full-text search matched for issuance words (`sec.fts.issuance`, a read with status ok), filed
+    DESC: [{form, filed, accn, shares (the exact growth number the filing prints, else None), ex, url, label, text,
+    before_float (filed before `anchor`, or None with no anchor)}]. PURE, never raises on junk."""
+    sec = _sub(doc, "sec")
+    fts = fts_of(sec)
+    raw = fts.get("issuance")
+    if _status(fts) != "ok" or not isinstance(raw, list):
+        return []
+    n, hits = _number_of(fts, growth)
+    hit_accns = {h["accn"] for h in hits if h["accn"]}
+    cik = _sub(doc, "ref").get("cik")
+    a = _iso(anchor)
+    out = []
+    for r in raw:
+        if not isinstance(r, dict):
+            continue
+        form, filed, accn = _opt_str(r.get("form")), _iso(r.get("filed")), _opt_str(r.get("accn"))
+        if filed is None or _form_base(form) != FILING_6K_FORM:
+            continue
+        d = _opt_str(r.get("doc"))
+        ex = [{"type": e["type"].strip(), "desc": _opt_str(e.get("desc"))}
+              for e in (r.get("ex") if isinstance(r.get("ex"), list) else [])
+              if isinstance(e, dict) and _opt_str(e.get("type"))]
+        shares = n if (n and accn and accn in hit_accns) else None
+        before = (filed < a) if a else None
+        label = "%s %s" % (form, _md(filed))
+        text = "%s — the SEC full-text search matched issuance words" % label
+        if shares:
+            text += "; it states %s shares" % format(shares, ",")
+        if before is not None:
+            text += "; dated %s %s (the check's start date)" % ("before" if before else "on or after", _md(a))
+        if ex:
+            text += " · " + " · ".join(("%s: %s" % (e["type"], e["desc"])) if e["desc"] else e["type"] for e in ex)
+        out.append({"form": form, "filed": filed, "accn": accn, "shares": shares, "ex": ex,
+                    "url": filing_url(cik, accn, d), "label": label, "text": text, "before_float": before})
+    out.sort(key=lambda r: r["filed"], reverse=True)
+    return out
+
+
+def _et_date(v) -> Optional[str]:
+    """The US-Eastern calendar date of a stored UTC timestamp (ISO), else None."""
+    d = _ts(v)
+    if d is None:
+        return None
+    try:
+        from zoneinfo import ZoneInfo
+        return d.astimezone(ZoneInfo(ET_ZONE)).date().isoformat()
+    except Exception:                                          # noqa: BLE001 — no tz database: the UTC date
+        return d.astimezone(timezone.utc).date().isoformat()
+
+
+def _sc_row(key, label, shares, flt, as_of, date_kind) -> dict:
+    return {"key": key, "label": label, "shares": shares, "float": flt, "as_of": as_of, "date_kind": date_kind}
+
+
+def share_counts(si_record, basis_doc, growth) -> list:
+    """§3.4 — every share count on file for the name, in this order, only those with a value: the short-interest
+    record, Yahoo's current row, the newest same-unit SEC cover, Massive's two ticker-detail counts (dated by the read
+    — the provider gives no as-of), the number a 6-K states for THIS growth. [{key, label, shares, float, as_of,
+    date_kind ("read" | "as_of" | "filed")}]. No comparison, no cut, no flag. PURE, never raises on junk."""
+    rec = si_record if isinstance(si_record, dict) else {}
+    doc = basis_doc if isinstance(basis_doc, dict) else {}
+    out = []
+    F, Fa, P, Pa = _record_fields(rec)
+    if P or F:
+        out.append(_sc_row("record", SHARE_COUNT_LABELS["record"], P, F, Pa if P else Fa, "read"))
+    yh = doc.get("yahoo") if isinstance(doc.get("yahoo"), dict) else {}
+    Y, yf = _pos_int(yh.get("shares_outstanding")), _pos_int(yh.get("float_shares"))
+    if Y or yf:
+        out.append(_sc_row("yahoo", SHARE_COUNT_LABELS["yahoo"], Y, yf, _iso(yh.get("as_of")), "read"))
+    ref, sec = _sub(doc, "ref"), _sub(doc, "sec")
+    rtype = ref.get("type") if isinstance(ref.get("type"), str) else None
+    covers = _covers(sec.get("covers")) if _status(sec) == "ok" else []
+    if covers and rtype in SEC_COVER_SAME_UNIT_TYPES:
+        c = covers[-1]
+        out.append(_sc_row("sec_cover", SHARE_COUNT_LABELS["sec_cover"] % (c["form"] or "filing"), c["shares"], None,
+                           c["as_of"], "as_of"))
+    if _status(ref) == "ok":
+        ra = _et_date(ref.get("read_at"))
+        for key, field in (("massive_class", "share_class_shares"), ("massive_weighted", "weighted_shares")):
+            v = _pos_int(ref.get(field))
+            if v:
+                out.append(_sc_row(key, SHARE_COUNT_LABELS[key], v, None, ra, "read"))
+    if _status(fts_of(sec)) == "ok":
+        n, hits = _number_of(fts_of(sec), growth)
+        if n and hits:
+            h = hits[0]
+            out.append(_sc_row("filing", SHARE_COUNT_LABELS["filing"] % (h["form"], _md(h["filed"])), n, None,
+                               h["filed"], "filed"))
+    return out
+
+
+def share_counts_text(rows, basis_doc) -> str:
+    """The one "Share counts" row: every count with its date words, then the SEC cover state when no cover row."""
+    parts = []
+    rows = [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+    for r in rows:
+        k = r.get("key")
+        if k is None:
+            continue
+        val = (format(r["shares"], ",") if r.get("shares") else
+               ("float %s" % format(r["float"], ",") if r.get("float") else None))
+        if val is None:
+            continue
+        if k == "filing":
+            parts.append("%s +%s" % (r["label"], val))
+            continue
+        name = r.get("label") if k == "sec_cover" else SHARE_COUNT_WORDS.get(k, r.get("label") or k)
+        when = ("as of %s" if r.get("date_kind") == "as_of" else "read %s") % _md(r.get("as_of"))
+        if k in ("massive_class", "massive_weighted"):
+            when += TEXT_NO_AS_OF
+        parts.append("%s %s (%s)" % (name, val, when))
+    if not any(r.get("key") == "sec_cover" for r in rows):
+        doc = basis_doc if isinstance(basis_doc, dict) else {}
+        ref, sec = _sub(doc, "ref"), _sub(doc, "sec")
+        rtype = ref.get("type") if isinstance(ref.get("type"), str) else None
+        if _status(sec) == "ok" and _covers(sec.get("covers")) and rtype not in SEC_COVER_SAME_UNIT_TYPES:
+            parts.append("SEC cover: " + _units_words(rtype))
+        else:
+            parts.append(TEXT_NO_COVER)
+    return " · ".join(parts) + "."
+
+
 # ───────────────────────────────────────────── the verdict
 def _flag(key, emoji, short, text) -> dict:
     return {"key": key, "emoji": emoji, "short": short, "text": text}
@@ -658,8 +967,14 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             elif a != b:
                 reasons.append(REFUSE_SPLIT)
 
+    # 📄 2026-11-26 (spec sitrack §3.1, A1 + A3) — EVENTS on or after the anchor, never copies; a same-day filing is
+    # counted and labelled (which came first is not known). Read here (spec sishares §3.2): the fresh-float check of
+    # step 2 needs them.
+    ev = filing_events(filings, anchor, cap=sec.get("filings_cap"))
+    dil, charter = ev["events"], ev["charter"]
+
     # ── step 2: share-count evidence
-    growth = fell = None
+    growth = fell = fresh = None
     count_flag = False
     sec_ev = y_ev = None
     newest_after = next((c for c in reversed(covers) if anchor and c["as_of"] > anchor), None)
@@ -683,7 +998,12 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             if is_float:
                 si_b = rebase(si, S, basis_date, executed)
                 if stale_trigger(si_b, F, paired, newer[0]):
-                    reasons.append(REFUSE_DILUTED)
+                    # 🩳 2026-11-26 (spec sishares §3.2) — a newer float read with the grown count, under
+                    # FLOAT_FRESH_WHEN, is used instead of refused
+                    fresh = float_fresh(upd, growth, sec, dil, anchor=anchor, basis_date=basis_date,
+                                        executed=executed) if upd else None
+                    if not fresh:
+                        reasons.append(REFUSE_DILUTED)
             else:
                 count_flag = stale_trigger(si, paired, paired, newer[0])
         falls = [c for c in (sec_ev, y_ev) if c and c[0] <= paired * frac]
@@ -693,12 +1013,14 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                     "from_source": base[2], "to_shares": c[0], "to_asof": c[1], "to_source": c[2], "to_form": c[3]}
     refused_reasons = [k for k in REFUSAL_ORDER if k in reasons]
     float_refused = refused_reasons[0] if refused_reasons else None
+    if float_refused:                                  # a float refused for a split is never "fresh"
+        fresh = None
 
     # ── step 3: the count for % of shares outstanding
     count, count_changed, no_pct, pct_so = None, False, False, None
     # a newer float divided by while the record's count sits across a split from S: the count is chosen as below
     p_cross = bool(upd and not float_refused and P and Pa and splits_ok and not same_side(Pa, S, executed))
-    if splits_ok and (float_refused or not is_float or p_cross):
+    if splits_ok and (float_refused or not is_float or p_cross or fresh):
         P_on_S = P if (P and Pa and same_side(Pa, S, executed)) else None
         cut = P_on_S * frac if P_on_S else None
         c_sec = c_y = None
@@ -750,6 +1072,18 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                     "newer count" % (EMOJI_WARN, r, format(growth["to_shares"], ","),
                                      _src_words(growth["to_source"], growth["to_form"]), _md(growth["to_asof"]),
                                      format(growth["from_shares"], ","), _md(growth["from_asof"])))
+        flags.append(_flag(FLAG_COUNT_STALE, EMOJI_WARN, SHORT_COUNT_STALE % r, text))
+    if fresh and growth:                               # 🩳 2026-11-26 (spec sishares §3.2) — the count was out of date
+        r, pr = ratio_words(growth["ratio"]), fresh["proof"]
+        head = (EMOJI_WARN, r, format(growth["to_shares"], ","), _src_words(growth["to_source"], growth["to_form"]),
+                _md(growth["to_asof"]), format(growth["from_shares"], ","), _md(growth["from_asof"]))
+        if pr:
+            text = TEXT_COUNT_BEFORE_FLOAT % (head + (
+                pr["form"], _md(pr["filed"]), format(pr["n"], ","), format(growth["from_shares"], ","),
+                format(pr["n"], ","), format(growth["to_shares"], ","), format(upd["shares"], ","),
+                _md(upd["as_of"])))
+        else:
+            text = TEXT_COUNT_WITH_FLOAT % (head + (format(upd["shares"], ","), _md(upd["as_of"])))
         flags.append(_flag(FLAG_COUNT_STALE, EMOJI_WARN, SHORT_COUNT_STALE % r, text))
     if record_under:                                   # A6 — the three counts, always, in the hover
         head = (TITLE_SHARE_COUNTS_HEAD % (format(record_under["shares"], ","), _md(record_under["as_of"]),
@@ -823,10 +1157,6 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
     elif float_refused == REFUSE_DILUTED and flags and flags[0]["key"] == FLAG_FLOAT_STALE:
         float_line = flags[0]["text"]
 
-    # 📄 2026-11-26 (spec sitrack §3.1, A1 + A3) — EVENTS on or after the anchor, never copies; a same-day filing is
-    # counted and labelled (which came first is not known).
-    ev = filing_events(filings, anchor, cap=sec.get("filings_cap"))
-    dil, charter = ev["events"], ev["charter"]
     anchor_words = ANCHOR_WORDS_FLOAT if is_float else ANCHOR_WORDS_COUNT
 
     def _same_day_tail(evs, words) -> str:
@@ -852,6 +1182,8 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
         if ev["n_copies"]:
             text += TEXT_FILING_COPIES % (ev["n_copies"], "copy" if ev["n_copies"] == 1 else "copies")
         text += _same_day_tail(dil, _named)
+        if ev["n_reports"]:                            # C13 — a 6-K that reports an offering already counted
+            text += TEXT_FILING_SAME_DAY_6K % ev["n_reports"]
         if ev["unchecked"]:
             text += TEXT_FILING_UNCHECKED % (ev["unchecked"], "filing" if ev["unchecked"] == 1 else "filings")
         if ev["cap"]:
@@ -914,8 +1246,12 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                "splits": _status(sp) or "not_read",
                "yahoo": "ok" if Y else "not_read"}
     check = _check_text(ref, sec, sp, sec_units, rtype, Y, Ya)
+    iss = issuances(doc, growth, anchor)
+    counts = share_counts(rec, doc, growth)
     rows_out = ([{"k": "Note", "v": l} for l in title_lines]
                 + [{"k": FLAG_ROW_LABEL.get(f["key"], "Flag"), "v": f["text"]} for f in flags]
+                + ([{"k": ROW_SHARE_COUNTS, "v": share_counts_text(counts, doc)}] if counts else [])
+                + [{"k": ROW_SHARE_ISSUANCE, "v": i["text"]} for i in iss]
                 + [{"k": "Share-count check", "v": check}])
     tier_text = None
     if float_refused == REFUSE_DILUTED:
@@ -935,18 +1271,46 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             "flags": flags, "status": "partial" if partial else "ok", "sources": sources,
             "checked_at": _ts_iso(doc.get("checked_at")), "tier_text": tier_text,
             "title_lines": title_lines, "rows": rows_out, "check_text": check, "float_line": float_line,
-            "track": track, "float_update": float_update}
+            "track": track, "float_update": float_update, "issuances": iss, "share_counts": counts,
+            "float_fresh": ({"mode": fresh["mode"], "accn": (fresh["proof"] or {}).get("accn"),
+                             "filed": (fresh["proof"] or {}).get("filed")} if fresh else None)}
 
 
 def _when(sub) -> str:
     return _et(sub.get("read_at")) or "n/a"
 
 
+def _units_words(rtype) -> str:
+    return ("not compared — an ADR's SEC cover counts ordinary shares" if (rtype or "").upper().startswith("ADR")
+            else "not compared — the SEC cover counts a different share unit (listing type %s)" % (rtype or "n/a"))
+
+
+def _fts_words(fts: dict) -> str:
+    """[C1, C9] The 6-K full-text search read state, in words — never silent."""
+    st = _status(fts)
+    if st == "ok":
+        s = (("last try failed %s; the answer read %s is used" % (_et(fts.get("error_at")) or "n/a", _when(fts)))
+             if fts.get("error") else "read %s" % _when(fts))
+        cap = _pos_int(fts.get("cap"))
+        return s + (" — only the first %d answers are read" % cap if cap else "")
+    if st == "none_6k":
+        if fts.get("error"):                       # a held "none" a later pass could not re-ask: 6-Ks may exist now
+            return ("not read — paused" if fts.get("error") == "blocked"
+                    else "not read — last try failed %s" % (_et(fts.get("error_at")) or "n/a"))
+        return "no 6-K filed in the window"
+    if st == "failed":
+        return "not read — last try failed %s" % (_et(fts.get("error_at")) or "n/a")
+    if st == "blocked":
+        return "not read — paused"
+    if st == "off":
+        return "switched off"
+    return "not read"
+
+
 def _check_text(ref, sec, sp, sec_units, rtype, Y, Ya) -> str:
     st = _status(sec)
     if sec_units:
-        s = ("not compared — an ADR's SEC cover counts ordinary shares" if (rtype or "").upper().startswith("ADR")
-             else "not compared — the SEC cover counts a different share unit (listing type %s)" % (rtype or "n/a"))
+        s = _units_words(rtype)
     elif st == "ok":
         s = (("last try failed %s; the answer read %s is used" % (_et(sec.get("error_at")) or "n/a", _when(sec)))
              if sec.get("error") else "read %s" % _when(sec))
@@ -971,7 +1335,9 @@ def _check_text(ref, sec, sp, sec_units, rtype, Y, Ya) -> str:
     else:
         p = "not read"
     y = ("%s as of %s" % (format(Y, ","), Ya)) if Y else "not read"
-    return "SEC cover count: %s · splits (Massive): %s · Yahoo shares outstanding: %s." % (s, p, y)
+    # 🩳 2026-11-26 (spec sishares §3.2) — the 4th clause ONLY when the doc holds a full-text read (else byte-identical)
+    f = (TEXT_CHECK_FTS % _fts_words(sec["fts"])) if isinstance(sec.get("fts"), dict) else ""
+    return "SEC cover count: %s · splits (Massive): %s · Yahoo shares outstanding: %s%s." % (s, p, y, f)
 
 
 def rules_sentence() -> str:
@@ -986,6 +1352,11 @@ def rules_sentence() -> str:
             "count fell with no split on file, '%s' when a check could not run. A change vs the prior settlement "
             "across a split is split-adjusted. A Yahoo float dated later than the one on the short-interest record "
             "and different from it is the one divided by once the splits are on file, with '%s' naming both and their "
-            "dates; filings and share growth are still looked for from the older float's date."
+            "dates; filings and share growth are still looked for from the older float's date. A newer float read "
+            "with or after the larger share count is used, not called stale, %s, with '%s'. A %s the SEC full-text "
+            "search matches for issuance words is a '%s' filing too, never a second one on a day an offering is "
+            "already counted."
             % (stale, SHORT_FLOAT_STALE, SHORT_SPLIT % "M/D", EMOJI_FILING, FILING_8K_DILUTION_ITEMS[0],
-               SHORT_COUNT_FELL % "N", SHORT_UNCHECKED, SHORT_FLOAT_UPDATED))
+               SHORT_COUNT_FELL % "N", SHORT_UNCHECKED, SHORT_FLOAT_UPDATED,
+               FLOAT_FRESH_MODE_WORDS.get(FLOAT_FRESH_WHEN, FLOAT_FRESH_MODE_WORDS["off"]), SHORT_COUNT_STALE % "N",
+               FILING_6K_FORM, EMOJI_FILING))

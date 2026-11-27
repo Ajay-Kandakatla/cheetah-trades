@@ -36,6 +36,13 @@ def blk(rec, doc):
     return SR.si_block(copy.deepcopy(rec), TODAY, basis=copy.deepcopy(doc))
 
 
+def _no_counts(b):
+    """2026-11-26 sishares §3.4: the block without `basis.share_counts` (it lists the Yahoo row's float as read)."""
+    b = copy.deepcopy(b)
+    b["basis"].pop("share_counts", None)
+    return b
+
+
 def _yahoo_none(doc):
     d = copy.deepcopy(doc)
     d["yahoo"] = dict(d["yahoo"], float_shares=None)
@@ -74,7 +81,8 @@ def test_case_a_suspect_newer_float_leaves_the_record_EXTREME_30pct():
     assert (b["float_shares"], b["float_asof"], b["float_source"]) == (1000000, "2026-09-01", SR.FLOAT_SOURCE)
     assert b["float_suspect"] is None and "float_update" not in b["basis"]
     assert {"k": "% of float", "v": "not read — no float on file"} not in b["rows"]
-    assert b == blk(rec, _yahoo_none(doc))                     # exactly the record-float block
+    # 2026-11-26 sishares §3.4 / §5.5: basis.share_counts lists Yahoo's row (its float too) — dropped before comparing
+    assert _no_counts(b) == _no_counts(blk(rec, _yahoo_none(doc)))      # exactly the record-float block
 
 
 def test_case_b_suspect_newer_float_keeps_the_record_floats_split_refusal():
@@ -86,7 +94,7 @@ def test_case_b_suspect_newer_float_keeps_the_record_floats_split_refusal():
     assert b["chip"] == "🩳 SI 50.0% shs out · ≤1d · 10/30 · ✂️ split 10/20"
     assert (b["pct_of_shares_out"], b["shares_outstanding"], b["tier"]) == (50.0, 200000, None)
     assert b["basis"]["float_refused"] == "split" and "float updated" not in b["chip"]
-    assert b == blk(rec, _yahoo_none(doc))
+    assert _no_counts(b) == _no_counts(blk(rec, _yahoo_none(doc)))      # 2026-11-26 sishares §5.5 (share_counts)
 
 
 def test_NEGATIVE_a_suspect_newer_float_over_a_suspect_record_float_is_still_served():

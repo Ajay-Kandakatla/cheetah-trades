@@ -263,10 +263,14 @@ def test_smtk_happy_path_builds_the_frozen_doc(_iso):
     assert doc["_id"] == "SMTK" and doc["v"] == 1 and doc["checked_at"] == NOW_ISO
     assert doc["seen"] == {"settlement_date": "2026-10-30", "float_shares": 546875, "float_asof": "2026-11-02",
                            "shares_outstanding": 1035799, "shares_asof": "2026-11-02"}
-    assert doc["ref"] == {"status": "ok", "cik": CIK, "type": "CS", "read_at": NOW_ISO, "error": None,
-                          "error_at": None, "strikes": 0}
+    # 2026-11-26 sishares §3.1 [C16]: the ref also carries the two Massive counts (None — the body gives none)
+    assert doc["ref"] == {"status": "ok", "cik": CIK, "type": "CS", "share_class_shares": None,
+                          "weighted_shares": None, "read_at": NOW_ISO, "error": None, "error_at": None, "strikes": 0}
     sec = doc["sec"]
-    assert set(sec) == {"status", "read_at", "error", "error_at", "strikes", "since", "top_accn", "covers", "filings"}
+    # 2026-11-26 sishares §3.1: + `fts` (SMTK files no 6-K in the window → "none_6k", nothing asked)
+    assert set(sec) == {"status", "read_at", "error", "error_at", "strikes", "since", "top_accn", "covers", "filings",
+                        "fts"}
+    assert sec["fts"]["status"] == "none_6k" and http.hits("efts") == []
     assert sec["status"] == "ok" and sec["read_at"] == NOW_ISO and sec["strikes"] == 0 and sec["error"] is None
     assert sec["since"] == "2026-10-15"                       # [C2] reaches back to prev_settlement_date
     assert sec["top_accn"] == "0001104659-26-127038"          # the 11-13 10-Q
@@ -368,8 +372,10 @@ def test_ref_ok_without_cik_is_no_cik(_iso):
 
 
 def test_held_fresh_ref_is_reused_and_an_old_one_refetched(_iso):
-    held_ref = {"status": "ok", "cik": CIK, "type": "CS", "read_at": "2026-11-20T00:00:00Z", "error": None,
-                "error_at": None, "strikes": 0}
+    # 2026-11-26 sishares [C16]: a held ref is fresh only WITH the two count keys (a ref without them is re-read —
+    # tests/test_si_sec_fts_2026_11_26.py pins that negative)
+    held_ref = {"status": "ok", "cik": CIK, "type": "CS", "share_class_shares": None, "weighted_shares": None,
+                "read_at": "2026-11-20T00:00:00Z", "error": None, "error_at": None, "strikes": 0}
     http = smtk_http()
     doc = run(smtk_db(basis=[{"_id": "SMTK", "ref": held_ref}]), http)
     assert http.hits("api.massive.com") == [] and doc["ref"] == held_ref

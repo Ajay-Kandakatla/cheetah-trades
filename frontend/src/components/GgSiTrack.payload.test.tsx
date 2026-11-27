@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GgSiTrackSection } from './GgSiTrack';
@@ -247,5 +247,81 @@ describe('🏁 served si_track block → GgSiTrackSection, verbatim', () => {
     const hi = (b.heads as [string, string][]).findIndex(([k]) => k === 'high');
     expect(tds[hi].textContent).toBe('');
     expect(screen.getByTestId('gg-st-patterns')).toBeTruthy();
+  });
+});
+
+/* 🏁 FOLLOW (2026-11-26, spec sishares §3.5 / §3.6, ⇄ be-track). Ajay 2026-11-26: "lets track them in our list of SI. and
+ * maintain a track record of our stocks". The regenerated golden carries the served `follow`; this pins that every served
+ * follow line, head and cell reaches the DOM verbatim, in the served order. Written to pass WITH and WITHOUT `follow`
+ * (an older golden / a fault → `follow` absent or null → no follow fold at all). */
+describe('🏁 served follow → the nested follow fold, verbatim (with or without follow)', () => {
+  const FLINES: [string, string][] = [
+    ['title', 'gg-st-follow-title'], ['caveat', 'gg-st-follow-caveat'], ['asof_text', 'gg-st-follow-asof'],
+    ['empty_text', 'gg-st-follow-empty'], ['shown_text', 'gg-st-follow-shown'], ['pending_text', 'gg-st-follow-pending'],
+  ];
+  const rowsOf = (v: unknown): any[] => (Array.isArray(v) ? v.filter((r) => r && typeof r === 'object' && !Array.isArray(r) && servedText(r.symbol)) : []);
+
+  it('follow served → ONE closed nested fold; open → every served line, base line, names / pinned head and cell verbatim', async () => {
+    const b = await load();
+    const f = (b as any).follow;
+    const { container } = render(<GgSiTrackSection block={clone(b)} />, wrap);
+    openFold(screen.getByTestId('gg-st'));
+    if (!f || typeof f !== 'object' || Array.isArray(f) || !servedText(f.summary_text)) {
+      // NEGATIVE: no served follow → no follow fold
+      expect(screen.queryByTestId('gg-st-follow')).toBeNull();
+      expect(container.innerHTML).not.toMatch(/gg-st-follow/);
+      return;
+    }
+    const fold = screen.getByTestId('gg-st-follow');
+    expect(fold.hasAttribute('open')).toBe(false);
+    expect(fold.textContent).toBe(f.summary_text);
+    openFold(fold);
+    for (const [k, tid] of FLINES) {
+      if (servedText(f[k])) expect(screen.getByTestId(tid).textContent, k).toBe(f[k]);
+      else expect(screen.queryByTestId(tid), k).toBeNull();
+    }
+    const base = Array.isArray(f.base_lines) ? f.base_lines : [];
+    expect([...fold.querySelectorAll('[data-testid^="gg-st-follow-base-"]')].map((e) => e.textContent)).toEqual(base.filter(servedText));
+    for (const [rowsKey, headsKey, tid, rid] of [['names', 'names_heads', 'gg-st-follow-names', 'gg-st-follow-name'],
+      ['pinned', 'pinned_heads', 'gg-st-follow-pinned', 'gg-st-follow-pin']]) {
+      const heads: [string, string][] = Array.isArray(f[headsKey]) ? f[headsKey] : [];
+      const rows = rowsOf(f[rowsKey]);
+      if (!heads.length || !rows.length) { expect(screen.queryByTestId(tid), tid).toBeNull(); continue; }
+      const t = screen.getByTestId(tid);
+      expect([...t.querySelectorAll('th')].map((th) => th.textContent)).toEqual(heads.map(([, l]) => l));
+      expect([...t.querySelectorAll('tbody tr')].map((tr) => tr.getAttribute('data-testid'))).toEqual(rows.map((r) => `${rid}-${r.symbol}`));
+      for (const r of rows) {
+        const tds = [...screen.getByTestId(`${rid}-${r.symbol}`).querySelectorAll('td')].map((td) => td.textContent);
+        expect(tds).toEqual([r.symbol, ...heads.slice(1).map(([k]) => (servedText(r.cells?.[k]) ? r.cells[k] : ''))]);
+      }
+    }
+    if (servedText(f.pinned_label)) expect(screen.getByTestId('gg-st-follow-pinned-label').textContent).toBe(f.pinned_label);
+    if (!rowsOf(f.pinned).length && servedText(f.pinned_empty_text)) {
+      expect(screen.getByTestId('gg-st-follow-pinned-empty').textContent).toBe(f.pinned_empty_text);
+    }
+    if (servedText(f.rule_label)) {
+      const rule = screen.getByTestId('gg-st-follow-rule');
+      expect(rule.querySelector('summary')!.textContent).toBe(f.rule_label);
+      openFold(rule);
+    }
+    // NEGATIVE: every text node is served; no served follow string says signal / edge / bounce
+    const served = strings(b);
+    for (const t of textNodes(container)) expect(served.has(t), `typed by the FE: "${t}"`).toBe(true);
+    for (const s of strings(f)) {
+      expect(/\b(signal|edge)s?\b/i.test(s), s).toBe(false);
+      expect(/bounc|carried/i.test(s), s).toBe(false);
+    }
+  });
+
+  it('NEGATIVE: the same block with follow null / an array / a number → no follow fold, the rest still draws', async () => {
+    for (const v of [null, [], 7]) {
+      const b = clone(await load()) as any;
+      b.follow = v;
+      const r = render(<GgSiTrackSection block={b} />, wrap);
+      openFold(within(r.container).getByTestId('gg-st'));
+      expect(within(r.container).queryByTestId('gg-st-follow')).toBeNull();
+      expect(within(r.container).getByTestId('gg-st-patterns')).toBeTruthy();
+      r.unmount();
+    }
   });
 });

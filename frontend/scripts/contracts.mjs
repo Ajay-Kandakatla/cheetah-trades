@@ -18341,11 +18341,25 @@ const CONTRACTS = [
       else if (!modes[1].includes(`"${mode[1]}"`)) errs.push(`basis_math.FLOAT_STALE_WHEN "${mode[1]}" must be one of FLOAT_STALE_MODES`);
       for (const fn of ['def verdict(', 'def filing_kind(', 'def track_update(']) if (!bm.includes(fn)) errs.push(`basis_math.py lost ${fn}`);
       // 2. share_basis: data.sec.gov + api.massive.com only, a generic User-Agent, the ONE SEC seam.
+      // AMENDED 2026-11-26 (spec sishares §4.5 [C12], Ajay: "Fix the POM chip and the 6-K dilution check."): the 🩳
+      // share-basis FAMILY is share_basis.py + sec_fts.py and it reaches data.sec.gov, api.massive.com and efts.sec.gov —
+      // share_basis.py names the first two, sec_fts.py names efts.sec.gov only and holds no http client (every efts call
+      // goes through share_basis._sec_get: the one pacer, the generic User-Agent, the _http seam). www.sec.gov is fetched
+      // by neither (it refuses a generic User-Agent; basis_math.SEC_ARCHIVE_URL is a link for his browser, never fetched).
       const sbRaw = read('../backend/short_interest/share_basis.py');
       if (/www\.sec\.gov/.test(sbRaw)) errs.push('share_basis.py must never call www.sec.gov (it refuses a generic User-Agent)');
       const hosts = [...sbRaw.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1].toLowerCase());
       const badHosts = [...new Set(hosts.filter((h) => h !== 'data.sec.gov' && h !== 'api.massive.com'))];
       if (badHosts.length) errs.push(`share_basis.py may reach only data.sec.gov / api.massive.com (found ${badHosts.join(', ')})`);
+      const sfRaw = exists('../backend/short_interest/sec_fts.py') ? read('../backend/short_interest/sec_fts.py') : '';
+      if (!sfRaw) errs.push('short_interest/sec_fts.py must exist (the 🩳 share-basis family: share_basis.py + sec_fts.py)');
+      else {
+        if (/www\.sec\.gov/.test(sfRaw)) errs.push('sec_fts.py must never call www.sec.gov (it refuses a generic User-Agent)');
+        const sfHosts = [...new Set([...sfRaw.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1].toLowerCase()))];
+        if (sfHosts.length !== 1 || sfHosts[0] !== 'efts.sec.gov') errs.push(`sec_fts.py must name ONE host, efts.sec.gov (found ${sfHosts.join(', ') || 'none'})`);
+        if (/^\s*(import|from)\s+(requests|httpx|aiohttp|urllib3|urllib\.request|http\.client)\b/m.test(sfRaw) || /\b(requests|httpx)\.(get|post|Session)\b|urlopen\(/.test(sfRaw)) errs.push('sec_fts.py must hold no http client — every call goes through the getter share_basis hands it');
+      }
+      if (!/\bSF\.read_issuance\(/.test(sbRaw) || !/_sec_get\(/.test(sbRaw)) errs.push('share_basis.py must reach efts.sec.gov only through sec_fts (SF.read_issuance) and its own _sec_get');
       const ua = /^SB_HTTP_HEADERS = (\{[^\n]*\})/m.exec(sbRaw);
       if (!ua) errs.push('share_basis.SB_HTTP_HEADERS must be one line');
       else if (/@|cheetah|pounce|ajay/i.test(ua[1])) errs.push('share_basis.SB_HTTP_HEADERS must carry no contact, app or owner name');
@@ -19458,6 +19472,90 @@ const CONTRACTS = [
         const isCss = f.endsWith('.css');
         if (isCss ? /[\w.+-]+@[\w-]+\.[\w.]+/.test(t) : t.includes('@')) errs.push(`${f} must hold no "@" (no e-mail address in a new file)`);
       }
+      return errs;
+    },
+  },
+  {
+    name: '🩳 share counts · 6-K · 🏁 follow (2026-11-26): FLOAT_FRESH_WHEN / FTS_WHEN one of their modes, si_follow = gajjala_state only + no push + HORIZONS by name + its own SIT.Budget, the ✨',
+    file: '../backend/chart_maps/gajjala/si_follow.py',
+    // Ajay 2026-11-26 ~21:10 ET, verbatim: "Fix the POM chip and the 6-K dilution check. Also find alternative srouces for
+    // this share count, I think the short interest theory is actually working may be its a bias for me on the ones its
+    // working out but lets track them in our list of SI. and maintain a track record of our stocks". Spec sishares rev 2
+    // §4.5. Display + record only: the two mode words are HIS CALLs (#1 FLOAT_FRESH_WHEN, #3 FTS_WHEN) and must stay one
+    // of the built modes; the follow is a LEDGER (no push, no gate, gajjala_state only, the horizons ARE the ledger's two
+    // span constants, its OWN instance of the ledger's per-night cap). The host family is pinned in the 🩳 SI float vs
+    // dilution contract (amended 2026-11-26).
+    checks: (src) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const strip = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+
+      // 1. the two mode words are one of their built modes
+      const bm = strip(quiet('../backend/short_interest/basis_math.py'));
+      const fw = /^FLOAT_FRESH_WHEN = "([a-z_]+)"/m.exec(bm);
+      const fms = /^FLOAT_FRESH_MODES = \(([^)]*)\)/m.exec(bm);
+      if (!fw || !fms) errs.push('basis_math must define FLOAT_FRESH_WHEN and FLOAT_FRESH_MODES');
+      else if (!fms[1].includes(`"${fw[1]}"`)) errs.push(`basis_math.FLOAT_FRESH_WHEN "${fw[1]}" must be one of FLOAT_FRESH_MODES`);
+      if (fms && !fms[1].includes('"off"')) errs.push('basis_math.FLOAT_FRESH_MODES must keep "off" (today\'s refusal, one word away)');
+      const sf = strip(quiet('../backend/short_interest/sec_fts.py'));
+      const tw = /^FTS_WHEN = "([a-z_]+)"/m.exec(sf);
+      const tms = /^FTS_MODES = \(([^)]*)\)/m.exec(sf);
+      if (!tw || !tms) errs.push('sec_fts must define FTS_WHEN and FTS_MODES');
+      else if (!tms[1].includes(`"${tw[1]}"`)) errs.push(`sec_fts.FTS_WHEN "${tw[1]}" must be one of FTS_MODES`);
+      if (tms && !tms[1].includes('"off"')) errs.push('sec_fts.FTS_MODES must keep "off" (no efts call, one word away)');
+
+      // 2. si_follow — gajjala_state only (through the store's get_state / set_state = ST.STATE), no push / alert module
+      const code = strip(src);
+      if (/\.coll\((?!ST\.STATE\))/.test(code)) errs.push('si_follow.py may open no collection but ST.STATE');
+      if (/\b(insert_one|insert_many|update_one|update_many|replace_one|delete_one|delete_many|bulk_write|find_one_and_update)\b/.test(code)) errs.push('si_follow.py must write only through st.set_state (gajjala_state) — no raw Mongo write');
+      const writes = [...new Set([...code.matchAll(/\bst\.((?:set|put|save|upsert|write|add|record|mark|delete|clear)_[a-z_]*)\(/g)].map((m) => m[1]))];
+      if (writes.some((w) => w !== 'set_state')) errs.push(`si_follow.py may write only through st.set_state (found ${writes.join(', ')})`);
+      if (!/def set_state\(self, sid: str, fields: dict\) -> None:\s*\n\s*self\._upsert\(STATE, /.test(quiet('../backend/chart_maps/gajjala/store.py'))) errs.push('store.set_state must write ST.STATE (gajjala_state) — si_follow rides on it');
+      const imports = [...code.matchAll(/^\s*(?:from\s+[\w.]+\s+import\s+[^\n]+|import\s+[^\n]+)/gm)].map((m) => m[0].trim());
+      const bad = imports.filter((l) => /(push|alert|notif|webpush|twilio|potential|send_to)/i.test(l));
+      if (bad.length) errs.push(`si_follow.py must import no push / alert module (found ${bad.join(' | ')})`);
+      if (/\b(send_to_user|send_to_all|_fan_out|kick_refresh)\b/.test(code)) errs.push('si_follow.py must ring nothing and kick nothing');
+      if (!/^HORIZONS = \(1, GC\.LEDGER_SPAN_SESSIONS, GC\.LEDGER_SPAN_SESSIONS_LONG\)/m.test(code)) errs.push('si_follow.HORIZONS must be (1, GC.LEDGER_SPAN_SESSIONS, GC.LEDGER_SPAN_SESSIONS_LONG) — the two constants by name');
+      if (!/\bSIT\.Budget\(SIT\.MAX_LOADS\b/.test(code)) errs.push('si_follow.py must build its OWN SIT.Budget(SIT.MAX_LOADS …) — the same constant, its own instance');
+      if (/\bbounc/i.test(src) || /["'][^"'\n]*\b(signal|edge)s?\b[^"'\n]*["']/i.test(code)) errs.push('si_follow.py must never say bounce, and no served string says signal / edge');
+
+      // 3. the ✨ — his words verbatim in curly quotes; the numbers in it ARE the constants; past index 100, right above 📅
+      const ID = 'gajjala-si-share-count-6k-follow-2026-11-26';
+      const H = 'Fix the POM chip and the 6-K dilution check. Also find alternative srouces for this share count, I think the short interest theory is actually working may be its a bias for me on the ones its working out but lets track them in our list of SI. and maintain a track record of our stocks';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      const gc = quiet('../backend/chart_maps/gajjala/constants.py');
+      const span = /^LEDGER_SPAN_SESSIONS = (\d+)/m.exec(gc);
+      const spanL = /^LEDGER_SPAN_SESSIONS_LONG = (\d+)/m.exec(gc);
+      const ran = /^RAN_MIN_PCT = ([\d.]+)/m.exec(quiet('../backend/chart_maps/gajjala_watch/constants.py'));
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-26') errs.push(`the 🩳 share-count ✨ addedAt must be 2026-11-26 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala&sub=high_si') errs.push(`the 🩳 share-count ✨ route must be /chart-maps?tab=gajjala&sub=high_si (found ${lab[3]})`);
+        if (!L.includes(`“${H}”`)) errs.push('the 🩳 share-count ✨ must quote him verbatim in curly quotes');
+        for (const w of ['open ⓘ on the 🩳 sub', 'Share counts', '6-K', 'cannot say whether short interest made the difference', 'a missing, failed or paused read keeps today', 'UNMEASURED', 'Not advice.'])
+          if (!L.includes(w)) errs.push(`the 🩳 share-count ✨ must say: ${w}`);
+        if (spanL && !L.includes(`for ${spanL[1]} sessions after it was listed`)) errs.push(`the 🩳 share-count ✨ must name GC.LEDGER_SPAN_SESSIONS_LONG (${spanL && spanL[1]} sessions)`);
+        if (span && spanL && !L.includes(`+1 / +${span[1]} / +${spanL[1]}`)) errs.push('the 🩳 share-count ✨ must name the horizons = HORIZONS (1 / LEDGER_SPAN_SESSIONS / LEDGER_SPAN_SESSIONS_LONG)');
+        if (span && !L.includes(`a +${span[1]} sessions column`)) errs.push('the 🩳 share-count ✨ must name the day column = DAY_HORIZON (GC.LEDGER_SPAN_SESSIONS)');
+        if (ran && !L.includes(`+${Number(ran[1])}% day`)) errs.push(`the 🩳 share-count ✨ must name the winner bar = gajjala_watch.RAN_MIN_PCT (+${ran && Number(ran[1])}%)`);
+        if (/\b(signal|edge)s?\b/i.test(L) || /bounc/i.test(L)) errs.push('the 🩳 share-count ✨ must never say signal / edge / bounce');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-runners-continuous-chart-2026-11-26') errs.push(`the ✨ '${ID}' must sit right above the 📅 runners entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 4. ship together
+      for (const f of ['../backend/short_interest/sec_fts.py', '../backend/scripts/si_fts_recall_probe.py', '../backend/scripts/gajjala_si_follow_backfill.py',
+        '../backend/tests/test_si_share_count_verdict_2026_11_26.py', '../backend/tests/test_si_sec_fts_2026_11_26.py', '../backend/tests/test_gajjala_si_follow_2026_11_26.py',
+        '../backend/tests/fixtures/sec_fts_pom_2026_11_26.json', '../backend/tests/fixtures/sec_6k_text_pom_2026_11_26.json', '../backend/tests/fixtures/sec_submissions_pom_2026_11_26.json',
+        'src/lib/newFeatures.si_share_count.test.ts',
+        '../docs/short_interest/share_count_sources_2026_11_26.md', '../docs/short_interest/sixk_issuance_2026_11_26.md',
+        '../docs/gajjala/si_follow_2026_11_26.md', '../docs/gajjala/si_follow_frontend_2026_11_26.md'])
+        if (!exists(f)) errs.push(`${f} must exist`);
       return errs;
     },
   },

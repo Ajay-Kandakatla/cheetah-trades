@@ -268,7 +268,8 @@ def test_NEGATIVE_rows_without_doc_count_as_before_and_say_not_yet_checked():
 ])
 def test_NEGATIVE_filing_events_never_raises_on_junk(junk):
     ev = BM.filing_events(junk, "2026-11-01")
-    assert set(ev) == {"events", "charter", "n_filings", "n_copies", "unchecked", "cap"}
+    # 2026-11-26 sishares §3.2 (C13): + n_reports (a marked 6-K reporting an offering already counted that day)
+    assert set(ev) == {"events", "charter", "n_filings", "n_copies", "unchecked", "n_reports", "cap"}
     json.dumps(ev, allow_nan=False)
     for e in ev["events"]:
         assert e["copies"] == 0                                      # junk doc / file → a row of its own
@@ -574,6 +575,10 @@ def test_NEGATIVE_the_float_branch_is_byte_identical_to_before(name):
     for f in v["filings"]:
         f.pop("copies")
         f.pop("same_day")
+    # 2026-11-26 sishares §3.2 / §5.5: the new verdict keys and their two rows are dropped before hashing too
+    for k in ("issuances", "share_counts", "float_fresh"):
+        v.pop(k)
+    v["rows"] = [r for r in v["rows"] if r["k"] not in (BM.ROW_SHARE_COUNTS, BM.ROW_SHARE_ISSUANCE)]
     got = hashlib.sha256(json.dumps(v, sort_keys=True, default=str, ensure_ascii=False).encode()).hexdigest()
     assert got == FLOAT_BRANCH_GOLDEN[name]
 

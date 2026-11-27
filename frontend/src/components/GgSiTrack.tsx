@@ -18,12 +18,21 @@
  * then a nested <details> for the served rule label → the rule text + the honesty paragraph.
  * This file types no word and formats no number: it never sorts, counts or fetches; `n` / `n_days` are never printed; every
  * string passes the servedText guard (a NaN / undefined / null / number / empty string prints nothing). A descriptive
- * ledger — never a gate, sort, push or lane input. UNMEASURED. */
+ * ledger — never a gate, sort, push or lane input. UNMEASURED.
+ *
+ * 🏁 FOLLOW (2026-11-26, spec sishares §3.6, WP fe). Ajay: "lets track them in our list of SI. and maintain a track record
+ * of our stocks". After the day tables, before the rule fold: ONE nested closed <details data-testid="gg-st-follow">
+ * whose summary is the served follow `summary_text`; its body MOUNTS ONLY WHILE OPEN: the title, the caveat, the as-of,
+ * the base lines, the empty line, the names table, the served pinned label + the pinned table (or the served
+ * `pinned_empty_text`), the shown / pending lines, then a nested rule fold. Same guards as the rest of the file: every
+ * string served, no number formatted, no sort, no fetch; a names / pinned row with no served symbol is dropped; a junk
+ * href → plain text; `follow` absent / null / not an object → nothing. The day table needs no change (its +5 column
+ * arrives as a served head + cell). */
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ggHref, type GgSiTrackBlock, type GgSiTrackDay, type GgSiTrackHead, type GgSiTrackPattern, type GgSiTrackRow,
-  type GgSiTrackShape,
+  ggHref, type GgSiFollowBlock, type GgSiFollowName, type GgSiTrackBlock, type GgSiTrackDay, type GgSiTrackHead,
+  type GgSiTrackPattern, type GgSiTrackRow, type GgSiTrackShape,
 } from '../lib/gajjala';
 import '../styles/gajjala.css';
 import '../styles/ggSiTrack.css';
@@ -172,6 +181,88 @@ function Day({ d, i, heads }: { d: GgSiTrackDay; i: number; heads: GgSiTrackHead
   );
 }
 
+/** The served-shape guard for a follow table's rows: objects that carry a served symbol, in the SERVED order. */
+function namesOf(v: unknown): GgSiFollowName[] {
+  return Array.isArray(v) ? v.filter((r): r is GgSiFollowName => isObj(r) && servedText(r.symbol)) : [];
+}
+
+/** One follow table (names or pinned): the served heads; the first column the symbol (a link only through ggHref), every
+ *  other column the served cell of that head key (a non-string / empty cell prints nothing). */
+function FollowTable({ heads, rows, testid, rowid }: { heads: GgSiTrackHead[]; rows: GgSiFollowName[]; testid: string; rowid: string }) {
+  return (
+    <div className="gg-tr-scroll gg-st-scroll" data-testid={`${testid}-box`}>
+      <table className="gg-tr-table gg-st-table" data-testid={testid}>
+        <thead>
+          <tr>{heads.map(([k, label]) => <th key={k}>{label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => {
+            const sym = r.symbol as string;
+            const href = ggHref(r.href);
+            const cells = isObj(r.cells) ? r.cells : {};
+            return (
+              <tr key={`${sym}-${i}`} data-testid={`${rowid}-${sym}`}>
+                {heads.map(([k], j) => {
+                  if (j) {
+                    const v = cells[k];
+                    return <td key={k} className="gg-tr-cell">{servedText(v) ? v : null}</td>;
+                  }
+                  return <td key={k} className="gg-tr-cell gg-st-sym">{href ? <Link to={href}>{sym}</Link> : sym}</td>;
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FollowBody({ f }: { f: GgSiFollowBlock }) {
+  const base = Array.isArray(f.base_lines) ? f.base_lines : [];
+  const nHeads = headsOf(f.names_heads);
+  const names = nHeads.length ? namesOf(f.names) : [];
+  const pHeads = headsOf(f.pinned_heads);
+  const pinned = pHeads.length ? namesOf(f.pinned) : [];
+  return (
+    <div className="gg-st-body gg-st-follow-body">
+      <Line v={f.title} testid="gg-st-follow-title" className="gg-dv-line gg-st-title" />
+      <Line v={f.caveat} testid="gg-st-follow-caveat" className="gg-dv-line" />
+      <Line v={f.asof_text} testid="gg-st-follow-asof" />
+      {base.map((l, i) => <Line key={String(i)} v={l} testid={`gg-st-follow-base-${i}`} className="gg-dv-line" />)}
+      <Line v={f.empty_text} testid="gg-st-follow-empty" className="gg-dv-line" />
+      {names.length ? <FollowTable heads={nHeads} rows={names} testid="gg-st-follow-names" rowid="gg-st-follow-name" /> : null}
+      <Line v={f.pinned_label} testid="gg-st-follow-pinned-label" className="gg-dv-line gg-st-title" />
+      {pinned.length
+        ? <FollowTable heads={pHeads} rows={pinned} testid="gg-st-follow-pinned" rowid="gg-st-follow-pin" />
+        : <Line v={f.pinned_empty_text} testid="gg-st-follow-pinned-empty" />}
+      <Line v={f.shown_text} testid="gg-st-follow-shown" />
+      <Line v={f.pending_text} testid="gg-st-follow-pending" />
+      {servedText(f.rule_label) ? (
+        <details className="gg-st-rule gg-tr-rule" data-testid="gg-st-follow-rule">
+          <summary>{f.rule_label}</summary>
+          <Line v={f.rule_text} testid="gg-st-follow-rule-text" className="gg-dv-line" />
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+/** The 🏁 follow fold: absent / null / not an object / no served summary → nothing; else ONE closed <details> whose body
+ *  mounts only while open. */
+function Follow({ f }: { f: unknown }) {
+  const [open, setOpen] = useState(false);
+  if (!isObj(f) || !servedText(f.summary_text)) return null;
+  const block = f as GgSiFollowBlock;
+  return (
+    <details className="gg-st-follow" data-testid="gg-st-follow" open={open}
+             onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary data-testid="gg-st-follow-summary">{block.summary_text}</summary>
+      {open ? <FollowBody f={block} /> : null}
+    </details>
+  );
+}
+
 function Body({ b }: { b: GgSiTrackBlock }) {
   const patHeads = headsOf(b.pattern_heads);
   const patterns = Array.isArray(b.patterns) ? b.patterns.filter((p): p is GgSiTrackPattern => isObj(p)) : [];
@@ -193,6 +284,7 @@ function Body({ b }: { b: GgSiTrackBlock }) {
       {anyDay ? <div className="gg-tr-scroll gg-st-scroll" data-testid="gg-st-days">{dayNodes}</div> : null}
       <Line v={b.shown_text} testid="gg-st-shown" />
       <Line v={b.pending_text} testid="gg-st-pending" />
+      <Follow f={b.follow} />
       {servedText(b.rule_label) ? (
         <details className="gg-st-rule gg-tr-rule" data-testid="gg-st-rule">
           <summary>{b.rule_label}</summary>

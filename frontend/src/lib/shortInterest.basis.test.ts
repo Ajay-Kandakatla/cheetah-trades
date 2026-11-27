@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseSiMap, siBasisPending, siFlags, siFollowupClamp, siChip,
-  SI_FOLLOWUP_MIN_MS, SI_FOLLOWUP_MAX_MS, type ShortInterestRead,
+  parseSiMap, siBasisPending, siFlags, siFollowupClamp, siChip, siIssuances,
+  SI_FOLLOWUP_MIN_MS, SI_FOLLOWUP_MAX_MS, SI_FILING_URL_PREFIX, type ShortInterestRead,
 } from './shortInterest';
 
 /* 🩳 share-count check guards (2026-11-24, spec sidilute §3.7). Ajay: "Make sure we are looking for Dilution.." · "Also split
@@ -96,5 +96,53 @@ describe('🩳 parseSiMap passes `basis` through untouched', () => {
     expect(siChip(got.SMTK)!.text).toBe(chip);
     expect(siBasisPending(got.SMTK)).toBe(20000);
     expect(siFlags(got.SMTK).map((f) => f.key)).toEqual(['float_stale', 'split', 'filing']);
+  });
+});
+
+/* 🩳 siIssuances (2026-11-26, spec sishares §3.6 / §4.4). Ajay: "Fix the POM chip and the 6-K dilution check." The served
+ * `basis.issuances` → {label, text, url | null}; the link is kept ONLY with SI_FILING_URL_PREFIX. NEGATIVES: http:// ·
+ * another host · a look-alike host · javascript: · a missing label · a non-array → no link. */
+describe('🩳 siIssuances', () => {
+  const POM_URL = 'https://www.sec.gov/Archives/edgar/data/1877971/000121390026116021/ea0310863-6k_pomdoctor.htm';
+  const iss = (over: Record<string, unknown> = {}) => ({ form: '6-K', filed: '2026-11-04', accn: '0001213900-26-116021',
+    shares: 33185841, url: POM_URL, label: 'served 6-K 11/4 label', text: 'served 6-K issuance text', before_float: true, ...over });
+
+  it('the prefix is the EDGAR archive path on www.sec.gov over https', () => {
+    expect(SI_FILING_URL_PREFIX).toBe('https://www.sec.gov/Archives/edgar/data/');
+  });
+
+  it('a served issuance → its label, text and the served link, in the served order', () => {
+    const second = iss({ url: null, label: 'served second label', text: 'served second text' });
+    expect(siIssuances(rd({ status: 'ok', issuances: [iss(), second] }))).toEqual([
+      { label: 'served 6-K 11/4 label', text: 'served 6-K issuance text', url: POM_URL },
+      { label: 'served second label', text: 'served second text', url: null },
+    ]);
+  });
+
+  it('NEGATIVE: http:// · another host · a look-alike host · javascript: · data: · protocol-relative · a non-string · a quote / space → no link', () => {
+    for (const url of ['http://www.sec.gov/Archives/edgar/data/1877971/x/y.htm', 'https://evil.example/Archives/edgar/data/1/x/y.htm',
+      'https://www.sec.gov.evil.com/Archives/edgar/data/1/x/y.htm', 'https://sec.gov/Archives/edgar/data/1/x/y.htm',
+      'https://www.sec.gov/cgi-bin/browse-edgar?x=1', 'javascript:alert(1)', 'data:text/html,x', '//www.sec.gov/Archives/edgar/data/1/x',
+      ' https://www.sec.gov/Archives/edgar/data/1/x/y.htm', 'https://www.sec.gov/Archives/edgar/data/1/x/y.htm" onclick="x',
+      'https://www.sec.gov/Archives/edgar/data/1/x y.htm', 'HTTPS://WWW.SEC.GOV/Archives/edgar/data/1/x', 7, null, undefined, {}, []]) {
+      const out = siIssuances(rd({ issuances: [iss({ url })] }));
+      expect(out, String(url)).toHaveLength(1);
+      expect(out[0].url, String(url)).toBeNull();
+    }
+  });
+
+  it('NEGATIVE: a missing / empty / non-string label drops the entry; a non-string text reads ""', () => {
+    for (const label of [undefined, null, '', '   ', 7, NaN, {}]) {
+      expect(siIssuances(rd({ issuances: [iss({ label })] })), String(label)).toEqual([]);
+    }
+    expect(siIssuances(rd({ issuances: [iss({ text: NaN })] }))[0].text).toBe('');
+  });
+
+  it('NEGATIVE: a non-array issuances / junk entries / no basis / an older API / no read → []', () => {
+    for (const issuances of [undefined, null, 'x', 7, {}, { 0: iss() }]) expect(siIssuances(rd({ issuances })), String(issuances)).toEqual([]);
+    expect(siIssuances(rd({ issuances: [null, 'x', 3, [iss()], iss()] }))).toHaveLength(1);
+    for (const basis of [undefined, null, 'x', [], [{ issuances: [iss()] }]]) expect(siIssuances(rd(basis)), String(basis)).toEqual([]);
+    expect(siIssuances(null)).toEqual([]);
+    expect(siIssuances(undefined)).toEqual([]);
   });
 });

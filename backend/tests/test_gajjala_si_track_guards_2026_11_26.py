@@ -19,7 +19,12 @@ SIT_REL = "chart_maps/gajjala/si_track.py"
 SIT_SRC = (BACKEND / SIT_REL).read_text(encoding="utf-8")
 
 # the only modules that may import si_track (display: the nightly's fenced step, the 🩳 block's fenced key, the backfill)
-IMPORTERS = {"chart_maps/gajjala/nightly.py", "chart_maps/gajjala/high_si.py", "scripts/gajjala_si_track_backfill.py"}
+IMPORTERS = {"chart_maps/gajjala/nightly.py", "chart_maps/gajjala/high_si.py", "scripts/gajjala_si_track_backfill.py",
+             # PIN MOVED 2026-11-26 (spec sishares §4.3, predicted): the 🏁 follow-up module and its backfill script —
+             # display only; pinned below (no push / alert import, no Watch store import).
+             "chart_maps/gajjala/si_follow.py", "scripts/gajjala_si_follow_backfill.py"}
+SF_REL = "chart_maps/gajjala/si_follow.py"
+SF_SRC = (BACKEND / SF_REL).read_text(encoding="utf-8")
 
 
 def _imports(src: str) -> set:
@@ -159,3 +164,40 @@ def test_si_track_never_writes_a_prior_key_into_the_reads_store():
 def test_NEGATIVE_a_planted_prior_write_would_trip():
     planted = SIT_SRC + '\ndef _x(c, d):\n    c.update_one({"_id": d}, {"$set": {"tile.bars5_prior": []}})\n'
     assert [ln for ln in planted.split("\n") if "update_one(" in ln and "_prior" in ln]
+
+
+# ── 2026-11-26 (spec sishares §4.3): the 🏁 follow-up module — display only, like si_track ──────────────────────────
+SF_BANNED_MODULES = ("push", "alerts", "high_si_cross", "trading", "notify", "twilio")
+
+
+def _sf_banned(src: str) -> list:
+    return sorted(m for m in _imports(src) if any(m == b or m.startswith(b + ".") or m.endswith("." + b)
+                                                   or ("." + b + ".") in m for b in SF_BANNED_MODULES))
+
+
+def test_si_follow_imports_no_push_alert_or_trading_module():
+    assert _sf_banned(SF_SRC) == []
+    tree = ast.parse(SF_SRC)
+    top = sorted(m for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom)) for m in _imports(ast.unparse(n)))
+    assert top == ["__future__.annotations", "chart_maps.gajjala.constants", "chart_maps.gajjala.si_track",
+                   "datetime.date", "logging", "typing.Callable",
+                   "typing.Optional"]
+
+
+def test_NEGATIVE_an_alerts_or_push_import_in_si_follow_trips():
+    for planted in ("\nfrom chart_maps.gajjala import alerts as AL\n", "\nfrom push import hooks\n",
+                    "\ndef _x():\n    from chart_maps.gajjala import high_si_cross\n"):
+        assert _sf_banned(SF_SRC + planted), planted
+
+
+def test_si_follow_names_no_watch_store_and_writes_through_set_state_only():
+    for banned in ("gajjala_watch", "update_one", "insert_one", "replace_one", "upsert_read", "send_", "kick"):
+        assert banned not in SF_SRC, banned
+    assert "st.set_state(" in SF_SRC and "ST.STATE" not in SF_SRC.replace("SIT.", "")
+    assert "SIT.Budget(" in SF_SRC
+
+
+def test_NEGATIVE_a_watch_store_import_in_si_follow_would_trip():
+    planted = SF_SRC + "\nfrom chart_maps.gajjala_watch import store as WST\n"
+    assert "gajjala_watch import store" in planted and "gajjala_watch" in planted
+    assert "chart_maps.gajjala_watch.store" in _imports(planted)

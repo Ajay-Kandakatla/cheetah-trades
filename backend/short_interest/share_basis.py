@@ -18,6 +18,11 @@ because the SEC stop was on.
 
 Outside calls: data.sec.gov with a generic User-Agent (no project name, no contact), paced through ONE pacer
 (`_sec_wait`, SB_SEC_MIN_INTERVAL_SEC apart); the Massive host through `ssr_corp._getter / _key / _safe`.
+
+🩳 2026-11-26 (spec sishares §3.1 + §3.3): the 6-K issuance reads go to the SEC full-text search through `sec_fts`,
+which holds the one URL and no http client — every GET it makes is `_sec_get` here (the same pacer, headers and
+`_http` seam). Its stop is persisted as `state|fts` and never stops data.sec.gov. The Massive ticker reference also
+keeps its two share counts (`ref.share_class_shares`, `ref.weighted_shares`, dated by the read only).
 """
 from __future__ import annotations
 
@@ -32,6 +37,7 @@ import urllib.parse
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Optional
 
+from short_interest import sec_fts as SF
 from short_interest import ssr_corp as SC
 
 log = logging.getLogger("short_interest.share_basis")
@@ -40,6 +46,9 @@ log = logging.getLogger("short_interest.share_basis")
 SB_COLL = "si_share_basis"
 SB_VERSION = 1
 SB_STATE_SEC_ID = "state|sec"                 # {"_id", "blocked_until", "reason"}: a 403 / 429 stops ALL SEC calls until then
+# 🩳 2026-11-26 (spec sishares §3.1, C12) — the same shape for the SEC full-text search: a 403 / 429 from efts stops ONLY
+# the full-text reads (`sec_fts`) until then, never data.sec.gov.
+SB_STATE_FTS_ID = "state|fts"
 SB_HTTP_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; share-count-reader)", "Accept": "application/json"}
 SEC_CONCEPT_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK%s/dei/EntityCommonStockSharesOutstanding.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK%s.json"
@@ -151,7 +160,7 @@ def _clean(symbols) -> list:
         if not isinstance(s, str):
             continue
         s = s.strip().upper()
-        if s and s not in out and s != SB_STATE_SEC_ID.upper():
+        if s and s not in out and s not in (SB_STATE_SEC_ID.upper(), SB_STATE_FTS_ID.upper()):
             out.append(s)
     return out
 
@@ -261,6 +270,37 @@ def _block_sec(db, now: datetime, reason: str, store: bool) -> None:
         log.warning("share_basis: sec state write failed: %s", type(exc).__name__)
 
 
+_fts_stop = {"until": None}                                    # the in-process copy of state|fts.blocked_until
+
+
+def _fts_blocked(db, now: datetime) -> bool:
+    """The `_sec_blocked` shape for the full-text search stop (state|fts) [C12]."""
+    until = _fts_stop["until"]
+    if isinstance(until, datetime) and until > now:
+        return True
+    try:
+        doc = _find_one(db[SB_COLL], SB_STATE_FTS_ID) if db is not None else None
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: fts state read failed: %s", type(exc).__name__)
+        doc = None
+    u = _parse_ts((doc or {}).get("blocked_until"))
+    return bool(u is not None and u > now)
+
+
+def _block_fts(db, now: datetime, reason: str, store: bool) -> None:
+    """The `_block_sec` shape: SB_SEC_BLOCK_MIN, in-process + the stored doc; `store=False` writes nothing."""
+    until = now + timedelta(minutes=SB_SEC_BLOCK_MIN)
+    _fts_stop["until"] = until
+    log.warning("share_basis: SEC full-text search answered %s — full-text reads stop until %s", reason, _ts(until))
+    if not store or db is None:
+        return
+    try:
+        db[SB_COLL].replace_one({"_id": SB_STATE_FTS_ID},
+                                {"_id": SB_STATE_FTS_ID, "blocked_until": _ts(until), "reason": reason}, upsert=True)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: fts state write failed: %s", type(exc).__name__)
+
+
 # ───────────────────────────────────────────── the four reads (never raise)
 def _cik10(v) -> Optional[str]:
     if isinstance(v, bool) or v is None:
@@ -273,9 +313,20 @@ def _cik10(v) -> Optional[str]:
     return s.zfill(10)
 
 
+def _count(v) -> Optional[int]:
+    """A provider share count: a finite number > 0 (bool / NaN / ≤ 0 / string / anything else → None)."""
+    if isinstance(v, (bool, str)) or not isinstance(v, (int, float)):
+        return None
+    return _pos_int(v)
+
+
 def fetch_ref(sym: str, *, http=None) -> dict:
-    """The Massive ticker reference: {"status": "ok", "cik", "type"} | {"status": "absent"} (404)
-    | {"status": "failed", "error"}. ONE GET."""
+    """The Massive ticker reference: {"status": "ok", "cik", "type", "share_class_shares", "weighted_shares"}
+    | {"status": "absent"} (404) | {"status": "failed", "error"}. ONE GET.
+
+    🩳 2026-11-26 (spec sishares §3.1, WP-3): the same answer's `share_class_shares_outstanding` and
+    `weighted_shares_outstanding` are kept (`_count`; None when the provider gives none). The provider gives NO as-of
+    date for either: they are dated by the read only."""
     try:
         key = SC._key()
         if not key:
@@ -296,7 +347,9 @@ def fetch_ref(sym: str, *, http=None) -> dict:
             return {"status": "failed", "error": ERR_MALFORMED}
         typ = res.get("type")
         return {"status": "ok", "cik": _cik10(res.get("cik")),
-                "type": typ.strip().upper() if isinstance(typ, str) and typ.strip() else None}
+                "type": typ.strip().upper() if isinstance(typ, str) and typ.strip() else None,
+                "share_class_shares": _count(res.get("share_class_shares_outstanding")),
+                "weighted_shares": _count(res.get("weighted_shares_outstanding"))}
     except Exception as exc:                                   # noqa: BLE001
         return {"status": "failed", "error": _err(exc)}
 
@@ -327,6 +380,13 @@ def _is_report(form: str) -> bool:
     return base in SB_REPORT_FORMS or base.startswith(SEC_PERIODIC_PREFIXES)
 
 
+def _is_6k(form: str) -> bool:
+    base = form.strip().upper()
+    if base.endswith("/A"):
+        base = base[:-2].strip()
+    return base == SB_REPORT_FORMS[1]
+
+
 def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=None) -> dict:
     """{"status": "ok", "filings": [{"form", "filed", "items", "doc", "file", "accn", "with"}] (newest first,
     filed >= since, only kinds `kind_fn(form, items)` names, at most SB_FILINGS_KEPT), "top_accn"[, "cap"]}
@@ -336,7 +396,11 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
     (each a non-empty string or None — a missing or ragged array leaves them None and the row counts as before);
     `with` = the form of the first report (`_is_report`) in listing order the issuer filed the SAME day, read over the
     WHOLE listing before the kind filter (an 8-K 8.01 that is not kept still marks its day), else None. `cap` =
-    SB_FILINGS_KEPT, present only when the kind-filtered list was longer than it."""
+    SB_FILINGS_KEPT, present only when the kind-filtered list was longer than it.
+
+    🩳 2026-11-26 (spec sishares §3.3): `reports` = the 6-K / 6-K/A rows (base SB_REPORT_FORMS[1]) filed >= since,
+    [{"form", "filed", "accn", "doc"}] newest first, listing order on a tie — whatever `kind_fn` says (a 6-K is never
+    in `filings` by itself; the full-text step marks the issuance ones)."""
     try:
         kf = kind_fn or _default_kind_fn()
         r = _sec_get(SEC_SUBMISSIONS_URL % cik10, http)
@@ -364,7 +428,7 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
             filed = _day(dates[i])
             if form and filed and filed not in report_on and _is_report(form):
                 report_on[filed] = form
-        rows, top = [], None
+        rows, top, reports = [], None, []
         for i in range(n):
             form = forms[i].strip() if isinstance(forms[i], str) else ""
             filed = _day(dates[i])
@@ -376,13 +440,17 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
                 top = (filed, accn.strip())
             if since and filed < since:
                 continue
+            if accn and _is_6k(form):
+                reports.append({"form": form, "filed": filed, "accn": accn.strip(), "doc": _str_at(docs, i)})
             if kf(form, it) is None:
                 continue
             rows.append({"form": form, "filed": filed, "items": it, "doc": _str_at(docs, i),
                          "file": _str_at(files, i), "accn": accn.strip() if accn else None,
                          "with": report_on.get(filed)})
         rows.sort(key=lambda x: x["filed"], reverse=True)
-        out = {"status": "ok", "filings": rows[:SB_FILINGS_KEPT], "top_accn": top[1] if top else None}
+        reports.sort(key=lambda x: x["filed"], reverse=True)
+        out = {"status": "ok", "filings": rows[:SB_FILINGS_KEPT], "top_accn": top[1] if top else None,
+               "reports": reports}
         if len(rows) > SB_FILINGS_KEPT:
             out["cap"] = SB_FILINGS_KEPT
         return out
@@ -504,15 +572,165 @@ def _yahoo_row(db, sym: str) -> Optional[dict]:
     return {"float_shares": fl, "shares_outstanding": so, "as_of": asof}
 
 
+REF_COUNT_KEYS = ("share_class_shares", "weighted_shares")
+
+
 def _ref_fresh(href, now: datetime) -> bool:
+    """A held ok ref read inside SB_REF_REFRESH_DAYS — and [C16] holding BOTH count keys (a ref read before 2026-11-26
+    has neither and is read once more)."""
     if not isinstance(href, dict) or href.get("status") != "ok":
+        return False
+    if any(k not in href for k in REF_COUNT_KEYS):
         return False
     r = _parse_ts(href.get("read_at"))
     return r is not None and timedelta(0) <= now - r < timedelta(days=SB_REF_REFRESH_DAYS)
 
 
+# ───────────────────────────────────────────── the 6-K full-text step (spec sishares §3.3)
+def _fts_empty(since) -> dict:
+    return {"since": since, "top_6k": None, "top_6k_filed": None, "issuance": [], "number": None}
+
+
+def _fts_good(sub) -> bool:
+    return isinstance(sub, dict) and sub.get("status") in SF.FTS_GOOD
+
+
+def _failed_fts(held, error: str, now_iso: str, since) -> dict:
+    """The status rule on the full-text sub-doc: a held good read stands + error; nothing good held → `failed`."""
+    if _fts_good(held):
+        out = dict(held)
+        out.update({"error": error, "error_at": now_iso, "strikes": _strikes(held) + 1})
+        return out
+    out = dict({"status": "failed"}, **_fts_empty(since))
+    out.update({"read_at": None, "error": error, "error_at": now_iso, "strikes": _strikes(held) + 1})
+    return out
+
+
+def _fts_get(http):
+    return lambda url: _sec_get(url, http)                     # the ONE pacer, the generic headers, the `_http` seam
+
+
+def _accns(rows) -> list:
+    return [r.get("accn") for r in rows or [] if isinstance(r, dict)]
+
+
+def _fts_reask(held: dict, top: dict, since) -> bool:
+    """A held good answer is asked again when the newest 6-K moved, the window moved, the last try failed (`error`
+    set — re-asked on the name's next pass, which `is_due` schedules at SB_REFRESH_MIN: `sec.fts` does not take the
+    SB_ERROR_RETRY_MIN retry of ref / sec / splits), or [C8] `holds` says a no-hit read was made too soon after the
+    newest 6-K was filed."""
+    if held.get("top_6k") != top["accn"] or _day(held.get("since")) != since or held.get("error"):
+        return True
+    return not SF.holds(held.get("top_6k_filed"), held.get("read_at"), top["accn"] in _accns(held.get("issuance")))
+
+
+def _fts_step(db, cik, held, reports, since, now, now_iso, http, store, sink=None) -> dict:
+    """sec.fts (spec §3.1): FTS_WHEN off → "off", no call · no 6-K in the window → "none_6k", no call · else the
+    phrase query (re-asked per `_fts_reask`; the stop and the status rule as on every SEC sub-doc). The held
+    `number` rides along; step 8b of `refresh_symbol` owns it."""
+    held = held if isinstance(held, dict) else None
+    if not SF.fts_on():
+        out = dict({"status": "off"}, **_fts_empty(since))
+        out.update({"read_at": None, "error": None, "error_at": None, "strikes": 0})
+        return out
+    if not reports:
+        return _ok_sub(dict({"status": "none_6k"}, **_fts_empty(since)), now_iso)
+    top = reports[0]
+    good = _fts_good(held)
+    if good and held.get("status") == "ok" and not _fts_reask(held, top, since):
+        return dict(held)
+    if _fts_blocked(db, now):
+        if good:
+            out = dict(held)                                   # no call; the held answer stays as it is …
+            if held.get("status") == "none_6k" or held.get("top_6k") != top["accn"] \
+                    or _day(held.get("since")) != since:
+                out.update({"error": "blocked", "error_at": now_iso})   # … [C1] flagged when it no longer covers
+            return out
+        out = dict({"status": "blocked"}, **_fts_empty(since))
+        out.update({"read_at": None, "error": None, "error_at": now_iso, "strikes": _strikes(held)})
+        return out
+    got = SF.read_issuance(cik, since, SF.et_day(now), reports, get=_fts_get(http))
+    if got.get("status") != "ok":
+        if isinstance(sink, dict):
+            sink["fts_failed"] = True                          # step 8b asks nothing on a pass whose phrase read failed
+        if got.get("code") in SEC_BLOCK_HTTP:
+            _block_fts(db, now, got.get("error") or "blocked", store)
+        return _failed_fts(held, got.get("error") or "error", now_iso, since)
+    hn = held.get("number") if held and isinstance(held.get("number"), dict) else None
+    out = {"status": "ok", "since": since, "top_6k": top["accn"], "top_6k_filed": top["filed"],
+           "issuance": got.get("issuance") or [], "number": hn}
+    if got.get("cap"):
+        out["cap"] = got["cap"]
+    return _ok_sub(out, now_iso)
+
+
+def _marked(fts, since) -> list:
+    """The issuance 6-Ks of a good full-text answer as `sec.filings` rows (spec §3.1), filed >= since."""
+    if not isinstance(fts, dict) or fts.get("status") != "ok":
+        return []
+    out = []
+    for r in fts.get("issuance") or []:
+        if not isinstance(r, dict) or not isinstance(r.get("accn"), str) or not _day(r.get("filed")):
+            continue
+        if since and r["filed"] < since:
+            continue
+        out.append({"form": r.get("form") or SB_REPORT_FORMS[1], "filed": r["filed"], "items": "",
+                    "doc": r.get("doc"), "file": None, "accn": r["accn"], "with": None, "fts": SF.FTS_ISSUANCE})
+    return out
+
+
+def _with_marked(filings: list, marked: list) -> tuple:
+    """(rows filed DESC, capped at SB_FILINGS_KEPT, cut: bool). A marked accession already listed is marked in place."""
+    rows = [dict(f) for f in filings]
+    have = {f.get("accn"): f for f in rows if f.get("accn")}
+    for m in marked:
+        if m["accn"] in have:
+            have[m["accn"]]["fts"] = SF.FTS_ISSUANCE
+        else:
+            rows.append(m)
+    rows.sort(key=lambda x: x.get("filed") or "", reverse=True)
+    return rows[:SB_FILINGS_KEPT], len(rows) > SB_FILINGS_KEPT
+
+
+def _number_step(db, rec, doc, held_fts, reports, cik, now, now_iso, http, growth_fn, store, fts_failed=False) -> None:
+    """Step 8b (spec §3.3): the exact-number query, IN PLACE on doc.sec.fts.number. Asked only when the full-text
+    answer is ok, 6-Ks exist in the window, the verdict's growth gives n = to − from > 0, and (n, from, to, since,
+    top_6k) moved or [C8] the held answer does not `holds`. A failed try keeps the held number and sets `error`."""
+    sec = doc.get("sec") if isinstance(doc.get("sec"), dict) else {}
+    fts = sec.get("fts")
+    if fts_failed or not SF.fts_on() or not reports or not cik or not isinstance(fts, dict) \
+            or fts.get("status") != "ok":
+        return
+    today = SF.et_day(now)
+    try:
+        g = (growth_fn or SF.default_growth_fn())(dict(rec), doc, today)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: %s growth read failed: %s", doc.get("_id"), type(exc).__name__)
+        return
+    nums = SF.growth_numbers(g)
+    if nums is None:
+        return
+    n, a, b = nums
+    since, top = sec.get("since"), reports[0]
+    hn = fts.get("number") if isinstance(fts.get("number"), dict) else None
+    hf = held_fts if isinstance(held_fts, dict) else {}
+    same = bool(hn and hn.get("n") == n and hn.get("from") == a and hn.get("to") == b
+                and _day(hf.get("since")) == _day(since) and hf.get("top_6k") == top["accn"])
+    if same and SF.holds(top["filed"], hn.get("read_at"), bool(hn.get("hits"))):
+        return
+    if _fts_blocked(db, now):
+        return
+    got = SF.read_number(cik, n, since, today, reports, get=_fts_get(http))
+    if got.get("status") == "ok":
+        fts["number"] = {"n": n, "from": a, "to": b, "read_at": now_iso, "hits": got.get("hits") or []}
+        return
+    if got.get("code") in SEC_BLOCK_HTTP:
+        _block_fts(db, now, got.get("error") or "blocked", store)
+    fts.update({"error": got.get("error") or "error", "error_at": now_iso, "strikes": _strikes(fts) + 1})
+
+
 # ───────────────────────────────────────────── one name
-def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store) -> dict:
+def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store, sink=None) -> dict:
     empty = {"since": since, "top_accn": None, "covers": [], "filings": []}
     if not cik:
         if isinstance(ref, dict) and ref.get("status") in ("ok", "absent"):
@@ -543,16 +761,26 @@ def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store) -> 
         status, covers = c["status"], (c.get("covers") or [])
     else:
         status, covers = "ok", hcov
+    # 🩳 2026-11-26 (spec sishares §3.3) — the 6-K full-text step, then its issuance rows join `filings`
+    reports = got.get("reports") or []
+    if isinstance(sink, dict):
+        sink["reports"] = reports
+    fts = _fts_step(db, cik, held.get("fts") if isinstance(held, dict) else None, reports, since, now, now_iso,
+                    http, store, sink)
+    filings, cut = _with_marked(got.get("filings") or [], _marked(fts, since))
     out = {"status": status, "since": since, "top_accn": got.get("top_accn"),
-           "covers": covers, "filings": got.get("filings") or []}
+           "covers": covers, "filings": filings, "fts": fts}
     if got.get("cap"):                                         # 📄 2026-11-26 — the kept-row cap cut the list
         out["filings_cap"] = got["cap"]
+    elif cut:
+        out["filings_cap"] = SB_FILINGS_KEPT
     return _ok_sub(out, now_iso)
 
 
 def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None, track_fn=None, kind_fn=None,
-                   store: bool = True) -> dict:
-    """Re-read one name's share basis (spec §3.2 steps 1–9) and return the §3.1 doc; `store=False` writes nothing."""
+                   growth_fn=None, store: bool = True) -> dict:
+    """Re-read one name's share basis (spec §3.2 steps 1–9) and return the §3.1 doc; `store=False` writes nothing.
+    🩳 2026-11-26: `growth_fn(rec, doc, today)` is the step-8b seam (default `sec_fts.default_growth_fn()`)."""
     sym = str(sym or "").strip().upper()
     now = _now(now)
     now_iso = _ts(now)
@@ -574,9 +802,12 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
     else:
         got = fetch_ref(sym, http=http)
         if got.get("status") in ("ok", "absent"):
-            ref = _ok_sub({"status": got["status"], "cik": got.get("cik"), "type": got.get("type")}, now_iso)
+            ref = _ok_sub({"status": got["status"], "cik": got.get("cik"), "type": got.get("type"),
+                           "share_class_shares": got.get("share_class_shares"),
+                           "weighted_shares": got.get("weighted_shares")}, now_iso)       # both keys always [C16]
         else:
-            ref = _failed_sub(href, got.get("error") or "error", now_iso, {"cik": None, "type": None})
+            ref = _failed_sub(href, got.get("error") or "error", now_iso,
+                              {"cik": None, "type": None, "share_class_shares": None, "weighted_shares": None})
     cik = ref.get("cik") if ref.get("status") == "ok" else None
     # 3. Yahoo's live row
     yahoo = _yahoo_row(d, sym)
@@ -585,8 +816,11 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
     dates = [_day(rec.get(k)) for k in ("settlement_date", "prev_settlement_date", "float_asof", "shares_asof")]
     dates.append(_day((track_held or {}).get("since")))
     since = min(x for x in dates if x)
-    # 5. SEC
-    sec = _sec_step(d, cik, ref, held.get("sec"), since, now, now_iso, http, kind_fn, store)
+    # 5. SEC (+ the 6-K full-text step)
+    held_sec = held.get("sec") if isinstance(held.get("sec"), dict) else None
+    held_fts = held_sec.get("fts") if held_sec and isinstance(held_sec.get("fts"), dict) else None
+    sink: dict = {}
+    sec = _sec_step(d, cik, ref, held.get("sec"), since, now, now_iso, http, kind_fn, store, sink=sink)
     # 6. reach back to the cover in force when the float was first seen
     tsince = _day((track_held or {}).get("since")) or _day(rec.get("float_asof"))
     since2 = since
@@ -611,6 +845,12 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
         track = track_held
     doc = {"_id": sym, "v": SB_VERSION, "checked_at": now_iso, "seen": _seen_of(rec),
            "ref": ref, "sec": sec, "splits": splits, "yahoo": yahoo, "float_track": track}
+    # 8b. 🩳 2026-11-26 — the exact share count added, read through the SEC full-text search (in place on sec.fts)
+    try:
+        _number_step(d, rec, doc, held_fts, sink.get("reports") or [], cik, now, now_iso, http, growth_fn, store,
+                     fts_failed=bool(sink.get("fts_failed")))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: %s number step failed: %s", sym, type(exc).__name__)
     # 9. store
     if store:
         try:
@@ -624,7 +864,9 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
 def is_due(basis_doc, si_record, now=None) -> bool:
     """[C5] False for a `no_record` name. True: no doc · a seed-only doc (no `checked_at`) · `seen` differs from the
     record · a source with an error / failed / blocked whose last try is SB_ERROR_RETRY_MIN old (SB_REFRESH_MIN from
-    SB_ERROR_STRIKES strikes) · `checked_at` SB_REFRESH_MIN old."""
+    SB_ERROR_STRIKES strikes) · `checked_at` SB_REFRESH_MIN old. 🩳 2026-11-26: `sec.fts` is NOT read here — a
+    failed / blocked full-text read (or a number-read `error`) waits for the SB_REFRESH_MIN pass (or a `seen` change)
+    and is re-asked then by `_fts_reask`; its efts stop is never a reason to re-read the whole basis sooner."""
     if not _usable(si_record):
         return False
     if not isinstance(basis_doc, dict):
@@ -801,10 +1043,17 @@ def _summary(sym: str, doc: dict) -> str:
     st = lambda k: "%s%s" % ((doc.get(k) or {}).get("status"),
                              (" (last try %s)" % doc[k]["error"]) if (doc.get(k) or {}).get("error") else "")
     tr = doc.get("float_track") or {}
-    return "%s | ref %s | sec %s, %d covers, %d filings | splits %s, %d rows | track %s" % (
+    fts = (doc.get("sec") or {}).get("fts") if isinstance((doc.get("sec") or {}).get("fts"), dict) else None
+    tail = ""
+    if fts is not None:                                        # 🩳 2026-11-26 — the 6-K full-text read
+        num = fts.get("number") if isinstance(fts.get("number"), dict) else None
+        tail = " | fts %s%s, %d issuance 6-K, number %s" % (
+            fts.get("status"), (" (last try %s)" % fts["error"]) if fts.get("error") else "",
+            len(fts.get("issuance") or []), ("%d hit" % len(num.get("hits") or [])) if num else "not asked")
+    return "%s | ref %s | sec %s, %d covers, %d filings | splits %s, %d rows | track %s%s" % (
         sym, st("ref"), st("sec"), len((doc.get("sec") or {}).get("covers") or []),
         len((doc.get("sec") or {}).get("filings") or []), st("splits"),
-        len((doc.get("splits") or {}).get("rows") or []), tr.get("origin"))
+        len((doc.get("splits") or {}).get("rows") or []), tr.get("origin"), tail)
 
 
 def main(argv=None) -> int:

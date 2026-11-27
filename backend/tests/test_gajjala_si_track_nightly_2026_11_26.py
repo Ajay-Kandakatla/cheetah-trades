@@ -133,7 +133,10 @@ def test_NEGATIVE_vwap_not_read_is_retried_inside_the_lookback_and_never_after()
     assert S not in SIT.lookback(SIT.tonight(late))
     calls = []
     SIT.record_night(late, store=st, **seams(si, load_1m=lambda s, d: calls.append(d) or _minutes(d)))
-    assert calls == [] and all(r["vwap_state"] == "not_read" for r in doc(st)["rows"])
+    # PIN MOVED 2026-11-26 (spec sishares §3.5, WP be-track — predicted: the follow-up shares the night's 1-minute
+    # seam under its OWN budget): the follow-up now loads the sessions AFTER S that sit in tonight's look-back; the
+    # ledger's own VWAP retry of S (the negative this test guards) still asks nothing for S.
+    assert S not in calls and all(r["vwap_state"] == "not_read" for r in doc(st)["rows"])
     SIT.record_night(utc(N, "20:15"), store=st, **seams(si, load_1m=lambda s, d: _minutes(d)))
     assert all(r["vwap_state"] != "not_read" for r in doc(st)["rows"])
 

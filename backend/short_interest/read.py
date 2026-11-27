@@ -717,8 +717,10 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
 
 
 # 🩳 2026-11-24 — the ONE served key a checked name gains (spec sidilute §3.4). Absent on an unchecked name.
+# 🩳 2026-11-26 (spec sishares §3.2) — + "share_counts", "issuances": BOTH always present for a checked name (lists,
+# possibly empty).
 BASIS_KEYS = ("status", "checked_at", "float_refused", "refused_reasons", "float_pct_on_file", "growth", "fell",
-              "change", "splits", "filings", "flags", "sources", "float_update")
+              "change", "splits", "filings", "flags", "sources", "float_update", "share_counts", "issuances")
 
 
 def _apply_verdict(b: dict, v: dict) -> None:
@@ -750,6 +752,9 @@ def _apply_verdict(b: dict, v: dict) -> None:
                            else ("shares_out" if b.get("pct_of_shares_out") is not None else None))
     b["basis"] = {k: v.get(k) for k in BASIS_KEYS
                   if k != "float_update" or isinstance(v.get(k), dict)}   # absent unless a newer float was used
+    for k in ("share_counts", "issuances"):
+        if not isinstance(b["basis"].get(k), list):
+            b["basis"][k] = []
 
 
 def _basis(b) -> dict:
@@ -951,8 +956,23 @@ def _basis_sentences(b: dict, v: Optional[dict]) -> list:
     if isinstance(v, dict):
         out += [x for x in (v.get("title_lines") or []) if isinstance(x, str) and x]
     out += [t if t.endswith(".") else t + "." for t in _flag_texts(b)]
+    out += _issuance_sentences(b)                    # 🩳 2026-11-26 (spec sishares §3.2) — the counts row is NOT here
     if isinstance(v, dict) and isinstance(v.get("check_text"), str) and v["check_text"]:
         out.append("Share-count check: " + v["check_text"])
+    return out
+
+
+ISSUANCE_SENTENCE = "Issuance on file: %s%s."
+
+
+def _issuance_sentences(b: dict) -> list:
+    """One short sentence per 6-K the SEC full-text search matched ("Issuance on file: 6-K 11/4, 33,185,841 shares.")."""
+    out = []
+    for i in _basis(b).get("issuances") or []:
+        if not isinstance(i, dict) or not isinstance(i.get("label"), str) or not i["label"]:
+            continue
+        n = _pos_int(i.get("shares"))
+        out.append(ISSUANCE_SENTENCE % (i["label"], (", %s shares" % format(n, ",")) if n else ""))
     return out
 
 

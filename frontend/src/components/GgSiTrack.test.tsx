@@ -532,3 +532,219 @@ describe('🏁 on the 🚩 board — inside the 🩳 sub\'s ⓘ fold only', () =
     expect(within(r2.container).queryByTestId('gg-substate')).toBeNull();
   });
 });
+
+/* ---- 🏁 FOLLOW (2026-11-26, spec sishares §3.6 / §4.4, WP fe). Ajay 2026-11-26: "lets track them in our list of SI. and
+ * maintain a track record of our stocks". ONE nested closed fold inside the 🏁 body, after the day tables and before the
+ * rule fold; its body mounts only while open; every string served (sentinels below); the day table's +5 column is a
+ * served head + cell (no FE change). NEGATIVES: follow absent / null / array / number → nothing; a NaN / number / empty
+ * cell prints nothing; a row with no symbol is dropped; a junk href → plain text; a fault still prints alone. ---- */
+
+const FOLLOW = {
+  summary_text: '🏁 served follow summary', title: 'served follow title', caveat: 'served follow caveat',
+  asof_text: 'served follow as of', base_lines: ['served follow base five', 'served follow base first', 'served follow base waits'],
+  names_heads: [['ticker', 'served F Ticker'], ['first', 'served F First'], ['last', 'served F Last'], ['days', 'served F Days']],
+  names: [
+    { symbol: 'NCPL', href: '/chart-maps?tab=gajjala&focus=NCPL',
+      cells: { ticker: 'NCPL', first: 'served ncpl first', last: 'served ncpl last', days: 'served ncpl days' } },
+    { symbol: 'AKAN', href: null, cells: { ticker: 'AKAN', first: 'served akan first', last: 'served akan last', days: 'served akan days' } },
+  ],
+  pinned_label: 'served pinned by you label',
+  pinned_heads: [['ticker', 'served P Ticker'], ['since', 'served P Since'], ['wins', 'served P Wins']],
+  pinned: [{ symbol: 'POM', href: '/chart-maps?tab=gajjala&focus=POM', cells: { ticker: 'POM', since: 'served pom since', wins: 'served pom wins' } }],
+  pinned_empty_text: 'served no pins text', shown_text: 'served follow shown', pending_text: 'served follow pending',
+  rule_label: 'served follow rule label', rule_text: 'served follow rule text', empty_text: null,
+};
+const withFollow = (f: unknown) => ({ ...clone(ST), follow: f }) as GgSiTrackBlock;
+const openBoth = () => {
+  openFold(screen.getByTestId('gg-st'));
+  const f = screen.getByTestId('gg-st-follow');
+  openFold(f);
+  return f;
+};
+
+describe('🏁 follow fold — nested in the 🏁 body, closed, served strings only', () => {
+  it('ONE nested closed <details> after the day tables and before the rule fold; the body is not mounted while closed', () => {
+    const { container } = render(<GgSiTrackSection block={withFollow(clone(FOLLOW))} />, wrap);
+    // NEGATIVE: the outer fold closed → no follow in the DOM at all
+    expect(screen.queryByTestId('gg-st-follow')).toBeNull();
+    openFold(screen.getByTestId('gg-st'));
+    const f = screen.getByTestId('gg-st-follow');
+    expect(f.tagName).toBe('DETAILS');
+    expect(f.hasAttribute('open')).toBe(false);
+    expect(screen.getByTestId('gg-st').contains(f)).toBe(true);
+    expect(container.querySelectorAll('[data-testid="gg-st-follow"]')).toHaveLength(1);
+    expect(screen.getByTestId('gg-st-follow-summary').textContent).toBe(FOLLOW.summary_text);
+    expect(f.textContent).toBe(FOLLOW.summary_text);
+    expect(f.querySelector('table')).toBeNull();
+    // placement: after the day box and the pending line, right before the rule fold
+    expect(screen.getByTestId('gg-st-pending').nextElementSibling).toBe(f);
+    expect(f.nextElementSibling).toBe(screen.getByTestId('gg-st-rule'));
+    const pos = (t: string) => [...container.querySelectorAll('[data-testid]')].indexOf(screen.getByTestId(t));
+    expect(pos('gg-st-days')).toBeLessThan(pos('gg-st-follow'));
+  });
+
+  it('open: title, caveat, as-of, base lines, the names table, the pinned label + table, shown / pending, the rule fold — in order, verbatim', () => {
+    const { container } = render(<GgSiTrackSection block={withFollow(clone(FOLLOW))} />, wrap);
+    const f = openBoth();
+    const want = ['gg-st-follow-summary', 'gg-st-follow-title', 'gg-st-follow-caveat', 'gg-st-follow-asof',
+      'gg-st-follow-base-0', 'gg-st-follow-base-1', 'gg-st-follow-base-2', 'gg-st-follow-names-box', 'gg-st-follow-names',
+      'gg-st-follow-name-NCPL', 'gg-st-follow-name-AKAN', 'gg-st-follow-pinned-label', 'gg-st-follow-pinned-box',
+      'gg-st-follow-pinned', 'gg-st-follow-pin-POM', 'gg-st-follow-shown', 'gg-st-follow-pending', 'gg-st-follow-rule',
+      'gg-st-follow-rule-text'];
+    expect([...f.querySelectorAll('[data-testid]')].map((e) => e.getAttribute('data-testid'))).toEqual(want);
+    expect(screen.getByTestId('gg-st-follow-title').textContent).toBe(FOLLOW.title);
+    expect(screen.getByTestId('gg-st-follow-caveat').textContent).toBe(FOLLOW.caveat);
+    expect(screen.getByTestId('gg-st-follow-asof').textContent).toBe(FOLLOW.asof_text);
+    FOLLOW.base_lines.forEach((l, i) => expect(screen.getByTestId(`gg-st-follow-base-${i}`).textContent).toBe(l));
+    const names = screen.getByTestId('gg-st-follow-names');
+    expect([...names.querySelectorAll('th')].map((th) => th.textContent)).toEqual(FOLLOW.names_heads.map(([, l]) => l));
+    expect([...names.querySelectorAll('tbody tr')].map((t) => t.getAttribute('data-testid')))
+      .toEqual(['gg-st-follow-name-NCPL', 'gg-st-follow-name-AKAN']);
+    const ncpl = screen.getByTestId('gg-st-follow-name-NCPL');
+    expect([...ncpl.querySelectorAll('td')].map((td) => td.textContent))
+      .toEqual(['NCPL', 'served ncpl first', 'served ncpl last', 'served ncpl days']);
+    expect(within(ncpl).getByRole('link').getAttribute('href')).toBe('/chart-maps?tab=gajjala&focus=NCPL');
+    expect(screen.getByTestId('gg-st-follow-name-AKAN').querySelector('a')).toBeNull();
+    // the pinned table under its served label, apart from the names table
+    expect(screen.getByTestId('gg-st-follow-pinned-label').textContent).toBe(FOLLOW.pinned_label);
+    const pinned = screen.getByTestId('gg-st-follow-pinned');
+    expect(names.contains(pinned)).toBe(false);
+    expect([...pinned.querySelectorAll('th')].map((th) => th.textContent)).toEqual(FOLLOW.pinned_heads.map(([, l]) => l));
+    expect([...screen.getByTestId('gg-st-follow-pin-POM').querySelectorAll('td')].map((td) => td.textContent))
+      .toEqual(['POM', 'served pom since', 'served pom wins']);
+    // NEGATIVE: pins served → no empty-pins line
+    expect(screen.queryByTestId('gg-st-follow-pinned-empty')).toBeNull();
+    expect(container.textContent).not.toContain(FOLLOW.pinned_empty_text);
+    const rule = screen.getByTestId('gg-st-follow-rule');
+    expect(rule.tagName).toBe('DETAILS');
+    expect(rule.hasAttribute('open')).toBe(false);
+    expect(rule.querySelector('summary')!.textContent).toBe(FOLLOW.rule_label);
+    expect(within(rule).getByTestId('gg-st-follow-rule-text').textContent).toBe(FOLLOW.rule_text);
+    // the names table scrolls in its own box (the 🏁 width rule)
+    for (const t of f.querySelectorAll('table')) expect(t.closest('.gg-tr-scroll')).not.toBeNull();
+  });
+
+  it('no pins → the served pinned_empty_text under the served label, no pinned table; NEGATIVE a pins list of junk rows is "none"', () => {
+    for (const pinned of [[], null, undefined, [{ symbol: null }, { symbol: 7 }, 'x', null, { symbol: '' }]]) {
+      const { unmount } = render(<GgSiTrackSection block={withFollow({ ...clone(FOLLOW), pinned })} />, wrap);
+      openBoth();
+      expect(screen.getByTestId('gg-st-follow-pinned-label').textContent).toBe(FOLLOW.pinned_label);
+      expect(screen.getByTestId('gg-st-follow-pinned-empty').textContent).toBe(FOLLOW.pinned_empty_text);
+      expect(screen.queryByTestId('gg-st-follow-pinned')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('NEGATIVE: follow absent / null / an array / a number / a string / {} / no summary → nothing of the follow; the 🏁 body is unchanged', () => {
+    const plain = render(<GgSiTrackSection block={clone(ST)} />, wrap);
+    openFold(within(plain.container).getByTestId('gg-st'));
+    const html = plain.container.innerHTML;
+    plain.unmount();
+    expect(html).not.toMatch(/gg-st-follow/);
+    for (const v of [undefined, null, [], [clone(FOLLOW)], 3, NaN, 'x', {}, { ...clone(FOLLOW), summary_text: '' },
+      { ...clone(FOLLOW), summary_text: 7 }]) {
+      const r = render(<GgSiTrackSection block={withFollow(v)} />, wrap);
+      openFold(within(r.container).getByTestId('gg-st'));
+      expect(r.container.innerHTML, JSON.stringify(v)).toBe(html);
+      r.unmount();
+    }
+  });
+
+  it('NEGATIVE: a NaN / number / null / empty cell or line prints nothing; a row with no symbol is dropped; a junk href is plain text', () => {
+    const b: any = clone(FOLLOW);
+    b.title = NaN; b.caveat = 5; b.asof_text = ''; b.shown_text = null; b.pending_text = undefined;
+    b.base_lines = [NaN, 'served follow base five', 3, '', null];
+    b.names = [
+      { ...b.names[0], href: 'https://evil.example/x', cells: { ticker: 'NCPL', first: NaN, last: 41.2, days: '' } },
+      { symbol: null, href: '/x', cells: { ticker: 'ZZZ', first: 'served dropped first' } },
+      { symbol: 9, cells: {} }, 'junk', null, { ...b.names[1], href: '//evil.example', cells: 'x' },
+    ];
+    b.pinned = [{ symbol: 'POM', href: 'javascript:alert(1)', cells: { ticker: 'POM', since: null, wins: 12.5 } }];
+    const { container } = render(<GgSiTrackSection block={withFollow(b)} />, wrap);
+    const f = openBoth();
+    for (const t of ['gg-st-follow-title', 'gg-st-follow-caveat', 'gg-st-follow-asof', 'gg-st-follow-shown', 'gg-st-follow-pending']) {
+      expect(screen.queryByTestId(t), t).toBeNull();
+    }
+    expect([...f.querySelectorAll('[data-testid^="gg-st-follow-base-"]')].map((e) => [e.getAttribute('data-testid'), e.textContent]))
+      .toEqual([['gg-st-follow-base-1', 'served follow base five']]);
+    expect([...screen.getByTestId('gg-st-follow-names').querySelectorAll('tbody tr')].map((t) => t.getAttribute('data-testid')))
+      .toEqual(['gg-st-follow-name-NCPL', 'gg-st-follow-name-AKAN']);
+    const ncpl = screen.getByTestId('gg-st-follow-name-NCPL');
+    expect([...ncpl.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['NCPL', '', '', '']);
+    expect(ncpl.querySelector('a')).toBeNull();
+    expect([...screen.getByTestId('gg-st-follow-name-AKAN').querySelectorAll('td')].map((td) => td.textContent)).toEqual(['AKAN', '', '', '']);
+    expect(screen.getByTestId('gg-st-follow-name-AKAN').querySelector('a')).toBeNull();
+    const pom = screen.getByTestId('gg-st-follow-pin-POM');
+    expect(pom.querySelector('a')).toBeNull();
+    expect([...pom.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['POM', '', '']);
+    expect(f.querySelector('a')).toBeNull();
+    expect(container.textContent).not.toMatch(/NaN|null|undefined|41\.2|12\.5|served dropped first|evil|javascript/);
+  });
+
+  it('NEGATIVE: junk heads → no names / pinned table, no crash; the lines and the empty-pins text still print', () => {
+    const b: any = { ...clone(FOLLOW), names_heads: 'x', pinned_heads: [['ticker'], [3, 'x'], null] };
+    const { container } = render(<GgSiTrackSection block={withFollow(b)} />, wrap);
+    const f = openBoth();
+    expect(f.querySelector('table')).toBeNull();
+    expect(screen.getByTestId('gg-st-follow-caveat').textContent).toBe(FOLLOW.caveat);
+    expect(screen.getByTestId('gg-st-follow-pinned-empty').textContent).toBe(FOLLOW.pinned_empty_text);
+    expect(container.textContent).not.toContain('NCPL');
+  });
+
+  it('the served empty line (no names yet) prints; NEGATIVE no rule label → no follow rule fold', () => {
+    const b: any = { ...clone(FOLLOW), names: [], empty_text: 'served follow empty', rule_label: null };
+    render(<GgSiTrackSection block={withFollow(b)} />, wrap);
+    openBoth();
+    expect(screen.getByTestId('gg-st-follow-empty').textContent).toBe('served follow empty');
+    expect(screen.queryByTestId('gg-st-follow-names')).toBeNull();
+    expect(screen.queryByTestId('gg-st-follow-rule')).toBeNull();
+    expect(screen.queryByText(FOLLOW.rule_text)).toBeNull();
+  });
+
+  it('NEGATIVE: a served fault_text still prints ALONE — no 🏁 fold, no follow, whatever follow is served', () => {
+    const { container } = render(<GgSiTrackSection block={{ ...withFollow(clone(FOLLOW)), fault_text: 'served st fault' }} />, wrap);
+    expect(screen.getByTestId('gg-st-fault').textContent).toBe('served st fault');
+    expect(container.querySelector('details, table')).toBeNull();
+    expect(container.textContent).toBe('served st fault');
+  });
+
+  it('NEGATIVE: the FE types no word — every text node of the opened 🏁 + follow + both rule folds is a fixture string', () => {
+    const block = withFollow(clone(FOLLOW));
+    const { container } = render(<GgSiTrackSection block={block} />, wrap);
+    openBoth();
+    openFold(screen.getByTestId('gg-st-follow-rule'));
+    openFold(screen.getByTestId('gg-st-rule'));
+    const served = strings(block);
+    for (const t of textNodes(container)) expect(served.has(t), t).toBe(true);
+    expect(textNodes(screen.getByTestId('gg-st-follow')).length).toBeGreaterThan(strings(FOLLOW).size / 2);
+  });
+
+  it('the day table +5 column needs no FE change: a served head + cell prints verbatim in the served position', () => {
+    const b: any = clone(ST);
+    b.heads = [...b.heads, ['f5', 'served +5 sessions']];
+    b.days[0].rows[0].cells.f5 = 'served aaa five';
+    b.days[0].rows[1].cells.f5 = NaN;
+    render(<GgSiTrackSection block={b} />, wrap);
+    openFold(screen.getByTestId('gg-st'));
+    const day = screen.getByTestId('gg-st-day-2026-11-25');
+    expect([...day.querySelectorAll('th')].map((th) => th.textContent).at(-1)).toBe('served +5 sessions');
+    expect([...screen.getByTestId('gg-st-row-2026-11-25-AAA').querySelectorAll('td')].at(-1)!.textContent).toBe('served aaa five');
+    // NEGATIVE: a NaN / missing +5 cell prints nothing
+    expect([...screen.getByTestId('gg-st-row-2026-11-25-BBB').querySelectorAll('td')].at(-1)!.textContent).toBe('');
+    expect([...screen.getByTestId('gg-st-row-2026-11-25-NEW').querySelectorAll('td')].at(-1)!.textContent).toBe('');
+  });
+
+  it('source + CSS: one follow fold in the file, no sort / fetch / formatting; the fold wraps on a phone', async () => {
+    const src = await readSource('src/components/GgSiTrack.tsx');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code.split('data-testid="gg-st-follow"').length - 1).toBe(1);
+    expect(code.split('<Follow ').length - 1).toBe(1);
+    expect(code).not.toMatch(/toFixed\(|toLocaleString\(|toPrecision\(|Intl\.|\.sort\(|\bfetch\(/);
+    const css = await readSource('src/styles/ggSiTrack.css');
+    const rule = /\n\.gg-st-follow \{([^}]*)\}/.exec(css)?.[1] || '';
+    expect(rule).toMatch(/min-width: 0/);
+    expect(rule).toMatch(/max-width: 100%/);
+    expect(rule).toMatch(/overflow-wrap: anywhere/);
+    expect(rule).not.toMatch(/nowrap|(^|;)\s*width:/);
+  });
+});

@@ -19,3 +19,7 @@
 .gg-st-table tr.gg-st-new > td { opacity: 0.75; }
 .gg-st-rule { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .gg-st-rule summary { min-width: 0; overflow-wrap: anywhere; }
+/* 🏁 the follow fold (2026-11-26, spec sishares §3.6): nested inside the 🏁 body, closed; same wrap rules — its tables scroll
+ * sideways in their own .gg-tr-scroll box. */
+.gg-st-follow { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.gg-st-follow > summary { cursor: pointer; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }

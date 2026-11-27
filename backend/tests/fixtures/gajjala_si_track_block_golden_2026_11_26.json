@@ -212,6 +212,10 @@
   [
    "next",
    "Next open→high / low"
+  ],
+  [
+   "f5",
+   "+5 sessions"
   ]
  ],
  "days": [
@@ -241,7 +245,8 @@
       "where": "rest of regular hours",
       "cross": "—",
       "vwap": "not read",
-      "next": "pending"
+      "next": "pending",
+      "f5": "pending"
      },
      "chips": [],
      "title": "BBB · 2026-11-20 · UNMEASURED"
@@ -268,7 +273,8 @@
       "where": "first hour",
       "cross": "—",
       "vwap": "not read",
-      "next": "pending"
+      "next": "pending",
+      "f5": "pending"
      },
      "chips": [],
      "title": "AAA · 2026-11-20 · UNMEASURED"
@@ -303,7 +309,8 @@
       "where": "first hour",
       "cross": "—",
       "vwap": "not read",
-      "next": "no bars"
+      "next": "no bars",
+      "f5": "pending"
      },
      "chips": [],
      "title": "CCC · 2026-11-19 · UNMEASURED"
@@ -330,7 +337,8 @@
       "where": "first hour",
       "cross": "—",
       "vwap": "not read",
-      "next": "1 → 0.0% / 0.0%"
+      "next": "1 → 0.0% / 0.0%",
+      "f5": "pending"
      },
      "chips": [],
      "title": "AAA · 2026-11-19 · UNMEASURED"
@@ -357,7 +365,8 @@
       "where": "rest of regular hours",
       "cross": "—",
       "vwap": "not read",
-      "next": "1 → +45.0% / 0.0%"
+      "next": "1 → +45.0% / 0.0%",
+      "f5": "pending"
      },
      "chips": [],
      "title": "BBB · 2026-11-19 · UNMEASURED"
@@ -392,7 +401,8 @@
       "where": "first hour",
       "cross": "—",
       "vwap": "not read",
-      "next": "1 → +50.0% / 0.0%"
+      "next": "1 → +50.0% / 0.0%",
+      "f5": "pending"
      },
      "chips": [],
      "title": "AAA · 2026-11-18 · UNMEASURED"
@@ -419,7 +429,8 @@
       "where": "first hour",
       "cross": "—",
       "vwap": "not read",
-      "next": "1 → +80.0% / 0.0%"
+      "next": "1 → +80.0% / 0.0%",
+      "f5": "pending"
      },
      "chips": [],
      "title": "CCC · 2026-11-18 · UNMEASURED"
@@ -438,5 +449,111 @@
  "fault_text": null,
  "empty_text": null,
  "n": 6,
- "n_days": 3
+ "n_days": 3,
+ "follow": {
+  "title": "🏁 What the 🩳 names did after they were listed · UNMEASURED",
+  "caveat": "These are the names we listed — winners and losers both count. It is a record of what happened next, not a test. Names that were not on the 🩳 list on the same days are not followed, so this cannot say whether short interest made the difference. UNMEASURED.",
+  "rule_label": "ⓘ how this is followed",
+  "rule_text": "A listing day is a session the 🩳 list held the name (its 🏁 row). Each listed name is followed for the next 10 market sessions and read at 1, 5 and 10 sessions. Another +40% day = a session whose 09:30–20:00 high is at least +40% over that session's own prior close (the 🏁 rule). A new high = a later 09:30–20:00 high above the listing day's high. The base is the listing day's last regular 5-minute close, or — for a name first listed at or after the regular close — the close of the first 5-minute bar at or after its listing time; with no listing time on file there is no base. Run / low = the best high / worst low of the sessions read vs the base; close = the last regular close of the last session vs the base. A listing day is counted only when every name listed that day is read through that session; a session the name did not trade is counted and is never a +40% day. Read nightly at 20:15 ET and retried for 10 market days. Pinned names are followed and never counted.",
+  "names_heads": [
+   [
+    "ticker",
+    "Ticker"
+   ],
+   [
+    "first",
+    "First listed"
+   ],
+   [
+    "last",
+    "Last listed"
+   ],
+   [
+    "days",
+    "Days listed"
+   ],
+   [
+    "wins_listed",
+    "+40% days while listed"
+   ],
+   [
+    "since",
+    "+40% days since first listed"
+   ]
+  ],
+  "pinned_label": "Pinned by you — followed, never counted",
+  "pinned_heads": [
+   [
+    "ticker",
+    "Ticker"
+   ],
+   [
+    "since",
+    "Pinned since"
+   ],
+   [
+    "days",
+    "Days on the 🩳 list"
+   ],
+   [
+    "read",
+    "Sessions read"
+   ],
+   [
+    "wins",
+    "+40% days"
+   ]
+  ],
+  "pinned": [],
+  "pinned_empty_text": "No name is pinned.",
+  "names": [
+   {
+    "symbol": "AAA",
+    "href": "/sepa/AAA?tab=supply&tf=5m_today",
+    "cells": {
+     "ticker": "AAA",
+     "first": "2026-11-18",
+     "last": "2026-11-20",
+     "days": "3",
+     "wins_listed": "2",
+     "since": "1 of 2 sessions read"
+    }
+   },
+   {
+    "symbol": "BBB",
+    "href": "/sepa/BBB?tab=supply&tf=5m_today",
+    "cells": {
+     "ticker": "BBB",
+     "first": "2026-11-19",
+     "last": "2026-11-20",
+     "days": "2",
+     "wins_listed": "1",
+     "since": "1 of 1 sessions read"
+    }
+   },
+   {
+    "symbol": "CCC",
+    "href": "/sepa/CCC?tab=supply&tf=5m_today",
+    "cells": {
+     "ticker": "CCC",
+     "first": "2026-11-18",
+     "last": "2026-11-19",
+     "days": "2",
+     "wins_listed": "1",
+     "since": "1 of 2 sessions read"
+    }
+   }
+  ],
+  "shown_text": null,
+  "pending_text": null,
+  "asof_text": "followed nightly at 20:15 ET · through 2026-11-20",
+  "base_lines": [
+   "Within 1 session after a listing day — counted on 2 of 2 listing days read in full · 5 name-days · 3 names: another +40% day 3 of 5 · a new high 2 of 5 · closed above the base 0 of 5 · 1 did not trade a session · 0 cut short by a split · 0 with no base",
+   "First listing only: another +40% day 3 of 3 · a new high 2 of 3 · closed above the base 0 of 3 · 3 names · too few names for an interval",
+   "Within 5 sessions after a listing day — no listing day has had 5 sessions yet; nothing is counted.",
+   "Within 10 sessions after a listing day — no listing day has had 10 sessions yet; nothing is counted."
+  ],
+  "summary_text": "🔭 After the listing · 3 names · 3 listing days · followed 10 sessions",
+  "empty_text": null
+ }
 }

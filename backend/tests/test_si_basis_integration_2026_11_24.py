@@ -38,7 +38,9 @@ TODAY = date(2026, 11, 24)
 NOW1 = datetime(2026, 11, 24, 19, 30, tzinfo=timezone.utc)                      # after the last capture (19:05Z)
 NOW2 = NOW1 + timedelta(minutes=SB.SB_ERROR_RETRY_MIN + 1)
 KEY = "SYNTHKEYsibasis"
-ALLOWED_HOSTS = {"data.sec.gov", "api.massive.com"}
+# 2026-11-26 sishares §3.3 / §5.5 (C12): the share-basis family also reaches efts.sec.gov (the 6-K full-text search,
+# sec_fts.py through share_basis._sec_get) — the contracts host pin is amended the same way; www.sec.gov never.
+ALLOWED_HOSTS = {"data.sec.gov", "api.massive.com", "efts.sec.gov"}
 # 2026-11-26 sitrack A4: the provider's 1.0 with no ADV on the record is FINRA's floor → '≤1d'
 SMTK_CHIP = "🩳 SI 8.9% shs out · ≤1d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13"
 MOVED = {"SMTK", "LABT", "KITT", "SMX"}                 # spec §7 #1 (C): the four that lose the % of float
@@ -433,7 +435,7 @@ def test_an_adr_type_is_not_compared_and_the_same_doc_as_cs_is(_harness):
 
 def test_no_host_but_sec_and_massive_and_no_key_in_a_stored_doc(_harness):
     db, http, old, new, docs = _run(holder=_harness)
-    assert http.hosts() == ALLOWED_HOSTS
+    assert http.hosts() == ALLOWED_HOSTS and "www.sec.gov" not in http.hosts()
     text = json.dumps(db[SB.SB_COLL].docs, default=str)
     assert KEY not in text and "apiKey" not in text
 

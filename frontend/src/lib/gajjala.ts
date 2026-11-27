@@ -813,6 +813,22 @@ export type GgSiTrackBlock = {
   shown_text?: string | null; pending_text?: string | null; asof_text?: string | null; rule_label?: string | null;
   rule_text?: string | null; honesty?: string | null; fault_text?: string | null; empty_text?: string | null;
   n?: number | null; n_days?: number | null;
+  /** 🏁 2026-11-26 (spec sishares §3.5 / §3.6): the served follow-up of the 🩳 list's names — None on a fault, absent on an
+   *  older API (no fold). Drawn as ONE nested closed fold inside the 🏁 body. */
+  follow?: GgSiFollowBlock | null;
+};
+/** 🏁 one served row of the follow's names / pinned table — `cells` keyed by the served head keys; `href` guarded with
+ *  ggHref (a junk href → plain text). A row with no served symbol is dropped. */
+export type GgSiFollowName = { symbol?: string | null; href?: string | null; cells?: Record<string, string | null> | null };
+/** 🏁 the served follow block (si_follow.served, 2026-11-26). Ajay: "lets track them in our list of SI. and maintain a track
+ *  record of our stocks". A record of what happened next, UNMEASURED, no comparison group: never a gate, sort, push or lane
+ *  input. Every word and number is SERVED, in the served order. */
+export type GgSiFollowBlock = {
+  summary_text?: string | null; title?: string | null; caveat?: string | null; asof_text?: string | null;
+  base_lines?: string[] | null; names_heads?: GgSiTrackHead[] | null; names?: GgSiFollowName[] | null;
+  pinned_label?: string | null; pinned_heads?: GgSiTrackHead[] | null; pinned?: GgSiFollowName[] | null;
+  pinned_empty_text?: string | null; shown_text?: string | null; pending_text?: string | null;
+  rule_label?: string | null; rule_text?: string | null; empty_text?: string | null;
 };
 /** ⛔ one row of the new-SSR list — every piece served and printed as handed (no number formatted here). */
 export type GgSsrNewRow = { symbol?: string | null; href?: string | null; at_text?: string | null; drop_text?: string | null;

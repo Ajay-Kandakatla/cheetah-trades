@@ -22,6 +22,18 @@ const MISS_ROW = { k: 'Short interest', v: 'not read — no FINRA record at the 
 const ITEMS: Record<string, unknown> = {
   EOSE: { symbol: 'EOSE', status: 'ok', chip: '🩳 SI 33.6% float · 4.1d · 9/15', title: 't', rows: ROWS },
   MISS: { symbol: 'MISS', status: 'no_record', chip: null, title: 'no record', rows: [MISS_ROW] },
+  POM: { symbol: 'POM', status: 'ok', chip: '🩳 served pom chip', title: 't', rows: ROWS,
+    basis: { status: 'ok', pending: false, issuances: [
+      { form: '6-K', filed: '2026-11-04', url: 'https://www.sec.gov/Archives/edgar/data/1877971/000121390026116021/ea0310863-6k_pomdoctor.htm',
+        label: 'served 6-K 11/4 filing', text: 'served pom issuance text' },
+      { form: '6-K', filed: '2026-10-01', url: 'https://www.sec.gov.evil.com/Archives/edgar/data/1/x/y.htm', label: 'served evil label', text: 'x' },
+      { form: '6-K', filed: '2026-09-01', url: null, label: 'served no link label', text: 'y' },
+      { form: '6-K', filed: '2026-08-01', url: 'https://www.sec.gov/Archives/edgar/data/1/x/z.htm', label: '', text: 'z' },
+    ] } },
+  JUNK: { symbol: 'JUNK', status: 'ok', chip: '🩳 served junk chip', title: 't', rows: ROWS,
+    basis: { status: 'ok', issuances: [{ url: 'javascript:alert(1)', label: 'served js label' },
+      { url: 'http://www.sec.gov/Archives/edgar/data/1/x/y.htm', label: 'served http label' }] } },
+  OLD: { symbol: 'OLD', status: 'ok', chip: '🩳 served old chip', title: 't', rows: ROWS, basis: { status: 'ok', issuances: 'x' } },
 };
 const PICKS = ['What it is: shares sold short and not yet bought back.', 'Not a forecast. UNMEASURED on this app’s universe.'];
 
@@ -107,6 +119,42 @@ describe('ShortInterestPanel', () => {
     expect(panel.textContent).not.toContain(SI_NOT_WARMED_TEXT);
     expect(panel.querySelector('dl')).toBeNull();
     expect(panel.textContent?.replace(SI_REQUEST_FAILED_TEXT, '').replace(/What this number is[\s\S]*$/, '')).not.toMatch(/\d/);
+  });
+
+  it('🩳 2026-11-26: the served 6-K issuance → a link under the rows, new tab, rel noopener noreferrer, the served label', async () => {
+    stub();
+    render(<ShortInterestPanel symbol="POM" />);
+    const panel = await screen.findByTestId('si-panel');
+    const list = await screen.findByTestId('si-issuances');
+    expect(panel.querySelector('dl')!.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const links = [...list.querySelectorAll('a')];
+    expect(links.map((a) => a.textContent)).toEqual(['served 6-K 11/4 filing']);
+    const a = links[0];
+    expect(a.getAttribute('href')).toBe('https://www.sec.gov/Archives/edgar/data/1877971/000121390026116021/ea0310863-6k_pomdoctor.htm');
+    expect(a.getAttribute('target')).toBe('_blank');
+    expect(a.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(a.getAttribute('title')).toBe('served pom issuance text');
+    // NEGATIVE: a look-alike host, no link, an empty label → nothing printed for them
+    expect(panel.textContent).not.toMatch(/served evil label|served no link label/);
+    expect(panel.querySelectorAll('a')).toHaveLength(1);
+  });
+
+  it('NEGATIVE: no issuance with a good link (javascript: / http:// / non-array / none) → the panel is unchanged', async () => {
+    stub();
+    const base = render(<ShortInterestPanel symbol="EOSE" />);
+    await screen.findByTestId('si-panel');
+    await waitFor(() => expect(base.container.querySelector('details')).not.toBeNull());
+    const html = base.container.innerHTML.replace(/EOSE/g, '');
+    base.unmount();
+    expect(html).not.toMatch(/si-issuances/);
+    for (const sym of ['JUNK', 'OLD']) {
+      const r = render(<ShortInterestPanel symbol={sym} />);
+      await screen.findByTestId('si-panel');
+      await waitFor(() => expect(r.container.querySelector('details')).not.toBeNull());
+      expect(r.container.querySelector('[data-testid="si-issuances"], a'), sym).toBeNull();
+      expect(r.container.innerHTML.replace(new RegExp(sym, 'g'), ''), sym).toBe(html);
+      r.unmount();
+    }
   });
 
   it('NEGATIVE: loaded and absent is "no record", never "request failed"', async () => {

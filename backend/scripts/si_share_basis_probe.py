@@ -40,6 +40,15 @@ Run only in a throwaway container with the worktree mounted (never the live api 
     -v <worktree>/backend:/app:ro -v <outdir>:/out -w /out \\
     cheetah-api:latest python -u /app/scripts/si_share_basis_probe.py --symbols SMTK,LABT,KITT
 
+2026-11-26 (spec sishares §4.1, §5.2a; Ajay: "Fix the POM chip and the 6-K dilution check.") — `--modes`: every
+STORED basis doc (no outside call) read under each of `basis_math.FLOAT_FRESH_MODES`, printing per name that differs
+from "off": refusal, % of float, tier, 🩳 High SI list membership (`high_si.classify`, on the session's stored read),
+flags gained, flags lost. `--with-fts` first runs `share_basis.refresh_symbol(sym, store=False)` (writes nothing) for
+the names "off" refuses as diluted under a newer float, so the table reads the real full-text answer. Writes
+`si_share_basis_modes.json`. Expected under the built default: POM only (§5.2a); a name that ENTERS or LEAVES the 🩳
+list goes to him first.
+  ... cheetah-api:latest python -u /app/scripts/si_share_basis_probe.py --modes --with-fts
+
 Never prints the key or a request URL; every output is scrubbed of `apiKey=`. Display data only — it measures nothing
 about returns.
 """
@@ -361,6 +370,104 @@ def run(symbols, *, db, now: datetime, today: date, seed: Optional[dict] = None,
             "payload": {"today": today.isoformat(), "cases": cases}}
 
 
+@contextlib.contextmanager
+def _fresh_mode(BM, mode: str):
+    prior = BM.FLOAT_FRESH_WHEN
+    BM.FLOAT_FRESH_WHEN = mode
+    try:
+        yield
+    finally:
+        BM.FLOAT_FRESH_WHEN = prior
+
+
+def _mode_row(block, read_doc) -> dict:
+    return {"refused": _refused(block), "pct_of_float": (block or {}).get("pct_of_float"),
+            "tier": (block or {}).get("tier"), "chip": (block or {}).get("chip"), "listed": _listed(block, read_doc),
+            "flags": _flag_keys(block)}
+
+
+def stored_basis_docs(db) -> dict:
+    """{SYM: stored basis doc} — every name doc of SB_COLL (state docs `state|…` left out). Reads only."""
+    from short_interest import share_basis as SB
+    out = {}
+    for d in db[SB.SB_COLL].find({}):
+        k = d.get("_id") if isinstance(d, dict) else None
+        if isinstance(k, str) and k and "|" not in k:
+            out[k.upper()] = d
+    return out
+
+
+def modes_run(*, db, now: datetime, today: date, with_fts: bool = False, refresh: Optional[Callable] = None,
+              reads: Optional[dict] = None, symbols=None) -> dict:
+    """§5.2a — the FLOAT_FRESH_MODES table over the stored basis docs. No write, no print. `with_fts` re-reads (store=
+    False) only the names "off" refuses as diluted under a newer float."""
+    from short_interest import basis_math as BM
+    from short_interest import client as C
+    from short_interest import read as SR
+    from short_interest import share_basis as SB
+
+    docs = stored_basis_docs(db)
+    if symbols:
+        want = {str(x).strip().upper() for x in symbols if str(x).strip()}
+        docs = {k: v for k, v in docs.items() if k in want}
+    syms = sorted(docs)
+    recs: dict = {}
+    for i in range(0, len(syms), 150):
+        recs.update(C.short_interest_map(syms[i:i + 150], db=db) or {})
+    refresh = refresh or SB.refresh_symbol
+    reads = reads or {}
+    table = {m: [] for m in BM.FLOAT_FRESH_MODES if m != "off"}
+    refreshed, errors, n_read = [], {}, 0
+    for sym in syms:
+        rec = recs.get(sym)
+        if not isinstance(rec, dict):
+            continue
+        doc, bdoc = _clean(rec, sym), docs[sym]
+        with _fresh_mode(BM, "off"):
+            off = SR.si_block(copy.deepcopy(doc), today, basis=copy.deepcopy(bdoc))
+        if with_fts and _refused(off) == BM.REFUSE_DILUTED and isinstance(((off or {}).get("basis") or {}).get(
+                "float_update"), dict):
+            try:
+                got = refresh(sym, db, now, store=False)
+            except Exception as exc:                           # noqa: BLE001 — the stored doc stands
+                errors[sym] = type(exc).__name__
+                got = None
+            if isinstance(got, dict) and not got.get("skipped"):
+                bdoc = got
+                refreshed.append(sym)
+                with _fresh_mode(BM, "off"):
+                    off = SR.si_block(copy.deepcopy(doc), today, basis=copy.deepcopy(bdoc))
+        n_read += 1
+        base = _mode_row(off, reads.get(sym))
+        for m in table:
+            with _fresh_mode(BM, m):
+                b = SR.si_block(copy.deepcopy(doc), today, basis=copy.deepcopy(bdoc))
+            row = _mode_row(b, reads.get(sym))
+            if any(row[k] != base[k] for k in ("refused", "pct_of_float", "tier", "listed", "flags")):
+                table[m].append({"symbol": sym, "refused": [base["refused"], row["refused"]],
+                                 "pct_of_float": [base["pct_of_float"], row["pct_of_float"]],
+                                 "tier": [base["tier"], row["tier"]], "listed": [base["listed"], row["listed"]],
+                                 "chip": [base["chip"], row["chip"]],
+                                 "flags_gained": sorted(set(row["flags"]) - set(base["flags"])),
+                                 "flags_lost": sorted(set(base["flags"]) - set(row["flags"]))})
+    return {"run_at": now.astimezone(timezone.utc).isoformat(timespec="seconds"), "today": today.isoformat(),
+            "built_mode": BM.FLOAT_FRESH_WHEN, "modes": list(BM.FLOAT_FRESH_MODES), "n_docs": len(syms),
+            "n_read": n_read, "with_fts": bool(with_fts), "refreshed": refreshed, "refresh_errors": errors,
+            "movers": table,
+            "list_moves": {m: [r["symbol"] for r in rows if _list_flip(r["listed"])] for m, rows in table.items()}}
+
+
+def _list_flip(pair) -> bool:
+    """True only when the 🩳 list membership itself flips (listed True <-> False) — a changed reason word with the
+    name off (or on) the list both ways is not an enter / leave."""
+    if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+        return False
+    a, b = pair
+    if not (isinstance(a, (list, tuple)) and a and isinstance(b, (list, tuple)) and b):
+        return False
+    return bool(a[0]) != bool(b[0])
+
+
 def session_reads(session: Optional[date] = None) -> dict:
     """{SYM: the 🩳 sub's stored read doc} for the session ({} on any fault) — the High SI list's input."""
     try:
@@ -414,7 +521,13 @@ def main(argv=None) -> int:
     ap.add_argument("--symbols", default="", help="comma-separated; default = the 🩳 sub's reads + the 👀 Watch list")
     ap.add_argument("--seed", default=None, help="a `share_basis seed` input file, laid over in memory only")
     ap.add_argument("--out", default=".", help="output directory")
+    ap.add_argument("--modes", action="store_true",
+                    help="every stored basis doc under each FLOAT_FRESH_MODES (names that differ from 'off')")
+    ap.add_argument("--with-fts", action="store_true",
+                    help="with --modes: re-read (store=False) the names 'off' refuses as diluted under a newer float")
     args = ap.parse_args(argv)
+    if args.with_fts and not args.modes:
+        ap.error("--with-fts needs --modes")
 
     from massive_keys import stocks_key
     from short_interest import client as C
@@ -430,6 +543,8 @@ def main(argv=None) -> int:
     from chart_maps.gajjala import tab as GT
     today = GT._et(now).date()
 
+    if args.modes:
+        return _main_modes(args, db=db, now=now, today=today, key=key, attempted=ATTEMPTED)
     out = run(syms, db=db, now=now, today=today, seed=seed, reads=session_reads())
     out["attempted_writes"] = len(ATTEMPTED)
     out["attempted_write_methods"] = dict(collections.Counter(ATTEMPTED))
@@ -467,6 +582,32 @@ def main(argv=None) -> int:
         print(_scrub("SMTK STRUCTURAL CHECK FAILED: %s" % "; ".join(out["smtk_failures"]), key))
         return 1
     print("SMTK structural check: holds")
+    return 0
+
+
+def _main_modes(args, *, db, now, today, key, attempted) -> int:
+    syms = [s for s in args.symbols.split(",") if s.strip()] or None
+    out = modes_run(db=db, now=now, today=today, with_fts=args.with_fts, reads=session_reads(), symbols=syms)
+    out["attempted_writes"] = len(attempted)
+    out["attempted_write_methods"] = dict(collections.Counter(attempted))
+    od = Path(args.out)
+    od.mkdir(parents=True, exist_ok=True)
+    (od / "si_share_basis_modes.json").write_text(
+        _scrub(json.dumps(_finite_json(out), indent=1, ensure_ascii=False, default=str), key), encoding="utf-8")
+    print("built mode: %s · stored basis docs %d · read %d · re-read with the full-text answer: %s"
+          % (out["built_mode"], out["n_docs"], out["n_read"], " ".join(out["refreshed"]) or "-"))
+    for m, rows in out["movers"].items():
+        print("\nmode %s — %d name(s) differ from 'off'" % (m, len(rows)))
+        print("SYM | refused | % of float | tier | 🩳 High SI list | flags gained | flags lost")
+        for r in rows:
+            print(_scrub("%s | %s -> %s | %s -> %s | %s -> %s | %s -> %s | %s | %s" % (
+                r["symbol"], r["refused"][0], r["refused"][1], r["pct_of_float"][0], r["pct_of_float"][1],
+                r["tier"][0], r["tier"][1], r["listed"][0], r["listed"][1], ",".join(r["flags_gained"]) or "-",
+                ",".join(r["flags_lost"]) or "-"), key))
+        print("enters / leaves the 🩳 list: %s" % (" ".join(out["list_moves"][m]) or "-"))
+    if out["refresh_errors"]:
+        print("re-read errors: %s" % json.dumps(out["refresh_errors"]))
+    print("attempted writes: %d %s" % (out["attempted_writes"], json.dumps(out["attempted_write_methods"])))
     return 0
 
 
