@@ -20041,6 +20041,161 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '📚 Playbook videos (2026-11-27): owner-only routes in playbook_api.py, BE == FE title / path, the accept rule, ONE component mounted once per place, {pbSlot} ×3, size latched, publish.py writes only under videos/playbook/<slug>, the ✨',
+    file: 'src/components/PlaybookVideos.tsx',
+    // Ajay 2026-11-27 ~02:15 ET, verbatim: "I loved the video can you move them under our replay tab with a PLaybook learning
+    // and also add it to the playbook tab too with videos". Spec playbookvid rev 2 §3.9 + §4.5. Display only, primary
+    // owner only: the list and the bytes behind the ONE gate, the 🎬 mount only after the board's own 200 (ownerSeen), the
+    // 📓 mount behind /auth/me is_primary_admin. UNMEASURED — a study film, not a signal.
+    checks: (pv) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const count = (s, needle) => s.split(needle).length - 1;
+      const pyStr = (src, name) => (new RegExp(`^${name} = "([^"]*)"`, 'm').exec(src) || [])[1];
+      const pyInt = (src, name) => { const m = new RegExp(`^(?:[A-Z_]+ = [^;\\n]+; )*${name} = (\\d+)\\b`, 'm').exec(src); return m ? Number(m[1]) : null; };
+
+      // 1. playbook_api.py: two routes, each behind the ONE gate; ONE FileResponse with the video headers
+      const pa = quiet('../backend/chart_maps/replays/playbook_api.py');
+      const paC = pyCode(pa);
+      const routes = [...paC.matchAll(/@router\.(?:get|api_route)\(([^\n]*)\)\s*\nasync def \w+\(([^\n]*)\):/g)];
+      if (routes.length !== 2) errs.push(`replays/playbook_api.py must declare exactly two routes (found ${routes.length})`);
+      for (const r of routes) if (!/email: str = Depends\(require_primary_admin\)/.test(r[2])) errs.push(`playbook_api.py route ${r[1].trim()} must take email: str = Depends(require_primary_admin)`);
+      if (!/^from ollama_chat\.api import require_primary_admin$/m.test(pa)) errs.push('playbook_api.py must import the ONE gate (from ollama_chat.api import require_primary_admin)');
+      const fr = paC.match(/return FileResponse\([^\n]*/g) || [];
+      if (fr.length !== 1) errs.push(`playbook_api.py must carry exactly one return FileResponse( (found ${fr.length})`);
+      else if (!/headers=C\.VIDEO_HEADERS\)$/.test(fr[0])) errs.push('playbook_api.py FileResponse must carry headers=C.VIDEO_HEADERS (identity + private)');
+      if (!/JSONResponse\(body, headers=C\.LISTING_HEADERS\)/.test(paC)) errs.push('playbook_api.py listing must answer with headers=C.LISTING_HEADERS (no-store)');
+
+      // 2. api.py includes the sub-router and keeps exactly four own routes
+      const api = pyCode(quiet('../backend/chart_maps/replays/api.py'));
+      if (count(api, 'router.include_router(playbook_router)') !== 1) errs.push('replays/api.py must carry router.include_router(playbook_router) exactly once');
+      if (!/^from \.playbook_api import router as playbook_router\b/m.test(api)) errs.push('replays/api.py must import playbook_api.router as playbook_router');
+      const own = [...api.matchAll(/@router\.(?:get|api_route)\(/g)].length;
+      if (own !== 4) errs.push(`replays/api.py must keep exactly four own routes (found ${own}) — the playbook routes live in playbook_api.py`);
+
+      // 3. constants == FE (title, path) and == publish.py (kind, sub, schema)
+      const cpy = quiet('../backend/chart_maps/replays/constants.py');
+      const kind = pyStr(cpy, 'PLAYBOOK_KIND'); const sub = pyStr(cpy, 'PLAYBOOK_SUB');
+      if (kind !== 'playbook') errs.push(`constants.PLAYBOOK_KIND must be "playbook" (found ${kind})`);
+      if (sub !== 'playbook') errs.push(`constants.PLAYBOOK_SUB must be "playbook" (found ${sub})`);
+      const lib = quiet('src/lib/playbookVideos.ts');
+      const feTitle = (/^ {2}replays: \{ title: '([^']+)'/m.exec(lib) || [])[1];
+      const beTitle = pyStr(cpy, 'PLAYBOOK_TITLE');
+      if (!beTitle || feTitle !== beTitle) errs.push(`FE PBV_WHERE.replays.title '${feTitle}' != constants.PLAYBOOK_TITLE '${beTitle}'`);
+      const apiPath = pyStr(cpy, 'API_PATH');
+      const pbSuffix = (/^PLAYBOOK_API_PATH = API_PATH \+ "([^"]+)"/m.exec(cpy) || [])[1];
+      const fePath = (/^export const PBV_PATH = '([^']+)';/m.exec(lib) || [])[1];
+      if (!apiPath || !pbSuffix || fePath !== apiPath + pbSuffix) errs.push(`FE PBV_PATH '${fePath}' != constants.PLAYBOOK_API_PATH '${apiPath}${pbSuffix}'`);
+      const beSchema = (/^PLAYBOOK_SCHEMA = (\d+)/m.exec(cpy) || [])[1];
+
+      // 4. playbook.py accept rule + guards; neither module uses .match( / re.search(
+      const pb = quiet('../backend/chart_maps/replays/playbook.py');
+      const pbC = pyCode(pb);
+      if (!/body\.get\("kind"\) != C\.PLAYBOOK_KIND/.test(pbC)) errs.push('playbook.py accept rule must compare body.get("kind") with C.PLAYBOOK_KIND');
+      if (!/if "window" in body:/.test(pbC)) errs.push('playbook.py must refuse a sidecar that carries a window key (a playbook file never enters the nightly list)');
+      if (count(pbC, 'except C.CARD_ERRORS:') < 1) errs.push('playbook.py must build each card inside try … except C.CARD_ERRORS');
+      if (!/nb != st\.st_size/.test(pbC)) errs.push('playbook.py must compare the sidecar bytes with the file size (a half-updated pair stays hidden)');
+      if (!/stat\.S_ISDIR\(os\.lstat\(/.test(pbC)) errs.push('playbook.py must guard videos/playbook with stat.S_ISDIR(os.lstat(…)) (a symlink never lists)');
+      for (const [n, s] of [['playbook.py', pbC], ['playbook_api.py', paC]]) if (/\.match\(|re\.search\(/.test(s)) errs.push(`${n} must apply patterns with .fullmatch only (no .match( / re.search()`);
+
+      // 5. lib: pbvSrc accepts only the playbook video path
+      if (!/startsWith\(`\$\{PBV_PATH\}\/video\/`\)/.test(tsCode(lib))) errs.push('lib/playbookVideos.ts pbvSrc must accept only `${PBV_PATH}/video/`');
+
+      // 6. the component: one <video> with the house attributes, no <a, no .play(, the owner wrapper
+      const pc = tsCode(pv);
+      const vids = pc.match(/<video\b[^>]*\/?>/g) || [];
+      if (vids.length !== 1) errs.push(`PlaybookVideos.tsx must render exactly one <video> (found ${vids.length})`);
+      else {
+        for (const need of [/\bcontrols\b/, /preload="metadata"/, /\bplaysInline\b/]) if (!need.test(vids[0])) errs.push(`PlaybookVideos.tsx <video> must carry ${need.source}`);
+        for (const bad of [/\bautoPlay\b/, /\bmuted\b/, /\bposter\b/, /\bdownload\b/]) if (bad.test(vids[0])) errs.push(`PlaybookVideos.tsx <video> must not carry ${bad.source}`);
+      }
+      if (/<a[\s>]/.test(pc)) errs.push('PlaybookVideos.tsx must render no <a> (every anchor on 📓 is an external link)');
+      if (/\.play\(/.test(pc)) errs.push('PlaybookVideos.tsx must never call .play( — the app never presses play');
+      if (!pc.includes('if (loading || !user?.is_primary_admin) return null;')) errs.push('PlaybookVideosOwner must return null unless /auth/me says is_primary_admin');
+
+      // 7. the mounts: ONE per place
+      const gb = tsCode(quiet('src/components/GajjalaBoard.tsx'));
+      if (count(gb, '<PlaybookVideosOwner where="playbook" />') !== 1) errs.push('GajjalaBoard.tsx must mount <PlaybookVideosOwner where="playbook" /> exactly once');
+      if (/<PlaybookVideos\s/.test(gb)) errs.push('GajjalaBoard.tsx must never mount a bare <PlaybookVideos (the owner check lives in PlaybookVideosOwner)');
+      const rb = tsCode(quiet('src/components/ReplaysBoard.tsx'));
+      if (count(rb, '<PlaybookVideos where="replays" />') !== 1) errs.push('ReplaysBoard.tsx must mount <PlaybookVideos where="replays" /> exactly once');
+      if (!rb.includes('const pbSlot = ownerSeen ? <PlaybookVideos where="replays" /> : null;')) errs.push('ReplaysBoard.tsx must mount it only inside const pbSlot = ownerSeen ? … : null;');
+      if (count(rb, '{pbSlot}') !== 3) errs.push(`ReplaysBoard.tsx must render {pbSlot} exactly three times — first child of each return (found ${count(rb, '{pbSlot}')})`);
+      const rets = [...rb.matchAll(/\breturn \(?\s*<>([\s\S]*?)<ReplaysPastWinners\b/g)];
+      if (rets.length !== 3) errs.push(`ReplaysBoard.tsx: expected three returns that render ReplaysPastWinners (found ${rets.length})`);
+      for (const [i, r] of rets.entries()) {
+        const a = r[1].indexOf('{pbSlot}'); const b = r[1].indexOf('className="rp-board"');
+        if (a < 0 || b < 0 || a > b) errs.push(`ReplaysBoard.tsx return #${i + 1} must carry {pbSlot} BEFORE its rp-board div (🏆 keeps child index 2)`);
+      }
+      if (count(rb, 'setOwnerSeen(true)') !== 1) errs.push('ReplaysBoard.tsx must call setOwnerSeen(true) exactly once (in the board GET .then)');
+      if (/useCurrentUser|\/auth\/me/.test(rb)) errs.push('ReplaysBoard.tsx must not call useCurrentUser or /auth/me (the ONE-fetch pins)');
+
+      // 8. the three new FE files: no admin email, no window literal, never the b-word
+      for (const f of ['src/components/PlaybookVideos.tsx', 'src/lib/playbookVideos.ts', 'src/styles/playbookVideos.css']) {
+        const t = f === 'src/components/PlaybookVideos.tsx' ? pv : f === 'src/lib/playbookVideos.ts' ? lib : quiet(f);
+        if (/ajaykandakatla/i.test(t)) errs.push(`${f} carries the admin email — never in the bundle`);
+        if (t.includes('04:00-20:00')) errs.push(`${f} types the window literal 04:00-20:00`);
+        if (/bounc/i.test(t)) errs.push(`${f} says the b-word — "reversal", never "bounce"`);
+      }
+
+      // 9. the ✨ — his words verbatim, once, dated, routed to 🎬 Replays, past index 100 right above the 🧘 entry
+      const ID = 'chart-maps-playbook-videos-2026-11-27';
+      const HIS = 'I loved the video can you move them under our replay tab with a PLaybook learning and also add it to the playbook tab too with videos';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-27') errs.push(`the 📚 ✨ addedAt must be 2026-11-27 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=replays&playbook=1') errs.push(`the 📚 ✨ route must be /chart-maps?tab=replays&playbook=1 (found ${lab[3]})`);
+        if (!L.includes(`“${HIS}”`)) errs.push('the 📚 ✨ must quote him verbatim inside curly quotes');
+        for (const w of [beTitle || '📚 Playbook learning', '🎬 Videos', 'Only you see it.', 'UNMEASURED', 'not a signal']) if (!L.includes(w)) errs.push(`the 📚 ✨ must say: ${w}`);
+        if (/bounc/i.test(L) || /\bedges?\b/i.test(L)) errs.push('the 📚 ✨ must never say bounce / edge');
+        if (/ajaykandakatla/i.test(L)) errs.push('the 📚 ✨ must carry no admin email (the label ships in every bundle)');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-gg-like-calm-check-2026-11-27') errs.push(`the ✨ '${ID}' must sit right above the 🧘 GG-like entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 10. the size is latched: read once in useState, never recomputed on a later render
+      if (!pc.includes('useState(() => pbvDefaultVariant(')) errs.push('PlaybookVideos.tsx must latch the size: useState(() => pbvDefaultVariant(…))');
+      if (count(pc, 'pbvDefaultVariant(') !== 1) errs.push(`PlaybookVideos.tsx must call pbvDefaultVariant( only inside the useState initialiser (found ${count(pc, 'pbvDefaultVariant(')})`);
+
+      // 11. publish.py (host file, outside the repo — skipped when absent): fullmatch only, a bounded wait, == constants,
+      //     and every write lands under <videos-root>/playbook/<slug>/ (realpath-checked dest, two atomic renames into it)
+      const PUB = '../../eod-audits/research/2026-11-27_gg_film/engine/publish.py';
+      if (exists(PUB)) {
+        const pubC = pyCode(read(PUB));
+        if (/\.match\(|re\.search\(/.test(pubC)) errs.push('publish.py must apply patterns with re.fullmatch only (no .match( / re.search()');
+        const poll = pyInt(pubC, 'POLL_SECONDS');
+        if (poll == null || poll < 60) errs.push(`publish.py POLL_SECONDS must be an int >= 60 (found ${poll})`);
+        if (!kind || pyStr(pubC, 'KIND') !== kind) errs.push(`publish.py KIND '${pyStr(pubC, 'KIND')}' must equal constants.PLAYBOOK_KIND '${kind}'`);
+        const destSub = (/DEST_SUB = "([^"]+)"/.exec(pubC) || [])[1];
+        if (!destSub || destSub !== sub) errs.push(`publish.py DEST_SUB '${destSub}' must equal constants.PLAYBOOK_SUB '${sub}'`);
+        const pubSchema = (/\bSCHEMA = (\d+)/.exec(pubC) || [])[1];
+        if (!pubSchema || pubSchema !== beSchema) errs.push(`publish.py SCHEMA ${pubSchema} must equal constants.PLAYBOOK_SCHEMA ${beSchema}`);
+        if (!/want = os\.path\.join\(os\.path\.realpath\(str\(vr\)\), DEST_SUB, slug\)/.test(pubC) || !/if os\.path\.realpath\(str\(dest\)\) != want:\s*\n\s*raise Refused/.test(pubC)) errs.push('publish.py must refuse a destination whose realpath is not <videos-root>/playbook/<slug>');
+        const reps = pubC.match(/os\.replace\([^\n]*\)/g) || [];
+        if (reps.length !== 2 || !reps.includes('os.replace(str(part), str(dst))') || !reps.includes('os.replace(str(tmp), str(jsn))')) errs.push(`publish.py must write by exactly two renames into dest (found ${reps.join(' | ') || 'none'})`);
+        for (const v of ['dst = dest / src.name', 'jsn = dest / (src.stem + ".json")', 'part = dest / f"', 'tmp = dest / f"']) if (!pubC.includes(v)) errs.push(`publish.py: every write target must be under dest (missing ${v})`);
+        if (/shutil\.(rmtree|move)|os\.(remove|rename|rmdir|removedirs)\(/.test(pubC)) errs.push('publish.py must never move or remove a tree (no rmtree / move / remove / rename / rmdir)');
+        if (count(pubC, 'os.mkdir(') !== 1) errs.push('publish.py must create folders only in dest_dir (playbook/ and <slug>/)');
+      }
+
+      // 12. ship together
+      for (const f of ['src/lib/playbookVideos.ts', 'src/lib/playbookVideos.test.ts', 'src/styles/playbookVideos.css', 'src/components/PlaybookVideos.test.tsx',
+        'src/components/PlaybookVideos.phone.test.tsx', 'src/components/ReplaysBoard.playbook.test.tsx', 'src/components/GajjalaBoard.playbook_videos.test.tsx',
+        'src/lib/newFeatures.playbook_videos.test.ts', '../backend/chart_maps/replays/playbook.py', '../backend/tests/test_replays_playbook_2026_11_27.py',
+        '../docs/replays/playbook_videos_2026_11_27.md', '../docs/replays/playbook_videos_frontend_2026_11_27.md',
+        '../docs/replays/playbook_videos_publish_2026_11_27.md']) if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

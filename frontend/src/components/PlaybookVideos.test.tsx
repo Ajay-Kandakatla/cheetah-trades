@@ -216,6 +216,26 @@ describe('📱 the size — phone default, latched, the switch', () => {
     expect(v2.currentTime).toBe(5);
     expect(playSpy).not.toHaveBeenCalled();
   });
+  it('NEGATIVE: 🖥 then 📱 before loadedmetadata → the ORIGINAL position is restored, not 0', async () => {
+    media(true);
+    const r = await mount({ body: READY }, '/chart-maps?tab=replays&playbook=1');
+    await settle(r);
+    await click(r.getByTestId(`pbv-play-${SLUG}-01_bull_flag`));
+    const v = videos(r.container)[0];
+    expect(v.getAttribute('src')).toBe(V('01_bull_flag_phone.mp4'));
+    v.currentTime = 42;
+    await click(r.getByTestId('pbv-variant-desktop'));
+    const v2 = videos(r.container)[0];
+    v2.currentTime = 0;                                                    // the new file has not loaded yet
+    await click(r.getByTestId('pbv-variant-phone'));                       // second tap, still no loadedmetadata
+    const v3 = videos(r.container)[0];
+    expect(v3.getAttribute('src')).toBe(V('01_bull_flag_phone.mp4'));
+    v3.currentTime = 0;
+    fireEvent.loadedMetadata(v3);
+    expect(v3.currentTime).toBe(42);
+    expect(v3.paused).toBe(true);
+    expect(playSpy).not.toHaveBeenCalled();
+  });
   it('NEGATIVE: a switch that does not change the playing file arms no restore', async () => {
     media(true);
     const r = await mount({ body: READY }, '/chart-maps?tab=replays&playbook=1');

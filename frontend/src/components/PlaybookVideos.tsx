@@ -151,12 +151,13 @@ export function PlaybookVideos({ where }: { where: PbvWhere }) {
   if (cfg.quiet && !(ready && films.length > 0)) return null;
 
   const play = (k: string) => { resumeAt.current = null; setPlaying((cur) => (cur === k ? null : k)); };
-  /* A tap on the switch: when a video is mounted and its file changes, keep the position (restored on loadedmetadata). */
+  /* A tap on the switch: when a video is mounted and its file changes, keep the position (restored on loadedmetadata).
+     A restore still pending (🖥 then 📱 before loadedmetadata) is kept — the new element would read 0. */
   const pickSize = (k: string) => {
     if (k === want) return;
     const vs = playing ? rowVariants.get(playing) : undefined;
     const el = vref.current;
-    if (el && vs && pbvSrc(pbvPick(vs, want)) !== pbvSrc(pbvPick(vs, k))) resumeAt.current = el.currentTime;
+    if (el && vs && pbvSrc(pbvPick(vs, want)) !== pbvSrc(pbvPick(vs, k))) resumeAt.current = resumeAt.current ?? el.currentTime;
     else resumeAt.current = null;
     setWant(k);
   };

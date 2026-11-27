@@ -1089,6 +1089,21 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-27 ~02:15 ET, verbatim: "I loved the video can you move them under our replay tab with a PLaybook learning
+  // and also add it to the playbook tab too with videos". Spec playbookvid rev 2 (scratchpad playbookvid/spec.md §3.9).
+  // BE chart_maps/replays/playbook.py (the listing engine) + playbook_api.py (two owner-only routes, included by api.py);
+  // FE lib/playbookVideos.ts + components/PlaybookVideos.tsx (ONE component, mounted once in ReplaysBoard's pbSlot and
+  // once as PlaybookVideosOwner in GajjalaBoard's 📓 PlaybookPanel) + styles/playbookVideos.css. Display only, owner only.
+  // UNMEASURED. Pinned by scripts/contracts.mjs ("📚 Playbook videos (2026-11-27)") + src/lib/newFeatures.playbook_videos.test.ts.
+  // PLACED past index 100 right above the 🧘 GG-like entry (the tape → 🧘 pair is not pinned adjacent): no NEW_FEATURES[n]
+  // pin moves and the 🧘 → 🧮 → 📅 chain is untouched. Docs docs/replays/playbook_videos_2026_11_27.md,
+  // playbook_videos_frontend_2026_11_27.md, playbook_videos_publish_2026_11_27.md.
+  {
+    id: 'chart-maps-playbook-videos-2026-11-27',
+    label: "📚 Playbook learning — you said: “I loved the video can you move them under our replay tab with a PLaybook learning and also add it to the playbook tab too with videos”. The narrated setups film now plays in the app: open 📚 Playbook learning at the top of 🎬 Replays, or 🎬 Videos on 🚩 Gajjala's ▸ 📓 Playbook. One row per chapter with its length and size — tap ▶ to play. Each chapter has a light phone copy and a 1080p copy with a switch between them; a phone-width screen starts on the light one. The Full film row is one large 1080p file. The list shows what has been published so far. Only you see it. A study film: hand-picked teaching charts, UNMEASURED, not a signal.",
+    addedAt: '2026-11-27',
+    route: '/chart-maps?tab=replays&playbook=1',
+  },
   // Ajay 2026-11-27 ~00:15 ET, verbatim: "Yes please, I think we are in bear market and looking at bad setups and make
   // them work, forcing them to work honestly..." · "Can you update them please.. find calmer and better setups.." ·
   // "Continue to track the runners we might evolve and find patterns in the current runners too but I want to make sure
