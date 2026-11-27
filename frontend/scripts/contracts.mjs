@@ -19683,6 +19683,203 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧮 float-accuracy guard (2026-11-26): read.pct_of is the ONE division, source_check pure with one division, SOURCE_KEYS apart from BASIS_KEYS, the two mode words, share_basis two hosts and no float read in refresh_symbol, the 🧮 mount, no typed chip words, the ✨',
+    file: '../backend/short_interest/source_check.py',
+    // Ajay 2026-11-26 ~21:20 ET, verbatim: "Also the Float share count issue and SI discrepancy happened too many times need
+    // to do something about it". Spec floatguard rev 2 §4.7 (§3.1 the one division, §3.3 the second float's I/O, §3.4 the
+    // pure comparison, §3.9 the FE, §4.6 (d) the call counts). Display only. The backend AST guard
+    // (tests/test_si_one_division_guard_2026_11_26.py) holds the exact division inventory; this block pins the same
+    // shape from the frontend gate so a commit cannot land a second division without both going red.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const count = (s, re) => (s.match(re) || []).length;
+      // Python code with every string literal and comment blanked (newlines kept) — a word inside a docstring or a
+      // "%s / %s" format string is never counted as code.
+      const pyBare = (s) => {
+        let out = '';
+        let i = 0;
+        while (i < s.length) {
+          const c = s[i];
+          if (c === '#') { while (i < s.length && s[i] !== '\n') i++; continue; }
+          if (c === '"' || c === "'") {
+            const q = s.startsWith(c.repeat(3), i) ? c.repeat(3) : c;
+            i += q.length;
+            out += '""';                                                              // the blank sits where the literal opened
+            while (i < s.length && !s.startsWith(q, i)) {
+              if (s[i] === '\\') { i += 2; continue; }
+              if (q.length === 1 && s[i] === '\n') break;
+              if (s[i] === '\n') out += '\n';
+              i++;
+            }
+            i += q.length;
+            continue;
+          }
+          out += c;
+          i++;
+        }
+        return out;
+      };
+      const divs = (code) => count(code, /(?<!\/)\/(?!\/)/g);                       // true division (and /=), never //
+      const fnSlice = (code, name) => {                                               // a top-level def up to the next top-level line
+        const at = code.search(new RegExp(`^def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = code.slice(at + 4);
+        const end = rest.search(/\n(?=[^\s\n])/);
+        return code.slice(at, end < 0 ? undefined : at + 4 + end);
+      };
+      const calls = (code) => count(code, /\bpct_of\(/g) - count(code, /\bdef pct_of\(/g);
+      const tuple = (code, name) => {
+        const m = new RegExp(`^${name}\\s*=\\s*\\(([^)]*)\\)`, 'm').exec(code);
+        return m ? [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]) : null;
+      };
+
+      // 1. read.pct_of is THE one division (§3.1, §4.6 (d)) — read the RAW sources: tuples keep their quoted words
+      const rdRaw = quiet('../backend/short_interest/read.py');
+      const rd = pyBare(rdRaw);
+      if (count(rd, /^def pct_of\(/gm) !== 1) errs.push('read.py must define pct_of exactly once (the ONE division)');
+      const po = fnSlice(rd, 'pct_of');
+      const poRaw = fnSlice(rdRaw.replace(/#[^\n]*/g, ''), 'pct_of') || '';
+      if (po && divs(po) !== 1) errs.push(`read.pct_of must hold exactly one division (found ${divs(po)})`);
+      if (po && !/\bcount \/ shares \* 100\.0\b/.test(poRaw)) errs.push('read.pct_of must divide count / shares * 100.0 (the §4.6 planted shape)');
+      if (rdRaw.indexOf('def pct_of(') < 0 || rdRaw.indexOf('def pct_of(') > rdRaw.indexOf('\nEXTREME_WORD')) errs.push('read.pct_of must sit ABOVE EXTREME_WORD (the guarded slice holds no numeric literal)');
+      const sib = fnSlice(rd, 'si_block');
+      if (calls(rd) !== 2) errs.push(`read.py must call pct_of exactly 2 times (found ${calls(rd)})`);
+      if (sib && calls(sib) !== 2) errs.push(`both read.py pct_of calls must sit in si_block (found ${calls(sib)} there)`);
+      if (sib && divs(sib) !== 0) errs.push(`read.si_block must hold no division of its own (found ${divs(sib)}) — it calls pct_of`);
+      const bm = pyBare(quiet('../backend/short_interest/basis_math.py'));
+      if (calls(bm) !== 5) errs.push(`basis_math.py must call SR.pct_of exactly 5 times (found ${calls(bm)})`);
+      const st = fnSlice(bm, 'stale_trigger');
+      if (!st || divs(st) !== 0) errs.push(`basis_math.stale_trigger must hold no division of its own (found ${st ? divs(st) : 'no function'})`);
+      const cl = pyBare(quiet('../backend/short_interest/client.py'));
+      if (calls(cl) !== 3) errs.push(`client.py must call SR.pct_of exactly 3 times (found ${calls(cl)})`);
+      const hs = pyBare(quiet('../backend/chart_maps/gajjala/high_si.py'));
+      if (calls(hs) !== 1) errs.push(`high_si.py must call SR.pct_of exactly once (found ${calls(hs)})`);
+      const cp = fnSlice(hs, 'card_pct');
+      if (!cp || divs(cp) !== 0) errs.push(`high_si.card_pct must hold no division of its own (found ${cp ? divs(cp) : 'no function'})`);
+
+      // 2. source_check.py — PURE (no I/O module, no clock) and exactly ONE division, in rel_of
+      const sc = pyBare(src);
+      if (calls(sc) < 1) errs.push('source_check.py must reach the second % through SR.pct_of');
+      const scImports = [...sc.matchAll(/^\s*(?:from\s+[\w.]+\s+import\s+[^\n]+|import\s+[^\n]+)/gm)].map((m) => m[0].trim());
+      const scBad = scImports.filter((l) => /\b(requests|pymongo|share_basis|urllib|httpx)\b/.test(l));
+      if (scBad.length) errs.push(`source_check.py must stay pure — no requests / pymongo / share_basis import (found ${scBad.join(' | ')})`);
+      if (/\b(datetime\.now|date\.today|time\.time)\(/.test(sc)) errs.push('source_check.py must read no clock (pure)');
+      if (divs(sc) !== 1) errs.push(`source_check.py must hold exactly one division (found ${divs(sc)})`);
+      const ro = fnSlice(sc, 'rel_of');
+      if (!ro || divs(ro) !== 1) errs.push('source_check.py: its one division must sit in rel_of');
+
+      // 3. SOURCE_KEYS ride beside BASIS_KEYS, never inside it
+      const sk = tuple(src, 'SOURCE_KEYS');
+      const bk = tuple(rdRaw, 'BASIS_KEYS');
+      if (!sk || !sk.length) errs.push('source_check.py must define SOURCE_KEYS');
+      if (!bk || !bk.length) errs.push('read.py must define BASIS_KEYS');
+      if (sk && bk) { const both = sk.filter((k) => bk.includes(k)); if (both.length) errs.push(`read.BASIS_KEYS must not grow — SOURCE_KEYS ride apart (found ${both.join(', ')})`); }
+      if (!/^SOURCE_KEYS = SCK\.SOURCE_KEYS\b/m.test(rd)) errs.push('read.py must bind SOURCE_KEYS = SCK.SOURCE_KEYS (one definition)');
+
+      // 4. the two mode words — HIS CALL #1 (EXTREME_CONTEST, built "flag") and #7 (SB_MFLOAT_WHEN)
+      const ec = /^EXTREME_CONTEST = "([a-z_]+)"/m.exec(src);
+      const ecm = tuple(src, 'EXTREME_CONTEST_MODES');
+      if (!ec || !ecm) errs.push('source_check.py must define EXTREME_CONTEST and EXTREME_CONTEST_MODES');
+      else {
+        if (!ecm.includes(ec[1])) errs.push(`source_check.EXTREME_CONTEST "${ec[1]}" must be one of EXTREME_CONTEST_MODES`);
+        for (const w of ['off', 'flag']) if (!ecm.includes(w)) errs.push(`source_check.EXTREME_CONTEST_MODES must keep "${w}"`);
+        if (ec[1] !== 'flag') errs.push(`source_check.EXTREME_CONTEST must be the built "flag" — the word stays; "hold" / "supported" are HIS CALL #1 (found "${ec[1]}")`);
+      }
+      const sbRaw = quiet('../backend/short_interest/share_basis.py');
+      const sbCode = pyBare(sbRaw);
+      const mw = /^SB_MFLOAT_WHEN = "([a-z_]+)"/m.exec(sbRaw);
+      const mwm = tuple(sbRaw, 'SB_MFLOAT_MODES');
+      if (!mw || !mwm) errs.push('share_basis.py must define SB_MFLOAT_WHEN and SB_MFLOAT_MODES');
+      else {
+        if (!mwm.includes(mw[1])) errs.push(`share_basis.SB_MFLOAT_WHEN "${mw[1]}" must be one of SB_MFLOAT_MODES`);
+        if (!mwm.includes('off')) errs.push('share_basis.SB_MFLOAT_MODES must keep "off" (no second-float call, one word away)');
+      }
+
+      // 5. share_basis still reaches exactly two hosts: data.sec.gov (literal) + api.massive.com (SC.BASE_URL)
+      const hosts = new Set([...sbRaw.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map((m) => m[1].toLowerCase()));
+      const bad = [...hosts].filter((h) => h !== 'data.sec.gov' && h !== 'api.massive.com');
+      if (bad.length) errs.push(`share_basis.py may name only data.sec.gov / api.massive.com (found ${bad.join(', ')})`);
+      const scBase = /^BASE_URL = "https:\/\/([a-z0-9.-]+)"/m.exec(quiet('../backend/short_interest/ssr_corp.py'));
+      if (!scBase || scBase[1] !== 'api.massive.com') errs.push('ssr_corp.BASE_URL must stay https://api.massive.com (share_basis reaches Massive through it)');
+      const fp = /^MASSIVE_FLOAT_PATH = "([^"]*)"/m.exec(sbRaw);
+      if (!fp || !fp[1].startsWith('/') || /:\/\//.test(fp[1])) errs.push('share_basis.MASSIVE_FLOAT_PATH must be a path on the Massive host (no host of its own)');
+      if (!/\bSC\.BASE_URL \+ MASSIVE_FLOAT_PATH\b/.test(sbCode)) errs.push('share_basis.py: the second-float GET must go to SC.BASE_URL + MASSIVE_FLOAT_PATH');
+      if (new Set([...hosts, 'api.massive.com']).size !== 2) errs.push('share_basis.py must reach exactly two hosts');
+
+      // 6. refresh_symbol makes NO new outside call — the second float is read by the worker step / the nightly only
+      const rs = fnSlice(sbCode, 'refresh_symbol');
+      if (!rs) errs.push('share_basis.py lost def refresh_symbol(');
+      else for (const fn of ['fetch_mfloats', 'mfloat_step']) if (new RegExp(`\\b${fn}\\(`).test(rs)) errs.push(`share_basis.refresh_symbol must hold no ${fn}( call (spec §3.3 [C4] — five call-count pins)`);
+
+      // 7. GgHighSi mounts the 🧮 section exactly once, right after the 🏁 one
+      const gh = quiet('src/components/GgHighSi.tsx');
+      const nAudit = count(gh, /<GgSiAuditSection\b/g);
+      if (nAudit !== 1) errs.push(`GgHighSi.tsx must mount <GgSiAuditSection> exactly once (found ${nAudit})`);
+      const tAt = gh.indexOf('<GgSiTrackSection');
+      if (nAudit === 1 && (tAt < 0 || gh.indexOf('<GgSiAuditSection') < tAt)) errs.push('GgHighSi.tsx must mount <GgSiAuditSection> AFTER <GgSiTrackSection>');
+      if (!/import \{ GgSiAuditSection \} from '\.\/GgSiAudit';/.test(gh)) errs.push("GgHighSi.tsx must import GgSiAuditSection from './GgSiAudit'");
+
+      // 8. no FE file types the chip words — the chip, hover and panel print the SERVED text. Tests and fixtures quote the
+      //    served payload; the ✨ registry (lib/newFeatures.ts) describes the feature in prose and is not a renderer.
+      const typed = [];
+      const walk = (rel) => {
+        let ents = [];
+        try { ents = readdirSync(join(FRONTEND_ROOT, rel), { withFileTypes: true }); } catch { errs.push(`${rel} is unreadable`); return; }
+        for (const e of ents) {
+          const p = `${rel}/${e.name}`;
+          if (e.isDirectory()) { if (e.name !== '__fixtures__' && e.name !== 'node_modules') walk(p); continue; }
+          if (!/\.(ts|tsx)$/.test(e.name) || /\.test\.tsx?$/.test(e.name) || p === 'src/lib/newFeatures.ts') continue;
+          if (/sources disagree/i.test(quiet(p))) typed.push(p);
+        }
+      };
+      walk('src');
+      if (typed.length) errs.push(`no FE file may type "sources disagree" — it is served (found ${typed.join(', ')})`);
+
+      // 9. the ✨ — his words verbatim in curly quotes, past index 100 right above the 📅 Runners-on-👀 entry, no number of its own
+      const ID = 'gajjala-si-float-accuracy-guard-2026-11-26';
+      const H = 'Also the Float share count issue and SI discrepancy happened too many times need to do something about it';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-27') errs.push(`the 🧮 ✨ addedAt must be 2026-11-27 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala&sub=high_si') errs.push(`the 🧮 ✨ route must be /chart-maps?tab=gajjala&sub=high_si (found ${lab[3]})`);
+        if (!L.includes(`“${H}”`)) errs.push('the 🧮 ✨ must quote him verbatim in curly quotes');
+        for (const w of ['% of float and % of shares', 'Float sources', '⚠️ sources disagree', 'keeps its word', 'holding the word at High instead is built and is your call',
+          'open ⓘ on the 🩳 sub, then 🧮', 'DKI and GMEX still print their figures', 'Display only — no alert, gate, sort or list changed', 'UNMEASURED', 'Not advice.'])
+          if (!L.includes(w)) errs.push(`the 🧮 ✨ must say: ${w}`);
+        if (/\d/.test(L.replace(`“${H}”`, ''))) errs.push('the 🧮 ✨ must print no number of its own (none comes from a constant)');
+        if (/\b(signal|edge)s?\b/i.test(L) || /bounc/i.test(L)) errs.push('the 🧮 ✨ must never say signal / edge / bounce');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-watch-runners-two-weeks-2026-11-26') errs.push(`the ✨ '${ID}' must sit right above the 📅 Runners-on-👀 entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 10. ship together
+      for (const f of ['../backend/short_interest/source_check.py', '../backend/short_interest/source_audit.py',
+        '../backend/tests/test_si_source_check_2026_11_26.py', '../backend/tests/test_si_mfloat_2026_11_26.py',
+        '../backend/tests/test_si_source_audit_2026_11_26.py', '../backend/tests/test_si_source_audit_guards_2026_11_26.py',
+        '../backend/tests/test_si_card_count_2026_11_26.py', '../backend/tests/test_si_float_incidents_2026_11_26.py',
+        '../backend/tests/test_si_one_division_guard_2026_11_26.py', '../backend/tests/test_si_rules_pick_extreme_2026_11_26.py',
+        '../backend/tests/fixtures/massive_float_2026_11_26.json', '../backend/tests/fixtures/si_float_captures_2026_11_26.json',
+        '../backend/tests/fixtures/si_float_probe_rows_2026_11_26.json', '../backend/tests/fixtures/si_float_incidents_2026_11_26.json',
+        '../backend/tests/fixtures/si_float_incidents_golden_2026_11_26.json', '../backend/tests/fixtures/si_float_incidents_hold_golden_2026_11_26.json',
+        '../backend/tests/fixtures/si_source_audit_block_golden_2026_11_26.json',
+        'src/components/GgSiAudit.tsx', 'src/components/GgSiAudit.test.tsx', 'src/components/GgSiAudit.payload.test.tsx',
+        'src/components/RealtimeChips.siSource.test.tsx', 'src/components/ShortInterest.incidents.payload.test.tsx',
+        'src/lib/shortInterest.arith_guard.test.ts', 'src/lib/newFeatures.si_float_guard.test.ts',
+        '../docs/short_interest/float_accuracy_guard_2026_11_26.md', '../docs/short_interest/float_accuracy_guard_frontend_2026_11_26.md',
+        '../docs/short_interest/massive_float_source_2026_11_26.md', '../docs/short_interest/source_audit_2026_11_26.md',
+        '../docs/short_interest/one_division_2026_11_26.md'])
+        if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

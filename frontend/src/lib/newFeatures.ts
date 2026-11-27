@@ -1089,6 +1089,27 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-26 ~21:20 ET, verbatim: "Also the Float share count issue and SI discrepancy happened too many times need
+  // to do something about it". Spec floatguard rev 2 (scratchpad floatguard/spec.md §3, §3.10, §4.7). BE
+  // short_interest/read.pct_of (THE one division — read.si_block, basis_math stale_trigger / verdict, client
+  // short_interest_for / _build_doc and high_si.card_pct all call it), short_interest/source_check.py (PURE: the float we
+  // divide by beside the second dated float; SOURCE_KEYS; EXTREME_CONTEST "flag" — HIS CALL #1, "hold" built and off),
+  // short_interest/share_basis (the Massive /stocks/vX/float read = the `mfloat` sub-doc, SB_MFLOAT_WHEN — HIS CALL #7;
+  // never inside refresh_symbol), short_interest/source_audit.py (the nightly 🧮 audit + the re-runnable dry run), the
+  // hooks in chart_maps/gajjala/high_si.py / nightly.py / si_track.py; FE components/GgSiAudit.tsx mounted in
+  // GgHighSi.tsx after the 🏁, RealtimeChips.tsx (the served share-count sentence). DKI and GMEX still print their
+  // figures, with the warning (HIS CALL #2). Display only — no alert, gate, sort or list change. UNMEASURED. Pinned by
+  // scripts/contracts.mjs ("🧮 float-accuracy guard (2026-11-26)") + src/lib/newFeatures.si_float_guard.test.ts.
+  // PLACED past index 100, right above the 📅 Runners-on-👀 entry (the 💧 / ✅ way): no NEW_FEATURES[n] pin moves and the
+  // 📅 → 🩳 share-count → 📅 chart chain is untouched. Docs docs/short_interest/float_accuracy_guard_2026_11_26.md,
+  // massive_float_source_2026_11_26.md, source_audit_2026_11_26.md, one_division_2026_11_26.md,
+  // float_accuracy_guard_frontend_2026_11_26.md.
+  {
+    id: 'gajjala-si-float-accuracy-guard-2026-11-26',
+    label: "🧮 A second float beside every 🩳 number — you said: “Also the Float share count issue and SI discrepancy happened too many times need to do something about it”. One place now works out % of float and % of shares for every 🩳 chip, panel and table. A second dated float — Massive's free float — is read for every name we check and shown beside Yahoo's: both counts, both dates, both % and how far apart, in the hover and in a new Float sources row on the 🩳 panel. When the two dated floats disagree on an EXTREME name, the chip keeps its word and adds ⚠️ sources disagree, with both values in the hover; holding the word at High instead is built and is your call. A nightly 🧮 audit lists every 🩳 name's sources, their dates and the spread — open ⓘ on the 🩳 sub, then 🧮. DKI and GMEX still print their figures, now with the warning (DKI once its split history on file reaches back to the second float's date); which provider is wrong is not known for either, and pulling them is your call. Neither float was checked against a filing. Display only — no alert, gate, sort or list changed. UNMEASURED. Not advice.",
+    addedAt: '2026-11-27',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-26 ~21:40 ET, verbatim: "Ok then add them to our watch list and track them please.. I know he tracks them
   // for two weeks sometimes.. before he discards them.. Can you do that please" · ~21:50 ET "Make it 30% please after A+".
   // Spec watchrun rev 2 (scratchpad watchrun/spec.md §3, §4 main-session). BE chart_maps/gajjala_watch/runseat.py (the ONE
