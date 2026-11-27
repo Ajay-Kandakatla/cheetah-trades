@@ -22,7 +22,10 @@ SIT_SRC = (BACKEND / SIT_REL).read_text(encoding="utf-8")
 IMPORTERS = {"chart_maps/gajjala/nightly.py", "chart_maps/gajjala/high_si.py", "scripts/gajjala_si_track_backfill.py",
              # PIN MOVED 2026-11-26 (spec sishares §4.3, predicted): the 🏁 follow-up module and its backfill script —
              # display only; pinned below (no push / alert import, no Watch store import).
-             "chart_maps/gajjala/si_follow.py", "scripts/gajjala_si_follow_backfill.py"}
+             "chart_maps/gajjala/si_follow.py", "scripts/gajjala_si_follow_backfill.py",
+             # PIN MOVED 2026-11-27 (spec floatguard §4.7, predicted): the nightly cross-source float audit reads the 🏁
+             # session doc — display only, no push / alert / gate import.
+             "short_interest/source_audit.py"}
 SF_REL = "chart_maps/gajjala/si_follow.py"
 SF_SRC = (BACKEND / SF_REL).read_text(encoding="utf-8")
 

@@ -94,6 +94,7 @@ from typing import Optional
 
 from short_interest import basis_math as BM
 from short_interest import client as SIC
+from short_interest import source_check as SCK
 
 log = logging.getLogger("short_interest.read")
 
@@ -284,6 +285,17 @@ def _pct1(p: float) -> str:
     return "<0.1%" if 0 < p < 0.05 else "%.1f%%" % p
 
 
+def pct_of(count, shares, digits: Optional[int] = 2) -> Optional[float]:
+    """THE one division behind every '% of float' and '% of shares outstanding': count / shares x 100, rounded to
+    `digits` (None = unrounded). None when `count` is None or `shares` is None / zero / negative.
+    🩳 2026-11-26 (spec floatguard §3.1) — every site keeps its OWN guard and calls this; the outputs are bit-identical
+    to the expression each site held before (`round(x / y * 100.0, 2)`)."""
+    if count is None or shares is None or not shares > 0:
+        return None
+    p = count / shares * 100.0
+    return p if digits is None else round(p, digits)
+
+
 def _dtc1(d: float) -> str:
     return "<0.1" if 0 < d < 0.05 else "%.1f" % d
 
@@ -434,6 +446,9 @@ TIER_LADDER_NOTE = ("Low under %g%%, Moderate %g%% to under %g%%, High %g%% to u
 # Tier sentences — the title prints "Tier: " + the sentence; the "Tier" row prints the sentence + " Ladder: " + _ladder() + "."
 TIER_TEXT = "%s (%s of the float)."                                   # word, _range(tier)
 TIER_HELD_TEXT = "%s — %s of the float, held below %s until the float is confirmed."   # word, _pct_tier(pf), EXTREME_WORD
+# 🩳 2026-11-26 (spec floatguard §3.5) — a second dated float held the word below EXTREME (source_check, modes hold /
+# supported only; never reached under the built default "flag"). word, _pct_tier(pf), EXTREME_WORD, SIC.SI_HIGH_PCT
+TIER_HELD_BY_SOURCE_TEXT = "%s — %s of the float, held below %s: another dated float on file puts it under %g%%."
 TIER_STALE_TEXT = "not given on a stale read."
 TIER_NO_FLOAT_TEXT = "not given — the tier words count the % of float, and no usable float is on file."  # NOT %-formatted
 TIER_ZERO_TEXT = "not given — too few shares short to read as a share of the float."
@@ -450,6 +465,8 @@ FLOAT_UNCONFIRMED_TEXT = ("%s — the float on file (%s shares, %s, as of %s) pu
 # _pct_tier(pf), _pct_tier(ps), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
 FLOAT_UNCHECKED_TEXT = ("not possible — shares outstanding is not on file, and EXTREME also needs at least %g%% of "
                         "shares outstanding.")                         # SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
+# 🩳 2026-11-26 (spec floatguard §3.5, C10) — on a contested name the hover never says "confirmed" alone.
+FLOAT_CONTESTED_NOTE = " A second dated float disagrees — see Float sources."
 
 
 def _cuts() -> tuple:
@@ -544,6 +561,9 @@ def _tier_sentence(b: Optional[dict]) -> Optional[str]:
     word = TIER_WORDS.get(tier) if isinstance(tier, str) else None
     if word is None:
         return None                                     # an out-of-order ladder or a failed tier: no sentence, never a guess
+    ec = _basis(b).get("extreme_contest")              # 🩳 2026-11-26 — a second dated float held the word
+    if isinstance(ec, dict) and ec.get("to") != ec.get("from"):
+        return TIER_HELD_BY_SOURCE_TEXT % (word, _pct_tier(pf), EXTREME_WORD, SIC.SI_HIGH_PCT)
     if tier == TIER_HIGH and b.get("float_check") in (FLOAT_UNCONFIRMED, FLOAT_UNCHECKED):
         return TIER_HELD_TEXT % (word, _pct_tier(pf), EXTREME_WORD)
     return TIER_TEXT % (word, _range(tier))
@@ -552,7 +572,10 @@ def _tier_sentence(b: Optional[dict]) -> Optional[str]:
 def _float_sentence(b: Optional[dict]) -> Optional[str]:
     fc = (b or {}).get("float_check")
     if fc == FLOAT_CONFIRMED:
-        return FLOAT_CONFIRMED_TEXT % (_pct_tier(b["pct_of_shares_out"]), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
+        s = FLOAT_CONFIRMED_TEXT % (_pct_tier(b["pct_of_shares_out"]), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
+        if isinstance(_basis(b).get("extreme_contest"), dict):
+            s += FLOAT_CONTESTED_NOTE
+        return s
     if fc == FLOAT_UNCONFIRMED:
         fl = b.get("float_shares")
         return FLOAT_UNCONFIRMED_TEXT % (FLOAT_UNCONFIRMED_WORD, format(fl, ",") if isinstance(fl, int) else "n/a",
@@ -625,8 +648,8 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
     legacy = doc.get("v") != 2
     fl = None if legacy else _pos_int(doc.get("float_shares"))
     so = _pos_int(doc.get("shares_outstanding"))
-    pf = round(si / fl * 100.0, 2) if fl else None
-    ps = round(si / so * 100.0, 2) if so else None
+    pf = pct_of(si, fl) if fl else None
+    ps = pct_of(si, so) if so else None
     # 2026-10-03 live check: 98 of 3,143 cached floats disagree with shares
     # outstanding (dual classes, ADRs, floats stale across a reverse split) and
     # BRK-B read 1,015% "of float". A float that is provably wrong never heads
@@ -705,6 +728,15 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
     except Exception as exc:                                   # noqa: BLE001 — a tier failure never costs the chip
         log.warning("short_interest.read: tier %s failed: %s", b.get("symbol"), type(exc).__name__)
         b["tier"], b["float_check"] = None, None
+    if isinstance(basis, dict) and v is not None:
+        # 🩳 2026-11-26 (spec floatguard §3.5) — the second dated float beside the one divided by. Its own fence: a
+        # raise leaves the block exactly as si_tier left it (compare is pure, apply assigns only at its end).
+        try:
+            cmp = SCK.compare(b, basis)
+            if cmp is not None:
+                SCK.apply(b, cmp)
+        except Exception as exc:                               # noqa: BLE001 — the source check never costs the chip
+            log.warning("short_interest.read: source check %s failed: %s", b.get("symbol"), type(exc).__name__)
     b["chip"] = chip_text(b)
     b["title"] = title_text(b, v)
     b["rows"] = rows_for(b, v)
@@ -721,6 +753,9 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
 # possibly empty).
 BASIS_KEYS = ("status", "checked_at", "float_refused", "refused_reasons", "float_pct_on_file", "growth", "fell",
               "change", "splits", "filings", "flags", "sources", "float_update", "share_counts", "issuances")
+# 🩳 2026-11-26 (spec floatguard §3.5) — three more `basis` keys, present exactly when the basis doc holds a dict
+# `mfloat` (a second dated float). BASIS_KEYS itself is NOT changed.
+SOURCE_KEYS = SCK.SOURCE_KEYS
 
 
 def _apply_verdict(b: dict, v: dict) -> None:
@@ -956,6 +991,7 @@ def _basis_sentences(b: dict, v: Optional[dict]) -> list:
     if isinstance(v, dict):
         out += [x for x in (v.get("title_lines") or []) if isinstance(x, str) and x]
     out += [t if t.endswith(".") else t + "." for t in _flag_texts(b)]
+    out += SCK.title_sentences(b)                    # 🩳 2026-11-26 — the two floats (empty when the flag carries them)
     out += _issuance_sentences(b)                    # 🩳 2026-11-26 (spec sishares §3.2) — the counts row is NOT here
     if isinstance(v, dict) and isinstance(v.get("check_text"), str) and v["check_text"]:
         out.append("Share-count check: " + v["check_text"])
@@ -1039,15 +1075,30 @@ def rows_for(b: dict, v: Optional[dict] = None) -> list:
     rows.append({"k": "Source", "v": b["source"]})
     if _conflict(b):
         rows.append({"k": "⚠ Counts disagree", "v": _conflict_sentence(b)})
-    rows.extend(_basis_rows(b, verdict))             # 🩳 2026-11-24 — notes, flags, the share-count check
+    brows = _basis_rows(b, verdict)
+    rows.extend(brows)                               # 🩳 2026-11-24 — notes, flags, the share-count check
+    src = SCK.rows(b)                                # 🩳 2026-11-26 — ONE "Float sources" row, right after Share counts
+    if src:
+        at = next((i for i, r in enumerate(rows) if r.get("k") == BM.ROW_SHARE_COUNTS), None)
+        if at is not None:
+            rows[at + 1:at + 1] = src
+        elif brows:
+            rows[-1:-1] = src
+        else:
+            rows.extend(src)
     return rows
 
 
 # ───────────────────────────────────────────── the map (ONE read)
-def si_map(symbols, db=None, today=None) -> dict:
+def si_map(symbols, db=None, today=None, basis_over=None) -> dict:
     """{SYM: block} for up to MAP_MAX_SYMBOLS names — ONE `$in` read of the
     short-INTEREST cache through `client.short_interest_map`. Never fetches; a
-    name with no doc is absent, never zero-filled."""
+    name with no doc is absent, never zero-filled.
+
+    🩳 2026-11-26 (spec floatguard §3.5, C2) — `basis_over` = {SYM: {top-level key: value}}: for a name that HAS a
+    loaded basis doc, `{**doc, **over}` is what si_block receives (the audit's dry run lays a fetched second float /
+    a wider splits read over the stored doc). In memory only; the loaded doc is not mutated; a name with no stored doc
+    gets no overlay; None = the path as before, byte for byte."""
     syms: list = []
     for s in symbols or []:
         s = str(s or "").strip().upper()
@@ -1059,6 +1110,9 @@ def si_map(symbols, db=None, today=None) -> dict:
     docs = SIC.short_interest_map(syms, db=db) or {}
     # 🩳 2026-11-24 — the share-basis docs (ONE `$in` read through share_basis.load; {} on any failure).
     bdocs = _basis_docs([s for s in syms if s in docs], db) if docs else {}
+    if isinstance(basis_over, dict) and basis_over:
+        over = {str(k).strip().upper(): o for k, o in basis_over.items() if isinstance(o, dict) and o}
+        bdocs = {k: ({**d, **over[k]} if k in over else d) for k, d in bdocs.items()}
     out: dict = {}
     for sym in syms:
         doc = docs.get(sym)

@@ -966,6 +966,18 @@ def session_doc(st, session, *, strict: bool = False) -> dict:
     return doc
 
 
+def _ladder_tier(b):
+    """The tier the house ladder gave BEFORE any second-float hold (basis.extreme_contest.from), else the block's own:
+    the 🏁 'EXTREME vs High' pattern keeps ONE definition under every EXTREME_CONTEST mode (🧮 2026-11-26, spec
+    floatguard §3.7 [C5]). Under the built default `from == to == tier`: no row changes."""
+    basis = b.get("basis") if isinstance(b, dict) and isinstance(b.get("basis"), dict) else {}
+    ec = basis.get("extreme_contest")
+    frm = ec.get("from") if isinstance(ec, dict) else None
+    if isinstance(frm, str) and frm in SR.TIER_ORDER:
+        return frm
+    return b.get("tier") if isinstance(b, dict) else None
+
+
 def record_session(st, session, now, *, source: str = "nightly", load_1m=None, si_read=None, ssr_read=None,
                    sho_read=None, split_lookup=None, ctx: Optional[Ctx] = None, write: bool = True) -> dict:
     """Record one session: the cohort, every row's fields, the doc + the index. RAISES on a listed / short-interest
@@ -1007,7 +1019,7 @@ def record_session(st, session, now, *, source: str = "nightly", load_1m=None, s
         except Exception:                                       # noqa: BLE001
             dtc = None
         row.update(settlement_date=b.get("settlement_date"), published_on=b.get("published_on"), pit=b.get("pit"),
-                   si_shares=b.get("si_shares"), tier=b.get("tier"), float_check=b.get("float_check"),
+                   si_shares=b.get("si_shares"), tier=_ladder_tier(b), float_check=b.get("float_check"),
                    pct_float=_f(b.get("pct_of_float")), pct_shares_out=_f(b.get("pct_of_shares_out")),
                    dtc=_f(dtc), dtc_provider=_f(b.get("days_to_cover")), adv=b.get("avg_daily_volume"),
                    float_shares=b.get("float_shares"), float_asof=b.get("float_asof"),

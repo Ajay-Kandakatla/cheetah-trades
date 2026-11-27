@@ -368,13 +368,41 @@ def _squeeze_signal(pct, dtc) -> str:
     return "low"
 
 
+# 🩳 SEPA card chip share count (2026-11-26 floatguard §3.8). `massive_ref` = today: Massive ticker details' UNDATED
+# shares outstanding. `resolver` (BUILT, OFF) = the 🩳 resolver's dated count (`read.si_map`) when its block is for the
+# SAME settlement. HIS CALL #9 — no list yet of which cards would move. Any unknown word behaves as "massive_ref".
+SI_CARD_COUNT_FROM = "massive_ref"
+SI_CARD_COUNT_MODES = ("massive_ref", "resolver")
+MASSIVE_REF_SHARES_SOURCE = "Massive ticker details — the provider gives no as-of date"
+
+
+def _resolver_card_block(symbol: str, settlement) -> Optional[dict]:
+    """The 🩳 resolver's block for `symbol` when it is for the SAME settlement date and carries a % of shares
+    outstanding; None on anything else (no block, another settlement, no %, a raise) -> the caller keeps today's."""
+    want = str(settlement or "")[:10]
+    if not want:
+        return None
+    try:
+        from short_interest import read as SR       # lazy: read imports this module
+        blk = (SR.si_map([symbol]) or {}).get(str(symbol).strip().upper())
+    except Exception as exc:                                   # noqa: BLE001 — the card keeps today's count
+        log.warning("short_interest(card): resolver read %s failed: %s", symbol, type(exc).__name__)
+        return None
+    if not isinstance(blk, dict) or str(blk.get("settlement_date") or "")[:10] != want:
+        return None
+    if blk.get("pct_of_shares_out") is None:
+        return None
+    return blk
+
+
 def short_interest_for(symbol: str) -> Optional[dict]:
     """Latest bi-monthly short interest + squeeze gauges, or None if Massive has
     no short-interest record (ADRs / thin names).
 
     Keys: settlement_date, short_interest (shares), avg_daily_volume,
     days_to_cover, shares_outstanding, pct_of_shares, prev_settlement_date,
-    si_change_pct (vs prior settlement), squeeze (low|elevated|high).
+    si_change_pct (vs prior settlement), squeeze (low|elevated|high),
+    shares_source (which share count the % divides by), shares_asof (its date; None = undated).
     """
     rows = _fetch_short_interest_rows(symbol, limit=4)
     if not rows:
@@ -382,11 +410,23 @@ def short_interest_for(symbol: str) -> Optional[dict]:
     latest = rows[0]
     prev = rows[1] if len(rows) > 1 else None
     si = latest.get("short_interest")
-    shares = _shares_outstanding(symbol)
-    pct = (si / shares * 100) if (si and shares) else None
     dtc = latest.get("days_to_cover")
     prev_si = prev.get("short_interest") if prev else None
     chg = ((si - prev_si) / prev_si * 100) if (si and prev_si) else None
+    blk = (_resolver_card_block(symbol, latest.get("settlement_date"))
+           if SI_CARD_COUNT_FROM == "resolver" else None)
+    if blk is not None:
+        shares = blk.get("shares_outstanding")
+        pct_out = blk.get("pct_of_shares_out")
+        squeeze = _squeeze_signal(pct_out, dtc)
+        shares_source, shares_asof = blk.get("shares_source"), blk.get("shares_asof")
+    else:
+        from short_interest import read as SR   # lazy: read imports this module
+        shares = _shares_outstanding(symbol)
+        pct = SR.pct_of(si, shares, digits=None) if (si and shares) else None
+        pct_out = round(pct, 2) if pct is not None else None
+        squeeze = _squeeze_signal(pct, dtc)
+        shares_source, shares_asof = MASSIVE_REF_SHARES_SOURCE, None
     return {
         "symbol": symbol.upper(),
         "settlement_date": latest.get("settlement_date"),
@@ -394,10 +434,12 @@ def short_interest_for(symbol: str) -> Optional[dict]:
         "avg_daily_volume": latest.get("avg_daily_volume"),
         "days_to_cover": dtc,
         "shares_outstanding": shares,
-        "pct_of_shares": round(pct, 2) if pct is not None else None,
+        "pct_of_shares": pct_out,
         "prev_settlement_date": prev.get("settlement_date") if prev else None,
         "si_change_pct": round(chg, 1) if chg is not None else None,
-        "squeeze": _squeeze_signal(pct, dtc),
+        "squeeze": squeeze,
+        "shares_source": shares_source,
+        "shares_asof": shares_asof,
     }
 
 
@@ -771,8 +813,8 @@ def _build_doc(sym, row, prev_row, denom, *, latest, prior, fetched_at) -> Optio
     fl = _pos_int(den.get("float_shares"))
     so = _pos_int(den.get("shares_outstanding"))
     asof = den.get("as_of_iso")
-    pf = round(si / fl * 100.0, 2) if fl else None
-    ps = round(si / so * 100.0, 2) if so else None
+    pf = SR.pct_of(si, fl) if fl else None
+    ps = SR.pct_of(si, so) if so else None
     sym = str(sym).upper()
     return {
         "_id": sym, "symbol": sym, "v": 2,

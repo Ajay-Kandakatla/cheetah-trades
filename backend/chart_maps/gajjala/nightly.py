@@ -77,6 +77,13 @@ two weeks sometimes.. before he discards them.."): `main` then runs `gajjala_wat
 fence (the import inside it), under `gajjala_watch_runtrack` — one doc per 📅 run (listed, ×'d, aged or blocked), one
 closed-daily-bar read per open name, rows through tonight, closed on the calendar after 10 sessions. A failure lands
 under `gajjala_watch_runtrack.error` — never in GG5's `errors`, never in the exit code. STEPS unchanged.
+
+🧮 Float source audit (2026-11-26 — Ajay "Also the Float share count issue and SI discrepancy happened too many times
+need to do something about it"): `main` then runs `high_si.source_audit_night` AFTER 🏁, in its OWN fence (the import
+inside it), under `gajjala_si_audit` — the second dated float for every checked share-basis name, the splits window
+widened where that float is older, one gajjala_state doc a night (display only; its own LEDGER_BACKFILL_MAX_SYMBOL_DAYS
+budget). A failure lands under `gajjala_si_audit.error` — never in GG5's `errors`, never in the exit code. STEPS
+unchanged; the crontab line unchanged. The short-interest module it calls lives outside this package.
 """
 from __future__ import annotations
 
@@ -391,6 +398,12 @@ def main(argv=None) -> int:
         except Exception as exc:                                 # noqa: BLE001
             log.exception("gajjala nightly: the SI track record failed")
             out["gajjala_si_track"] = {"error": f"record: {type(exc).__name__}"}
+        try:                                                     # 🧮 2026-11-26: after 🏁, fenced — never in errors / the exit code
+            from . import high_si as HS                          # the import inside the fence too: a broken module never moves the exit code
+            out["gajjala_si_audit"] = HS.source_audit_night(datetime.now(timezone.utc))
+        except Exception as exc:                                 # noqa: BLE001
+            log.exception("gajjala nightly: the float source audit failed")
+            out["gajjala_si_audit"] = {"error": f"audit: {type(exc).__name__}"}
         try:                                                     # 📅 2026-11-26: after 🩳, fenced — never in errors / the exit code
             from chart_maps.gajjala_watch import runtrack as RTK  # the import inside the fence too
             out["gajjala_watch_runtrack"] = RTK.nightly(datetime.now(timezone.utc))

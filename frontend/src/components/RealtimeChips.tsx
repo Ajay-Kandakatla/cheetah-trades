@@ -9,6 +9,11 @@
  *        FINRA bi-monthly short interest — shown only when squeeze fuel is
  *        elevated/high (pct-primary). Days-to-cover + settlement trend in tip.
  *
+ * 2026-11-26 (spec floatguard §3.9) — Ajay: "Also the Float share count issue and SI discrepancy happened too many times
+ * need to do something about it". The 🩳 hover gains ONE served sentence naming the share count the % divides by
+ * (`Share count: {shares_source}` + `, as of {shares_asof}` when served) — printed only when `shares_source` is a
+ * non-empty string, so an older API keeps today's hover byte for byte. No number changes here.
+ *
  * Lazy + viewport-gated via useRealtimeSignals. Accumulation polls every 6s
  * while the card is visible; both chips are absent (not errored) off-hours or
  * for names with no data.
@@ -30,6 +35,14 @@ function fmtMoney(n: number | null | undefined): string {
 }
 
 const pct = (x: number | null | undefined): number => Math.round((x ?? 0) * 100);
+
+const served = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
+
+/** The served share-count sentence for the 🩳 hover, or '' (an older API / nothing served). */
+function shareCountText(source: unknown, asof: unknown): string {
+  if (!served(source)) return '';
+  return `\nShare count: ${source}${served(asof) ? `, as of ${asof}` : ''}`;
+}
 
 export function RealtimeChips({ symbol }: Props) {
   const { ref, shortInterest, accumulation } = useRealtimeSignals(symbol);
@@ -70,7 +83,8 @@ export function RealtimeChips({ symbol }: Props) {
             `${si?.pct_of_shares != null ? `${si.pct_of_shares}% of shares outstanding` : 'n/a'}` +
             `${si?.days_to_cover != null ? ` · ${si.days_to_cover} days-to-cover` : ''}` +
             `${si?.si_change_pct != null ? ` · ${si.si_change_pct > 0 ? '+' : ''}${si.si_change_pct}% vs prior settlement` : ''}` +
-            `.\nSqueeze fuel: ${squeeze} (FINRA bi-monthly; % of shares outstanding, not free float).`
+            `.\nSqueeze fuel: ${squeeze} (FINRA bi-monthly; % of shares outstanding, not free float).` +
+            shareCountText(si?.shares_source, si?.shares_asof)
           }
         >
           🩳 Short {si?.pct_of_shares != null ? `${si.pct_of_shares}%` : (squeeze ?? '')}

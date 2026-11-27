@@ -1126,7 +1126,9 @@ def test_rules_pick_is_the_last_pick_and_the_section_is_at_the_cap():
     picks = SR.rules_section()["picks"]
     assert picks[-1] == RS.rules_pick()
     assert len(picks) == 8                                                   # the house cap — the next line must fold
-    (ext,) = [p for p in picks if "EXTREME" in p]
+    # 2026-11-26 floatguard (spec §1.7 / §6, predicted): pick 1 ('% of float = ') now names EXTREME too
+    assert picks[1].startswith("% of float = ") and "EXTREME" in picks[1]
+    (ext,) = [p for p in picks if "EXTREME" in p and not p.startswith("% of float = ")]
     assert picks.index(ext) == 2
     assert RS.rules_pick().startswith("🔒 Hard to borrow (the tag's name) = ")
     for w in ("Nasdaq, NYSE, NYSE American, NYSE Arca and Cboe BZX", "(Nasdaq, NYSE, NYSE American)",

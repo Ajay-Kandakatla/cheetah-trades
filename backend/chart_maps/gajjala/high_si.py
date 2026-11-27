@@ -269,7 +269,7 @@ def card_pct(si_block, float_read) -> Optional[float]:
     fl = float_shares(float_read)
     if si is None or not fl or fl <= 0:
         return None
-    return round(si / fl * 100.0, 2)
+    return SR.pct_of(si, fl)                                     # 🧮 2026-11-26: THE one division (read.pct_of)
 
 
 def classify(si_block, float_read) -> dict:
@@ -1001,6 +1001,17 @@ def ssr_new_block(listed, *, session, now, tf, v=None, ssr_read: Optional[Callab
 # in SI stocks itself": the 🩳 block's ONE fenced key for the SI track record (chart_maps.gajjala.si_track)
 SI_TRACK_KEY = "si_track"
 SIT_FAULT_TEXT = "🏁 The SI track record could not be read this time — the next read tries again."
+# 🧮 2026-11-26 (spec floatguard §3.7) — Ajay "Also the Float share count issue and SI discrepancy happened too many times
+# need to do something about it": the 🩳 block's ONE fenced key for the nightly float source audit
+# (short_interest.source_audit — display only) and the nightly's fenced step.
+SI_AUDIT_KEY = "si_audit"
+SIA_FAULT_TEXT = "🧮 The float source audit could not be read this time — the next read tries again."
+
+
+def source_audit_night(now) -> dict:
+    """The nightly's 🧮 step (chart_maps.gajjala.nightly, fenced there): short_interest.source_audit.audit_night."""
+    from short_interest import source_audit as SA
+    return SA.audit_night(now)
 
 
 def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, in_window: bool, tf: str, lim: int,
@@ -1061,6 +1072,12 @@ def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, i
     except Exception as exc:                                        # noqa: BLE001 — the cards stand
         log.warning("gajjala high si: si track section failed: %s", type(exc).__name__)
         out[SI_TRACK_KEY] = {"fault_text": SIT_FAULT_TEXT}
+    try:                                                            # 🧮 2026-11-26 — the float source audit, fenced on its own
+        from short_interest import source_audit as SA
+        out[SI_AUDIT_KEY] = SA.served_block(st, session, now)
+    except Exception as exc:                                        # noqa: BLE001 — the cards stand
+        log.warning("gajjala high si: float source audit section failed: %s", type(exc).__name__)
+        out[SI_AUDIT_KEY] = {"fault_text": SIA_FAULT_TEXT}
     out["_tiles"] = tiles
     return out
 
@@ -1077,4 +1094,5 @@ __all__ = ["TIERS", "STATE", "REASONS", "NOT_ADVICE", "ASK_TEXT", "RULE_LABEL", 
            "SSR_NEW_BLOCK_KEYS", "SSR_NEW_GROUP_KEYS", "SSR_NEW_ROW_KEYS", "SSR_NEW_FAULT", "SSR_NEW_SI_UNREAD",
            "SSR_NEW_LIST_UNREAD", "SSR_NEW_RULE_LABEL", "SSR_NEW_TIER_NOTE", "SSR_NEW_UNTIERED_TAIL",
            "SSR_NEW_ORDER_NOTE", "SSR_NEW_RULES_LINE", "ssr_si_text", "ssr_tiered", "ssr_new_rank", "ssr_new_fault",
-           "ssr_new_rules_line", "ssr_new_block", "SI_TRACK_KEY", "SIT_FAULT_TEXT"]
+           "ssr_new_rules_line", "ssr_new_block", "SI_TRACK_KEY", "SIT_FAULT_TEXT", "SI_AUDIT_KEY",
+           "SIA_FAULT_TEXT", "source_audit_night"]

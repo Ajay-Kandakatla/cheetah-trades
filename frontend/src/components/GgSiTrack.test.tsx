@@ -436,7 +436,8 @@ describe('🏁 inside the 🩳 panel — mounted after the ⛔ list, drawn once,
     const src = await readSource('src/components/GgHighSi.tsx');
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
     expect(code.split('<GgSiTrackSection').length - 1).toBe(1);
-    expect(code).toMatch(/<GgSsrNewSection block=\{block\.ssr_new\} \/><GgSiTrackSection block=\{block\.si_track\} \/>\n/);
+    expect(code).toMatch(/<GgSsrNewSection block=\{block\.ssr_new\} \/><GgSiTrackSection block=\{block\.si_track\} \/><GgSiAuditSection block=\{block\.si_audit\} \/>\n/);
+    expect(code).not.toMatch(/<GgSiAuditSection[^\n]*<GgSiTrackSection/);
     const state = code.slice(code.indexOf('export function GgHighSiState('), code.indexOf('export function GgHighSiPanel('));
     expect(state).not.toMatch(/si_track|GgSiTrack/);
   });

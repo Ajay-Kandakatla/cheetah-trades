@@ -24,11 +24,16 @@
  * 2026-11-26 (spec sitrack §3.7 B, [OC1]) — Ajay: "I want us to track these patters for future from SI like a track recprd
  * with in SI stocks itself". The served 🏁 SI track record (GgSiTrackSection) is mounted in the PANEL right after the ⛔
  * new-SSR section, on the SAME line (GgSsrNew.test.tsx pins the ⛔ mount as one digit-free line between the faults line and
- * the rule fold) — inside the sub's closed ⓘ fold, never on the landing; GgHighSiState is unchanged. */
+ * the rule fold) — inside the sub's closed ⓘ fold, never on the landing; GgHighSiState is unchanged.
+ *
+ * 2026-11-26 (spec floatguard §3.9) — Ajay: "Also the Float share count issue and SI discrepancy happened too many times
+ * need to do something about it". The served 🧮 float source audit (GgSiAuditSection) is mounted right after the 🏁, on the
+ * SAME digit-free line (the next line stays the rule fold) — inside the sub's closed ⓘ fold; GgHighSiState is unchanged. */
 import { Link } from 'react-router-dom';
 import { ggHref, type GgHighSiBlock } from '../lib/gajjala';
 import { GgSsrNewSection } from './GgSsrNew';
 import { GgSiTrackSection } from './GgSiTrack';
+import { GgSiAuditSection } from './GgSiAudit';
 import { GgSubState, type GgSubStateLine } from './GgFold';
 import '../styles/gajjala.css';
 
@@ -109,7 +114,7 @@ export function GgHighSiPanel({ block }: { block: GgHighSiBlock | null | undefin
         );
       })}
       {servedText(block.faults_text) ? <p className="gg-dv-line cm-note" data-testid="gg-hs-faults">{block.faults_text}</p> : null}
-      <GgSsrNewSection block={block.ssr_new} /><GgSiTrackSection block={block.si_track} />
+      <GgSsrNewSection block={block.ssr_new} /><GgSiTrackSection block={block.si_track} /><GgSiAuditSection block={block.si_audit} />
       {folded ? (
         <details className="gg-dv-rule" data-testid="gg-hs-rule">
           <summary>{servedText(block.rule_label) ? block.rule_label : 'ⓘ'}</summary>

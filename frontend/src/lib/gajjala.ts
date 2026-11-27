@@ -785,6 +785,24 @@ export type GgHighSiBlock = {
   /** 🏁 2026-11-26 (spec sitrack §3.7 B, [OC1]): the 🩳 SI track record — served by si_track.served_block in its own try;
    *  absent on an older API, null when not served (no section). Drawn INSIDE the panel, so it lives in the sub's ⓘ fold. */
   si_track?: GgSiTrackBlock | null;
+  /** 🧮 2026-11-26 (spec floatguard §3.6 / §3.9): the nightly float and share-count source audit — served by
+   *  source_audit.served_block in its own try (a raise → `{fault_text}`); absent on an older API, null when not served (no
+   *  section). Drawn INSIDE the panel after the 🏁, so it lives in the sub's ⓘ fold. */
+  si_audit?: GgSiAuditBlock | null;
+};
+/** 🧮 one served row of the source audit table (source_audit.served_block, 2026-11-26), in the SERVED order. `cells` is
+ *  keyed by the served head keys; `contested` true = the second float puts an EXTREME name under the cut; `held` true =
+ *  the word was changed. Every leaf is printed as handed — no number is formatted here. */
+export type GgSiAuditRow = { symbol?: string | null; href?: string | null; contested?: boolean | null;
+  held?: boolean | null; differ?: boolean | null; cells?: Record<string, string | null> | null };
+/** 🧮 the served source audit block (the `BLOCK_KEYS` of source_audit.py). What two data providers say — display only,
+ *  never a gate, sort, push or lane input. UNMEASURED. `n` / `n_differ` / `n_contested` / `n_window` are never printed
+ *  (the served summary carries them). */
+export type GgSiAuditBlock = {
+  title?: string | null; summary_text?: string | null; asof_text?: string | null; heads?: GgSiTrackHead[] | null;
+  rows?: GgSiAuditRow[] | null; shown_text?: string | null; rule_label?: string | null; rule_text?: string | null;
+  honesty?: string | null; fault_text?: string | null; empty_text?: string | null; n?: number | null;
+  n_differ?: number | null; n_contested?: number | null; n_window?: number | null;
 };
 /** 🏁 one served column head, `[key, label]` (`pattern_heads` / `heads`); the label is printed, the key picks the cell. */
 export type GgSiTrackHead = [string, string];

@@ -21,6 +21,11 @@ export type ShortInterest = {
   pct_of_shares?: number | null;
   si_change_pct?: number | null;
   squeeze?: 'low' | 'elevated' | 'high';
+  /** 2026-11-26 (spec floatguard §3.8 / §3.9): which share count the % above divides by, as SERVED by
+   *  client.short_interest_for (today "Massive ticker details — the provider gives no as-of date"), and its as-of date
+   *  when the source carries one. Absent on an older API → the hover is today's, byte for byte. */
+  shares_source?: string | null;
+  shares_asof?: string | null;
 };
 
 export type Accumulation = {

@@ -581,7 +581,7 @@ def stale_trigger(si, base, paired, newer) -> bool:
         den = base + newer - paired
         if s is None or s < 0 or den <= 0:
             return False
-        return SR.tier_of(round(s / base * 100, 2)) != SR.tier_of(round(s / den * 100, 2))
+        return SR.tier_of(SR.pct_of(s, base)) != SR.tier_of(SR.pct_of(s, den))     # 🩳 11-26 the ONE division
     return False
 
 
@@ -1040,7 +1040,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                 and same_side(upd["as_of"], S, executed)):               # the newer float's own Yahoo row
             count = {"shares": upd["paired_shares"], "as_of": upd["as_of"], "source": "yahoo", "form": None}
         if count:
-            pct_so = round(si / count["shares"] * 100.0, 2)
+            pct_so = SR.pct_of(si, count["shares"])                         # 🩳 11-26 the ONE division
             count_changed = (count["shares"] != P or count["as_of"] != Pa)
         else:
             no_pct = True
@@ -1237,7 +1237,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                               TEXT_FLOAT_UPDATED % (format(upd["shares"], ","), _md(upd["as_of"]),
                                                     format(upd["replaced_shares"], ","), _md(upd["replaced_asof"]))))
         float_update = dict(upd, suspect=upd_suspect,
-                            pct=(round(si / Fd * 100.0, 2) if (upd_suspect is None and not float_refused) else None))
+                            pct=(SR.pct_of(si, Fd) if (upd_suspect is None and not float_refused) else None))
 
     # ── status + sources + the check sentence
     missing = any(_status(s) is None for _k, s in named)
@@ -1261,7 +1261,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
     # [2026-11-24 later, refix 3] a dilution refusal judges the REPLACED float (its date and count ran the check), so
     # the "would read" % is on it — exactly as before the newer-float rule (LABT 18.04%, the line and the panel agree)
     fpd = F if (float_refused == REFUSE_DILUTED and upd) else Fd
-    fpof = round(si / fpd * 100.0, 2) if (float_refused and fpd) else None
+    fpof = SR.pct_of(si, fpd) if (float_refused and fpd) else None              # 🩳 11-26 the ONE division
     return {"float_refused": float_refused, "refused_reasons": refused_reasons, "float_pct_on_file": fpof,
             "count": count, "count_changed": bool(count_changed), "pct_of_shares_out": pct_so, "no_pct": bool(no_pct),
             "growth": growth, "fell": fell, "change": change, "splits": split_list,
@@ -1342,10 +1342,11 @@ def _check_text(ref, sec, sp, sec_units, rtype, Y, Ya) -> str:
 
 def rules_sentence() -> str:
     """The one sentence folded onto the END of the 🩳 rules pick that starts '% of float = ' (the section is at its
-    8-pick cap). Built from FLOAT_STALE_WHEN and the flag words by name."""
+    8-pick cap). Built from FLOAT_STALE_WHEN and the flag words by name. 🩳 2026-11-26 (spec floatguard §3.5) — ends
+    with source_check.rules_sentence() (lazy; a raise there keeps the sentence as it was)."""
     mode = FLOAT_STALE_MODE_WORDS.get(FLOAT_STALE_WHEN)
     stale = ("stale (%s)" % mode) if mode else "stale"
-    return ("The %% of float is not shown when the float on file is %s or sits on the other side of a split from "
+    s = ("The %% of float is not shown when the float on file is %s or sits on the other side of a split from "
             "the short-interest count: the chip falls back to %% of shares outstanding on the newest dated count (an "
             "SEC cover page or Yahoo's later count, with its date), carries no tier word, and says why — '%s', "
             "'%s', '%s' for a registration, prospectus or 8-K Item %s filing since the float was read, '%s' when a "
@@ -1360,3 +1361,9 @@ def rules_sentence() -> str:
                SHORT_COUNT_FELL % "N", SHORT_UNCHECKED, SHORT_FLOAT_UPDATED,
                FLOAT_FRESH_MODE_WORDS.get(FLOAT_FRESH_WHEN, FLOAT_FRESH_MODE_WORDS["off"]), SHORT_COUNT_STALE % "N",
                FILING_6K_FORM, EMOJI_FILING))
+    try:
+        from short_interest import source_check as SCK
+        s += " " + SCK.rules_sentence()
+    except Exception:                                          # noqa: BLE001 — the old sentence stands
+        pass
+    return s

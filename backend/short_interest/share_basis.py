@@ -23,6 +23,12 @@ Outside calls: data.sec.gov with a generic User-Agent (no project name, no conta
 which holds the one URL and no http client — every GET it makes is `_sec_get` here (the same pacer, headers and
 `_http` seam). Its stop is persisted as `state|fts` and never stops data.sec.gov. The Massive ticker reference also
 keeps its two share counts (`ref.share_class_shares`, `ref.weighted_shares`, dated by the read only).
+
+🧮 2026-11-26 (spec floatguard §3.2 + §3.3): a second DATED float, Massive's free float (`MASSIVE_FLOAT_PATH`), is kept
+as the `mfloat` sub-doc, behind `SB_MFLOAT_WHEN`. It is read in bulk by the nightly (`fetch_mfloats` +
+`store_mfloats`) and by ONE worker step (`mfloat_step`) — never by `refresh_symbol`, which makes no new outside call:
+it only carries a held `mfloat` and reaches its splits window (`since2`, never the SEC `since`) back to its date.
+`widen_splits` does the same with one splits read. A doc with no `mfloat` key is built exactly as before.
 """
 from __future__ import annotations
 
@@ -76,8 +82,18 @@ GOOD_STATUSES = ("ok", "none", "no_cik", "absent")             # a good read (st
 ERR_NO_KEY = "no_key"
 ERR_NO_REF = "no_ref"                                          # the ticker reference never answered: no CIK to ask with
 ERR_MALFORMED = "malformed"
+# 🧮 2026-11-26 (spec floatguard §3.2 + §3.3) — the second DATED float: Massive's free float (`/stocks/vX/float`), the
+# same host and key as the ticker reference. Read by the nightly (in bulk) and by ONE worker step (`mfloat_step`) for a
+# name first seen between nights — never inside `refresh_symbol`, which only carries a held `mfloat`.
+MASSIVE_FLOAT_PATH = "/stocks/vX/float"
+SB_MFLOAT_WHEN = "on"                         # HIS CALL #7 — "off" (or any other word) ends every second-float call
+SB_MFLOAT_MODES = ("off", "on")
+SB_MFLOAT_CHUNK = 100                         # MINE (engineering) — tickers per GET = the endpoint's default page size
+MFLOAT_GOOD = ("ok", "none")                  # a good second-float read (status rule)
+ERR_PARTIAL = "partial"                       # a 200 answer that names a next page: its unanswered names are not "none"
+ERR_TEST = "test"                             # pytest with nothing injected: no outside call
 
-_http = None                  # the ONE SEC outside-call seam; None → requests.get (lazy import) — the reg_sho._http shape
+_http = None                 # the ONE SEC outside-call seam; None → requests.get (lazy import) — the reg_sho._http shape
 
 
 # ───────────────────────────────────────────── small helpers
@@ -530,6 +546,260 @@ def fetch_splits(sym: str, since_iso: Optional[str], *, fetch=None) -> dict:
         return {"status": "failed", "error": _err(exc)}
 
 
+# ───────────────────────────────────────────── 🧮 the second dated float (spec floatguard §3.2 + §3.3)
+def mfloat_on(mode=None) -> bool:
+    """The switch: True only for the word "on" (SB_MFLOAT_WHEN read at call time; any other word = off)."""
+    m = SB_MFLOAT_WHEN if mode is None else mode
+    return m in SB_MFLOAT_MODES and m == SB_MFLOAT_MODES[1]
+
+
+def _under_test(seam) -> bool:
+    """The `kick` guard shape: nothing injected inside a pytest run -> no outside call."""
+    return seam is None and bool(os.environ.get("PYTEST_CURRENT_TEST"))
+
+
+def _mfloat_row(x) -> Optional[dict]:
+    """One usable float row: `free_float` passes `_count`, `effective_date` passes `_day`; the % only when
+    0 < pct <= 100 (else None)."""
+    if not isinstance(x, dict):
+        return None
+    shares, as_of = _count(x.get("free_float")), _day(x.get("effective_date"))
+    if shares is None or as_of is None:
+        return None
+    return {"status": "ok", "shares": shares, "pct": _mfloat_pct(x.get("free_float_percent")), "as_of": as_of}
+
+
+def _mfloat_pct(p) -> Optional[float]:
+    """`free_float_percent` as a float when 0 < pct <= 100 (bool / string / NaN / out of range -> None)."""
+    f = None if isinstance(p, (bool, str)) else _num(p)
+    return float(f) if f is not None and 0 < f <= 100 else None
+
+
+def _mfloat_chunk(get, key: str, chunk: list, out: dict) -> None:
+    """ONE GET for `chunk` = [(SYM, massive ticker)]; fills `out[SYM]`. A non-200 / malformed / raising answer, or a
+    200 that names a `next_url`, leaves every name it does not answer `failed` — never `none`."""
+    names = [s for s, _ in chunk]
+    try:
+        tick = []
+        for _, t in chunk:
+            if t not in tick:
+                tick.append(t)
+        r = get(SC.BASE_URL + MASSIVE_FLOAT_PATH,
+                params={"ticker.any_of": ",".join(tick), "limit": SB_MFLOAT_CHUNK, "apiKey": key},
+                timeout=SB_HTTP_TIMEOUT_SEC)
+        code = _status(r)
+        if code != 200:
+            raise _ChunkFail("http_%d" % code)
+        try:
+            body = r.json()
+        except Exception:                                      # noqa: BLE001 — a non-JSON 200
+            raise _ChunkFail(ERR_MALFORMED)
+        res = body.get("results") if isinstance(body, dict) else None
+        if not isinstance(res, list):
+            raise _ChunkFail(ERR_MALFORMED)
+        best: dict = {}                                        # massive ticker -> the newest usable row
+        for x in res:
+            t = x.get("ticker") if isinstance(x, dict) else None
+            row = _mfloat_row(x)
+            if not isinstance(t, str) or row is None:
+                continue
+            t = t.strip().upper()
+            if t not in best or row["as_of"] > best[t]["as_of"]:
+                best[t] = row
+        partial = bool(body.get("next_url"))
+        for s, t in chunk:
+            if t in best:
+                out[s] = dict(best[t])
+            elif partial:
+                out[s] = {"status": "failed", "error": ERR_PARTIAL}
+            else:
+                out[s] = {"status": "none"}
+    except _ChunkFail as cf:
+        for s in names:
+            out[s] = {"status": "failed", "error": cf.code}
+    except Exception as exc:                                   # noqa: BLE001
+        e = _err(exc)
+        for s in names:
+            out[s] = {"status": "failed", "error": e}
+
+
+class _ChunkFail(Exception):
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+def fetch_mfloats(symbols, *, http=None) -> dict:
+    """{SYM: {"status": "ok", "shares", "pct", "as_of"} | {"status": "none"} | {"status": "failed", "error"}}.
+
+    ONE GET per SB_MFLOAT_CHUNK names (`ticker.any_of`, `limit`, the key in params only). `http` None under pytest ->
+    every name failed ERR_TEST, no GET. No key -> every name failed ERR_NO_KEY, no GET. Tickers are spelled
+    `symbols.for_massive(symbols.resolve(s))` and mapped back. `none` ONLY for a name absent from an HTTP 200 answer
+    with no `next_url`. Never raises; only the exception TYPE is kept."""
+    syms = _clean(symbols)
+    if not syms:
+        return {}
+    if _under_test(http):
+        return {s: {"status": "failed", "error": ERR_TEST} for s in syms}
+    out: dict = {}
+    try:
+        key = SC._key()
+        if not key:
+            return {s: {"status": "failed", "error": ERR_NO_KEY} for s in syms}
+        from sepa import symbols as SYM                        # lazy
+        pairs = []
+        for s in syms:
+            try:
+                t = SYM.for_massive(SYM.resolve(s))
+            except Exception:                                  # noqa: BLE001
+                t = s
+            pairs.append((s, (t if isinstance(t, str) and t.strip() else s).strip().upper()))
+        get = SC._getter(http)
+        for i in range(0, len(pairs), SB_MFLOAT_CHUNK):
+            _mfloat_chunk(get, key, pairs[i:i + SB_MFLOAT_CHUNK], out)
+    except Exception as exc:                                   # noqa: BLE001
+        e = _err(exc)
+        for s in syms:
+            out.setdefault(s, {"status": "failed", "error": e})
+    for s in syms:
+        out.setdefault(s, {"status": "failed", "error": ERR_MALFORMED})
+    return out
+
+
+MFLOAT_EMPTY = {"shares": None, "pct": None, "as_of": None}
+
+
+def _mfloat_good(sub) -> bool:
+    return isinstance(sub, dict) and sub.get("status") in MFLOAT_GOOD
+
+
+def mfloat_sub(held, got, now_iso) -> dict:
+    """PURE: the stored §3.2 sub-doc for ONE fetched answer, against the held one (the house status rule:
+    `_ok_sub` on a good answer; `_failed_sub` keeps a held good read + error). `now_iso` = a timestamp string (a
+    datetime is accepted and written in the house format)."""
+    ts = now_iso if isinstance(now_iso, str) else _ts(_now(now_iso))
+    g = got if isinstance(got, dict) else {}
+    if g.get("status") == "ok" and _count(g.get("shares")) is not None and _day(g.get("as_of")):
+        return _ok_sub({"status": "ok", "shares": _count(g.get("shares")), "pct": _mfloat_pct(g.get("pct")),
+                        "as_of": _day(g.get("as_of"))}, ts)
+    if g.get("status") == "none":
+        return _ok_sub(dict({"status": "none"}, **MFLOAT_EMPTY), ts)
+    err = g.get("error") if isinstance(g.get("error"), str) and g.get("error") else ERR_MALFORMED
+    h = held if isinstance(held, dict) else None
+    if _mfloat_good(h):
+        return _failed_sub(h, err, ts, dict(MFLOAT_EMPTY))     # the held read stands: data + read_at, + error
+    return _failed_sub({"strikes": _strikes(h)} if h else None, err, ts, dict(MFLOAT_EMPTY))
+
+
+def store_mfloats(db, got: dict, now=None) -> dict:
+    """Write each fetched answer as the `mfloat` sub-doc of a CHECKED basis doc: `update_one({"_id": sym,
+    "checked_at": {"$exists": True}}, {"$set": {"mfloat": sub}})` — never an upsert, never a state doc, never a
+    seed-only doc. -> {"written": docs set, "no_doc": names with no checked doc, "failed": writes that raised}."""
+    counts = {"written": 0, "no_doc": 0, "failed": 0}
+    try:
+        if db is None or not isinstance(got, dict):
+            return counts
+        ans = {}
+        for k, v in got.items():
+            c = _clean([k])
+            if c:
+                ans[c[0]] = v
+        if not ans:
+            return counts
+        ts = _ts(_now(now))
+        coll = db[SB_COLL]
+        held = _find_map(coll, list(ans))
+        for sym, g in ans.items():
+            doc = held.get(sym)
+            if not isinstance(doc, dict) or doc.get("checked_at") is None:
+                counts["no_doc"] += 1
+                continue
+            sub = mfloat_sub(doc.get("mfloat"), g, ts)
+            try:
+                coll.update_one({"_id": sym, "checked_at": {"$exists": True}}, {"$set": {"mfloat": sub}})
+                counts["written"] += 1
+            except Exception as exc:                           # noqa: BLE001
+                log.warning("share_basis: %s mfloat write failed: %s", sym, type(exc).__name__)
+                counts["failed"] += 1
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: mfloat store failed: %s", type(exc).__name__)
+    return counts
+
+
+def _mfloat_fresh(held, now) -> bool:
+    """A held good second-float read (`ok` / `none`), no error, read inside SB_REF_REFRESH_DAYS."""
+    if not _mfloat_good(held) or held.get("error"):
+        return False
+    r = _parse_ts(held.get("read_at"))
+    return r is not None and timedelta(0) <= _now(now) - r < timedelta(days=SB_REF_REFRESH_DAYS)
+
+
+def mfloat_step(sym, db=None, now=None, *, http=None) -> str:
+    """THE per-name second-float read the worker makes after its refresh. First match: "off" (the switch) · "test"
+    (`http` None under pytest — before any read) · "no_doc" (no doc, or no `checked_at`) · "fresh" · "stored" (a
+    good answer written) · "failed". Never raises."""
+    try:
+        if not mfloat_on():
+            return "off"
+        if _under_test(http):
+            return "test"
+        c = _clean([sym])
+        d = db if db is not None else _default_db()
+        if not c or d is None:
+            return "no_doc"
+        s = c[0]
+        doc = _find_one(d[SB_COLL], s)
+        if not isinstance(doc, dict) or doc.get("checked_at") is None:
+            return "no_doc"
+        now = _now(now)
+        if _mfloat_fresh(doc.get("mfloat"), now):
+            return "fresh"
+        got = fetch_mfloats([s], http=http).get(s) or {"status": "failed", "error": ERR_MALFORMED}
+        w = store_mfloats(d, {s: got}, now)
+        return "stored" if got.get("status") in MFLOAT_GOOD and w.get("written") == 1 else "failed"
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: mfloat step failed: %s", type(exc).__name__)
+        return "failed"
+
+
+def checked_symbols(db=None) -> list:
+    """Every `_id` of SB_COLL that holds `checked_at` and survives `_clean` (never SB_STATE_SEC_ID /
+    SB_STATE_FTS_ID, never a seed-only doc), sorted. [] on any failure or no handle."""
+    try:
+        d = db if db is not None else _default_db()
+        if d is None:
+            return []
+        ids = []
+        for doc in d[SB_COLL].find({"checked_at": {"$exists": True}}, {"_id": 1, "checked_at": 1}):
+            if isinstance(doc, dict) and isinstance(doc.get("_id"), str) and doc.get("checked_at") is not None:
+                c = _clean([doc["_id"]])
+                if c and c[0] == doc["_id"]:
+                    ids.append(c[0])
+        return sorted(set(ids))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: checked symbols read failed: %s", type(exc).__name__)
+        return []
+
+
+def _mfloat_asof(doc) -> Optional[str]:
+    """The date of a held `ok` second float, else None."""
+    mf = doc.get("mfloat") if isinstance(doc, dict) else None
+    if not isinstance(mf, dict) or mf.get("status") != "ok":
+        return None
+    return _day(mf.get("as_of"))
+
+
+def needs_window(doc) -> bool:
+    """A held `ok` second float with a dated `as_of`, and (no dated `splits.since`, or `as_of` < `splits.since`): the
+    splits on file do not reach back to its date."""
+    a = _mfloat_asof(doc)
+    if a is None:
+        return False
+    sp = doc.get("splits") if isinstance(doc.get("splits"), dict) else {}
+    since = _day(sp.get("since"))
+    return since is None or a < since
+
+
 # ───────────────────────────────────────────── the SI record
 def _usable(rec) -> bool:
     """A usable settlement + count (the si_block rule): a `no_record` name is never checked [C5]."""
@@ -730,6 +1000,48 @@ def _number_step(db, rec, doc, held_fts, reports, cik, now, now_iso, http, growt
 
 
 # ───────────────────────────────────────────── one name
+def _splits_sub(sym, held_splits, since_iso, now_iso, splits_fetch=None) -> dict:
+    """Step 7 of `refresh_symbol` (moved verbatim, spec floatguard §3.3): ONE splits read from `since_iso` -> the
+    `splits` sub-doc (`_ok_sub`), or the status rule over the held one (`_failed_sub`). `widen_splits` shares it."""
+    got = fetch_splits(sym, since_iso, fetch=splits_fetch)
+    if got.get("status") == "ok":
+        return _ok_sub({"status": "ok", "since": since_iso, "rows": got.get("rows") or []}, now_iso)
+    return _failed_sub(held_splits, got.get("error") or "error", now_iso, {"since": since_iso, "rows": []})
+
+
+def widen_splits(sym, db=None, now=None, *, splits_fetch=None, store=True) -> dict:
+    """Reach the splits window back to a held second float's date with ONE splits read (spec floatguard §3.3).
+    -> {"status": "widened" | "not_needed" | "no_doc" | "failed" | "test", "splits": sub | None}. "test" =
+    `splits_fetch` None under pytest (no read at all). `store` -> `update_one({"_id": sym, "checked_at": {"$exists":
+    True}}, {"$set": {"splits": sub}})` (never an upsert); `store=False` writes nothing and still returns the sub. A
+    failed read keeps the held rows and `since` and sets `error` (the status rule). Never raises."""
+    try:
+        if _under_test(splits_fetch):
+            return {"status": "test", "splits": None}
+        c = _clean([sym])
+        d = db if db is not None else _default_db()
+        if not c or d is None:
+            return {"status": "no_doc", "splits": None}
+        s = c[0]
+        doc = _find_one(d[SB_COLL], s)
+        if not isinstance(doc, dict) or doc.get("checked_at") is None:
+            return {"status": "no_doc", "splits": None}
+        if not needs_window(doc):
+            return {"status": "not_needed", "splits": None}
+        sub = _splits_sub(s, doc.get("splits"), _mfloat_asof(doc), _ts(_now(now)), splits_fetch)
+        if store:
+            try:
+                d[SB_COLL].update_one({"_id": s, "checked_at": {"$exists": True}}, {"$set": {"splits": sub}})
+            except Exception as exc:                           # noqa: BLE001
+                log.warning("share_basis: %s splits write failed: %s", s, type(exc).__name__)
+                return {"status": "failed", "splits": sub}
+        return {"status": "widened" if sub.get("status") == "ok" and not sub.get("error") else "failed",
+                "splits": sub}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: widen splits failed: %s", type(exc).__name__)
+        return {"status": "failed", "splits": None}
+
+
 def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store, sink=None) -> dict:
     empty = {"since": since, "top_accn": None, "covers": [], "filings": []}
     if not cik:
@@ -809,6 +1121,9 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
             ref = _failed_sub(href, got.get("error") or "error", now_iso,
                               {"cik": None, "type": None, "share_class_shares": None, "weighted_shares": None})
     cik = ref.get("cik") if ref.get("status") == "ok" else None
+    # 2b. 🧮 2026-11-26 (spec floatguard §3.3) — a held second float is CARRIED, never read here (no call, whatever
+    # the switch says): its date only widens the splits window (step 7)
+    mf = held.get("mfloat") if isinstance(held.get("mfloat"), dict) else None
     # 3. Yahoo's live row
     yahoo = _yahoo_row(d, sym)
     # 4. the window
@@ -829,13 +1144,14 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
                   if isinstance(c, dict) and _day(c.get("as_of")) and c["as_of"] <= tsince]
         if before and max(before) < since2:
             since2 = max(before)
+    # 🧮 the splits window reaches back to a held ok second float's date — `since2` ONLY (the SEC window `since` and
+    # the 📄 flags never move)
+    mf_asof = _day(mf.get("as_of")) if mf is not None and mf.get("status") == "ok" else None
+    if mf_asof and mf_asof < since2:
+        since2 = mf_asof
     # 7. splits
     hsp = held.get("splits")
-    got = fetch_splits(sym, since2, fetch=splits_fetch)
-    if got.get("status") == "ok":
-        splits = _ok_sub({"status": "ok", "since": since2, "rows": got.get("rows") or []}, now_iso)
-    else:
-        splits = _failed_sub(hsp, got.get("error") or "error", now_iso, {"since": since2, "rows": []})
+    splits = _splits_sub(sym, hsp, since2, now_iso, splits_fetch)
     # 8. the float track (held rows count even when the last try failed [C1])
     rows = splits.get("rows") if splits.get("status") == "ok" else None
     try:
@@ -845,6 +1161,8 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
         track = track_held
     doc = {"_id": sym, "v": SB_VERSION, "checked_at": now_iso, "seen": _seen_of(rec),
            "ref": ref, "sec": sec, "splits": splits, "yahoo": yahoo, "float_track": track}
+    if mf is not None:
+        doc["mfloat"] = mf                                     # 🧮 carried as held, byte for byte
     # 8b. 🩳 2026-11-26 — the exact share count added, read through the SEC full-text search (in place on sec.fts)
     try:
         _number_step(d, rec, doc, held_fts, sink.get("reports") or [], cik, now, now_iso, http, growth_fn, store,
@@ -934,6 +1252,8 @@ def _worker(db) -> None:
                 doc = None
             if is_due(doc, rec):
                 refresh_symbol(sym, db)
+            if mfloat_step(sym, db) == "stored":               # 🧮 the second float, then (if older) the window
+                widen_splits(sym, db)
         except Exception as exc:                               # noqa: BLE001
             log.warning("share_basis: worker %s failed: %s", sym, type(exc).__name__)
         finally:
@@ -1050,6 +1370,8 @@ def _summary(sym: str, doc: dict) -> str:
         tail = " | fts %s%s, %d issuance 6-K, number %s" % (
             fts.get("status"), (" (last try %s)" % fts["error"]) if fts.get("error") else "",
             len(fts.get("issuance") or []), ("%d hit" % len(num.get("hits") or [])) if num else "not asked")
+    if isinstance(doc.get("mfloat"), dict):                    # 🧮 2026-11-26 — the second dated float
+        tail += " | mfloat %s" % doc["mfloat"].get("status")
     return "%s | ref %s | sec %s, %d covers, %d filings | splits %s, %d rows | track %s%s" % (
         sym, st("ref"), st("sec"), len((doc.get("sec") or {}).get("covers") or []),
         len((doc.get("sec") or {}).get("filings") or []), st("splits"),
@@ -1067,7 +1389,12 @@ def main(argv=None) -> int:
     g.add_argument("--file")
     sh = sub.add_parser("show")
     sh.add_argument("--symbols", required=True)
+    mfp = sub.add_parser("mfloat")                             # 🧮 prints the second-float answer, writes nothing
+    mfp.add_argument("--symbols", required=True)
     a = p.parse_args(argv)
+    if a.cmd == "mfloat":
+        print(json.dumps(fetch_mfloats(_clean(a.symbols.split(","))), sort_keys=True))
+        return 0
     d = _default_db()
     if d is None:
         print("no database")

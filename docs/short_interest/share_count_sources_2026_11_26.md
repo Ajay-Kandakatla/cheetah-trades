@@ -136,6 +136,7 @@ re-fetched 11-26):
 | OTC Markets / transfer agent | all five Nasdaq-listed | | | | | — | not applicable |
 
 No free, dated SECOND FLOAT source was found (NCPL 4.39M Yahoo vs 2.09M Finviz stays open, HIS CALL #8).
+SUPERSEDED 2026-11-26 (spec floatguard): Massive `/stocks/vX/float` is a dated second float (same host and key) — see `docs/short_interest/massive_float_source_2026_11_26.md`.
 
 ## Served shape
 

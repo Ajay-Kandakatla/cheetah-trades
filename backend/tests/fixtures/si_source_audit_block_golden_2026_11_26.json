@@ -1,0 +1,323 @@
+{
+ "asof_text": "checked nightly at 20:15 ET · last 11/25",
+ "empty_text": null,
+ "fault_text": null,
+ "heads": [
+  [
+   "ticker",
+   "Ticker"
+  ],
+  [
+   "on",
+   "Listed on"
+  ],
+  [
+   "float",
+   "Float we use"
+  ],
+  [
+   "other",
+   "Second float"
+  ],
+  [
+   "apart",
+   "Apart"
+  ],
+  [
+   "shares",
+   "Shares out we use"
+  ],
+  [
+   "counts",
+   "Share counts on file"
+  ],
+  [
+   "word",
+   "Chip word"
+  ]
+ ],
+ "honesty": "Counts of two providers differing, read once a night; this table never changes a % on a chip. What two data providers say — neither was checked against a filing. Not a signal. UNMEASURED. Not advice.",
+ "n": 16,
+ "n_contested": 6,
+ "n_differ": 10,
+ "n_window": 2,
+ "rows": [
+  {
+   "cells": {
+    "apart": "2,603×",
+    "counts": "short-interest record 752,439 (read 11/19) · Yahoo 752,439 (read 11/19) · SEC 20-F cover 21,020,597 (as of 6/30).",
+    "float": "361,428 · Yahoo, read 11/19 · 43.2%",
+    "on": "🩳",
+    "other": "940,677,978 · Massive, as of 10/31 · <0.1%",
+    "shares": "752,439 · Yahoo, read 11/19",
+    "ticker": "GMEX",
+    "word": "EXTREME — second float disagrees"
+   },
+   "contested": true,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/GMEX?tab=supply&tf=5m_today",
+   "symbol": "GMEX"
+  },
+  {
+   "cells": {
+    "apart": "46×",
+    "counts": "short-interest record 51,333 (read 11/24) · Yahoo 51,333 (read 11/24) · SEC cover: none on file.",
+    "float": "12,671 · Yahoo, read 11/24 · 238.2%",
+    "on": "🩳",
+    "other": "587,276 · Massive, as of 10/20 · 5.1%",
+    "shares": "51,333 · Yahoo, read 11/24",
+    "ticker": "DKI",
+    "word": "EXTREME — second float disagrees"
+   },
+   "contested": true,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/DKI?tab=supply&tf=5m_today",
+   "symbol": "DKI"
+  },
+  {
+   "cells": {
+    "apart": "4.2×",
+    "counts": "short-interest record 225,449,020 (read 9/11) · Yahoo 225,449,020 (read 9/11) · SEC cover: none on file.",
+    "float": "53,363,881 · Yahoo, read 9/11 · 46.8%",
+    "on": "🩳",
+    "other": "223,848,331 · Massive, as of 9/22 · 11.2%",
+    "shares": "225,449,020 · Yahoo, read 9/11",
+    "ticker": "CHWY",
+    "word": "EXTREME — second float disagrees"
+   },
+   "contested": true,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/CHWY?tab=supply&tf=5m_today",
+   "symbol": "CHWY"
+  },
+  {
+   "cells": {
+    "apart": "49%",
+    "counts": "short-interest record 287,361,020 (read 6/16) · Yahoo 287,361,020 (read 6/16) · SEC 10-Q cover 326,045,530 (as of 11/12).",
+    "float": "196,735,975 · Yahoo, read 6/16 · 28.1%",
+    "on": "🩳",
+    "other": "293,507,244 · Massive, as of 8/16 · 18.9%",
+    "shares": "287,361,020 · Yahoo, read 6/16",
+    "ticker": "TSHA",
+    "word": "EXTREME — second float disagrees"
+   },
+   "contested": true,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/TSHA?tab=supply&tf=5m_today",
+   "symbol": "TSHA"
+  },
+  {
+   "cells": {
+    "apart": "29%",
+    "counts": "short-interest record 53,629,989 (read 10/7) · Yahoo 53,629,989 (read 10/7) · SEC 10-Q cover 57,823,083 (as of 11/2).",
+    "float": "40,110,405 · Yahoo, read 10/7 · 23.5%",
+    "on": "🩳",
+    "other": "51,704,672 · Massive, as of 10/29 · 18.2%",
+    "shares": "53,629,989 · Yahoo, read 10/7",
+    "ticker": "AVTX",
+    "word": "EXTREME — second float disagrees"
+   },
+   "contested": true,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/AVTX?tab=supply&tf=5m_today",
+   "symbol": "AVTX"
+  },
+  {
+   "cells": {
+    "apart": "2%",
+    "counts": "short-interest record 267,626,957 (read 9/11) · Yahoo 267,626,957 (read 9/11) · SEC 20-F cover 10,000,000 (as of 12/31).",
+    "float": "213,951,695 · Yahoo, read 9/11 · 20.3%",
+    "on": "🩳",
+    "other": "218,662,651 · Massive, as of 3/18 · 19.9%",
+    "shares": "267,626,957 · Yahoo, read 9/11",
+    "ticker": "GENI",
+    "word": "EXTREME — second float disagrees"
+   },
+   "contested": true,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/GENI?tab=supply&tf=5m_today",
+   "symbol": "GENI"
+  },
+  {
+   "cells": {
+    "apart": "4.6×",
+    "counts": "short-interest record 1,046,390 (read 11/19) · Yahoo 1,046,390 (read 11/19) · SEC 20-F cover 6,400,000 (as of 12/31).",
+    "float": "876,064 · Yahoo, read 11/19 · 111.8%",
+    "on": "🩳",
+    "other": "190,023 · Massive, as of 8/21 · 515.5%",
+    "shares": "1,046,390 · Yahoo, read 11/19",
+    "ticker": "INLF",
+    "word": "EXTREME"
+   },
+   "contested": false,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/INLF?tab=supply&tf=5m_today",
+   "symbol": "INLF"
+  },
+  {
+   "cells": {
+    "apart": "31%",
+    "counts": "short-interest record 2,388,212 (read 11/20) · Yahoo 2,388,212 (read 11/20) · SEC 20-F cover 1,983,546 (as of 12/31).",
+    "float": "709,911 · Yahoo, read 11/20 · 22.6%",
+    "on": "🩳",
+    "other": "540,841 · Massive, as of 8/13 · 29.6%",
+    "shares": "2,388,212 · Yahoo, read 11/20",
+    "ticker": "AKAN",
+    "word": "High"
+   },
+   "contested": false,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/AKAN?tab=supply&tf=5m_today",
+   "symbol": "AKAN"
+  },
+  {
+   "cells": {
+    "apart": "13%",
+    "counts": "short-interest record 897,717 (read 11/24) · Yahoo 897,717 (read 11/24) · SEC 20-F cover 1,795,943 (as of 12/31).",
+    "float": "282,748 · Yahoo, read 11/24 · 68.6%",
+    "on": "🩳",
+    "other": "319,195 · Massive, as of 8/13 · 60.7%",
+    "shares": "897,717 · Yahoo, read 11/24",
+    "ticker": "SMX",
+    "word": "EXTREME"
+   },
+   "contested": false,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/SMX?tab=supply&tf=5m_today",
+   "symbol": "SMX"
+  },
+  {
+   "cells": {
+    "apart": "3%",
+    "counts": "short-interest record 8,018,428 (read 11/18) · Yahoo 8,018,428 (read 11/25) · SEC 10-Q cover 7,847,899 (as of 3/19).",
+    "float": "4,387,760 · Yahoo, read 11/18 · 10.6%",
+    "on": "🩳",
+    "other": "4,246,497 · Massive, as of 8/14 · 10.9%",
+    "shares": "8,018,428 · Yahoo, read 11/18",
+    "ticker": "NCPL",
+    "word": "High"
+   },
+   "contested": false,
+   "differ": true,
+   "held": false,
+   "href": "/sepa/NCPL?tab=supply&tf=5m_today",
+   "symbol": "NCPL"
+  },
+  {
+   "cells": {
+    "apart": null,
+    "counts": "short-interest record 13,256,037 (read 11/9) · Yahoo 13,256,037 (read 11/9) · SEC cover: none on file.",
+    "float": "8,413,711 · Yahoo, read 11/9 · 40.3%",
+    "on": "🩳",
+    "other": "not compared — the splits on file start after a float's date",
+    "shares": "13,256,037 · Yahoo, read 11/9",
+    "ticker": "BETR",
+    "word": "EXTREME"
+   },
+   "contested": false,
+   "differ": false,
+   "held": false,
+   "href": "/sepa/BETR?tab=supply&tf=5m_today",
+   "symbol": "BETR"
+  },
+  {
+   "cells": {
+    "apart": null,
+    "counts": null,
+    "float": "888,130 · Yahoo, read 11/17 · 35.8%",
+    "on": "🩳",
+    "other": "not read",
+    "shares": "2,675,412 · Yahoo, read 11/17",
+    "ticker": "CLRO",
+    "word": "EXTREME"
+   },
+   "contested": false,
+   "differ": false,
+   "held": false,
+   "href": "/sepa/CLRO?tab=supply&tf=5m_today",
+   "symbol": "CLRO"
+  },
+  {
+   "cells": {
+    "apart": null,
+    "counts": "short-interest record 2,377,874 (read 11/24) · Yahoo 2,377,874 (read 11/24) · SEC cover: not compared — an ADR's SEC cover counts ordinary shares.",
+    "float": "1,403,950 · Yahoo, read 11/24 · 31.3%",
+    "on": "🩳",
+    "other": "none on file",
+    "shares": "2,377,874 · Yahoo, read 11/24",
+    "ticker": "JZ",
+    "word": "EXTREME"
+   },
+   "contested": false,
+   "differ": false,
+   "held": false,
+   "href": "/sepa/JZ?tab=supply&tf=5m_today",
+   "symbol": "JZ"
+  },
+  {
+   "cells": {
+    "apart": null,
+    "counts": "short-interest record 2,576,092 (read 11/9) · Yahoo 35,761,933 (read 11/25) · SEC cover: none on file.",
+    "float": "not shown — float stale",
+    "on": "🩳",
+    "other": "10,373,225 · Massive, as of 3/31",
+    "shares": "35,761,933 · Yahoo, read 11/25",
+    "ticker": "POM",
+    "word": "—"
+   },
+   "contested": false,
+   "differ": false,
+   "held": false,
+   "href": "/sepa/POM?tab=supply&tf=5m_today",
+   "symbol": "POM"
+  },
+  {
+   "cells": {
+    "apart": null,
+    "counts": "short-interest record 4,859,369 (read 11/18) · Yahoo 4,859,369 (read 11/18) · SEC 10-Q cover 4,859,369 (as of 11/11).",
+    "float": "not shown — float stale",
+    "on": "🩳",
+    "other": "739,250 · Massive, as of 11/10",
+    "shares": "4,859,369 · SEC cover, as of 11/11",
+    "ticker": "SMTK",
+    "word": "—"
+   },
+   "contested": false,
+   "differ": false,
+   "held": false,
+   "href": "/sepa/SMTK?tab=supply&tf=5m_today",
+   "symbol": "SMTK"
+  },
+  {
+   "cells": {
+    "apart": null,
+    "counts": "short-interest record 978,675 (read 11/7) · Yahoo 2,220,906 (read 11/25) · SEC 10-Q cover 1,788,532 (as of 11/3).",
+    "float": "1,667,144 · Yahoo, read 11/25 · 26.4%",
+    "on": "🩳",
+    "other": "not compared — the splits on file start after a float's date",
+    "shares": "2,220,906 · Yahoo, read 11/25",
+    "ticker": "WHLR",
+    "word": "EXTREME"
+   },
+   "contested": false,
+   "differ": false,
+   "held": false,
+   "href": "/sepa/WHLR?tab=supply&tf=5m_today",
+   "symbol": "WHLR"
+  }
+ ],
+ "rule_label": "ⓘ how this is checked",
+ "rule_text": "Every night at 20:15 ET the names on the 🩳 list, the 🔭 follow-up and the 👀 Watch are read again: the float the chip divides by (Yahoo's, with its read date) beside Massive's free float (its effective date), split-adjusted with the splits on file. A second float dated before the splits on file is not compared until the splits read reaches back to its date. A second dated float (Massive's free float) is read beside Yahoo's and both are in the hover with their dates; when it puts an EXTREME name under the cut the chip adds '⚠️ sources disagree' and the word stays. At most 120 outside reads a night; the rest wait for the next night.",
+ "shown_text": null,
+ "summary_text": "🧮 Sources · 6 EXTREME contested · 10 of 10 compared floats differ · 2 not compared yet",
+ "title": "🧮 Float and share-count sources · checked nightly"
+}

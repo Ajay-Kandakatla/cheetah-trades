@@ -992,7 +992,9 @@ def test_route_serves_a_held_read(monkeypatch):
 def test_rules_fold_into_the_short_volume_pick():
     picks = SR.rules_section()["picks"]
     assert len(picks) == 8 and picks[-1] == RS.rules_pick()
-    (ext,) = [p for p in picks if "EXTREME" in p]
+    # 2026-11-26 floatguard (spec §1.7 / §6, predicted): pick 1 ('% of float = ') now names EXTREME too
+    assert picks[1].startswith("% of float = ") and "EXTREME" in picks[1]
+    (ext,) = [p for p in picks if "EXTREME" in p and not p.startswith("% of float = ")]
     assert picks.index(ext) == 2
     assert picks[6].startswith("Short VOLUME") and picks[6].endswith(BR.rules_pick())
     assert picks[6] == SHORT_VOLUME_PICK + " " + RULES_DEFAULT

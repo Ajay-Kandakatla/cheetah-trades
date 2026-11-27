@@ -1,0 +1,118 @@
+{
+ "about": "REAL answer of GET https://api.massive.com/stocks/vX/float?ticker.any_of=<the 16 requested names> (house key, read-only planner probe, 2026-11-26 late ET). Keyed extract of the floatguard scratch captures_2026_11_26.json: massive_float_http -> http, massive_float_raw -> answer, names -> requested. No key is stored here.",
+ "captured_at": "2026-11-27T04:31:30.760650+00:00",
+ "http": 200,
+ "requested": [
+  "AKAN",
+  "AVTX",
+  "BETR",
+  "CHWY",
+  "CLRO",
+  "DKI",
+  "GENI",
+  "GMEX",
+  "INLF",
+  "JZ",
+  "NCPL",
+  "POM",
+  "SMTK",
+  "SMX",
+  "TSHA",
+  "WHLR"
+ ],
+ "answer": {
+  "results": [
+   {
+    "effective_date": "2026-08-13",
+    "free_float": 540841,
+    "free_float_percent": 100.0,
+    "ticker": "AKAN"
+   },
+   {
+    "effective_date": "2026-10-29",
+    "free_float": 51704672,
+    "free_float_percent": 96.4,
+    "ticker": "AVTX"
+   },
+   {
+    "effective_date": "2026-10-16",
+    "free_float": 8302619,
+    "free_float_percent": 62.7,
+    "ticker": "BETR"
+   },
+   {
+    "effective_date": "2026-09-22",
+    "free_float": 223848331,
+    "free_float_percent": 99.3,
+    "ticker": "CHWY"
+   },
+   {
+    "effective_date": "2026-08-25",
+    "free_float": 886631,
+    "free_float_percent": 33.1,
+    "ticker": "CLRO"
+   },
+   {
+    "effective_date": "2026-10-20",
+    "free_float": 29363802,
+    "free_float_percent": 50.4,
+    "ticker": "DKI"
+   },
+   {
+    "effective_date": "2026-03-18",
+    "free_float": 218662651,
+    "free_float_percent": 85.0,
+    "ticker": "GENI"
+   },
+   {
+    "effective_date": "2026-10-31",
+    "free_float": 940677978,
+    "free_float_percent": 100.0,
+    "ticker": "GMEX"
+   },
+   {
+    "effective_date": "2026-08-21",
+    "free_float": 190023,
+    "free_float_percent": 18.2,
+    "ticker": "INLF"
+   },
+   {
+    "effective_date": "2026-08-14",
+    "free_float": 4246497,
+    "free_float_percent": 54.1,
+    "ticker": "NCPL"
+   },
+   {
+    "effective_date": "2026-03-31",
+    "free_float": 10373225,
+    "free_float_percent": 51.0,
+    "ticker": "POM"
+   },
+   {
+    "effective_date": "2026-11-10",
+    "free_float": 739250,
+    "free_float_percent": 71.4,
+    "ticker": "SMTK"
+   },
+   {
+    "effective_date": "2026-08-13",
+    "free_float": 893747,
+    "free_float_percent": 82.1,
+    "ticker": "SMX"
+   },
+   {
+    "effective_date": "2026-08-16",
+    "free_float": 293507244,
+    "free_float_percent": 89.2,
+    "ticker": "TSHA"
+   },
+   {
+    "effective_date": "2026-10-08",
+    "free_float": 239842,
+    "free_float_percent": 42.2,
+    "ticker": "WHLR"
+   }
+  ],
+  "status": "OK"
+ }
+}

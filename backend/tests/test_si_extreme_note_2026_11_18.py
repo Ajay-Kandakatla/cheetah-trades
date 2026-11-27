@@ -274,7 +274,9 @@ def test_NEGATIVE_no_served_extreme_string_or_pick_reads_as_a_forecast():
     texts = _served_strings()
     assert len(texts) >= 12
     picks = [p for p in SR.rules_section()["picks"] if "EXTREME" in p]
-    assert len(picks) == 1
+    # 2026-11-26 floatguard (spec §1.7 / §6, predicted): pick 1 ('% of float = ') now names EXTREME too, so it runs
+    # through the same forecast-word check as the tier pick
+    assert len(picks) == 2 and picks[0].startswith("% of float = ")
     for t in texts + picks:
         assert not FORBIDDEN.search(t), t
         assert "band" not in t.lower() and "did not run" not in t.lower(), t
@@ -285,14 +287,14 @@ def test_NEGATIVE_no_served_extreme_string_or_pick_reads_as_a_forecast():
 
 
 def test_rules_pick_is_built_from_the_constant(monkeypatch):
-    (pick,) = [p for p in SR.rules_section()["picks"] if "EXTREME" in p]
+    (pick,) = [p for p in SR.rules_section()["picks"] if "EXTREME" in p and not p.startswith("% of float = ")]
     assert ("%g%%" % SIC.SI_HIGH_PCT) in pick and "SI_HIGH_PCT" in pick
     assert "too small to call either way" in pick and "UNMEASURED" in pick
     assert "band" not in pick.lower() and "Reversal Squeeze" not in pick
     picks = SR.rules_section()["picks"]
     assert picks.index(pick) == 2 and picks[1].startswith("% of float = ")
     monkeypatch.setattr(SIC, "SI_HIGH_PCT", 25.0)
-    (moved,) = [p for p in SR.rules_section()["picks"] if "EXTREME" in p]
+    (moved,) = [p for p in SR.rules_section()["picks"] if "EXTREME" in p and not p.startswith("% of float = ")]
     assert "at or above 25% of the float" in moved and "at or above 20%" not in moved
 
 
