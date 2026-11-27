@@ -1089,6 +1089,22 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-27 ~00:15 ET, verbatim: "Yes please, I think we are in bear market and looking at bad setups and make
+  // them work, forcing them to work honestly..." · "Can you update them please.. find calmer and better setups.." ·
+  // "Continue to track the runners we might evolve and find patterns in the current runners too but I want to make sure
+  // we are finding similar setups to Gajjala". Spec gglike rev 2 (scratchpad gglike/spec.md §3, §4 main-session). BE
+  // chart_maps/gajjala/gg_like.py (the ONE engine: block / served / board_block / rules_line; every bound observed on GG's
+  // example charts, not his rule; CENSUS = tests/fixtures/gajjala/gg_like_census_2026_11_27.json) + gg_like_track.py; FE
+  // lib/ggLike.ts + components/GgLike.tsx (one per-device key gg-like-only:board; no 👀 Watch filter [C1]). The numbers
+  // below are CENSUS / SEPARATION / the bounds — pinned by scripts/contracts.mjs ("🧘 GG-like calm check (2026-11-27)").
+  // Display only: no gate, detector constant, alert, push, sort or list membership reads it. UNMEASURED. PLACED past
+  // index 100 right above the 📅 Runners entry: no NEW_FEATURES[n] pin moves. Docs docs/gajjala/gg_like_2026_11_27.md.
+  {
+    id: 'gajjala-gg-like-calm-check-2026-11-27',
+    label: "🧘 A GG-like check on every 🚩 card — you said: “Yes please, I think we are in bear market and looking at bad setups and make them work, forcing them to work honestly...” · “Can you update them please.. find calmer and better setups..” · “Continue to track the runners we might evolve and find patterns in the current runners too but I want to make sure we are finding similar setups to Gajjala”. Each card now carries a 🧘 chip: 🧘 GG-like when every check we can read sits inside the range of GG's own valid example charts — quiet base bars before the trigger, the trigger within 15% of the day's high so far, on 🎾 a tennis ball drop of 15% or more, every base close on or above the 9 or 21 EMA — else the first check it fails; tap the chip for the list. A 🧘 GG-like only toggle, with its count before you tap, hides the cards that fail, on this device only; a card that rang, or one you opened from an alert, is never hidden. Rare by design: on our own stored reads 2026-11-13 → 2026-11-25 about 6 cards a day read GG-like (67 of 531), and on 🎾 Reversal Squeeze almost none (3 of 285) — the board may show none. It is not a test of his valid vs invalid charts: the same checks pass 6 of his 11 invalid examples. The chip also sits on 🏁 Track record rows and the 👀 Watch tags. Display only — no rule, gate, count, sort or push changed; the A+ gate is unchanged. UNMEASURED. Not advice.",
+    addedAt: '2026-11-27',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-26 ~21:20 ET, verbatim: "Also the Float share count issue and SI discrepancy happened too many times need
   // to do something about it". Spec floatguard rev 2 (scratchpad floatguard/spec.md §3, §3.10, §4.7). BE
   // short_interest/read.pct_of (THE one division — read.si_block, basis_math stale_trigger / verdict, client

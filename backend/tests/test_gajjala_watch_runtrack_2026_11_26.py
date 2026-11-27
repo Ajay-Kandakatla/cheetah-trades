@@ -438,9 +438,11 @@ def test_NEGATIVE_a_ring_on_the_run_day_is_listed_but_never_rang_A_later_and_a_l
     for iso in WIN:
         run_night(iso, coll, seats, {"AIMD": frame(full_bars(run_bar=(1.0, 1.3, 1.0, 1.2, 9e6)))})
     d = coll.docs[f"{RUN}|AIMD"]
+    # 🧘 2026-11-27 (spec gglike WP be-track step 6): each ring item gains gg_like / gg_like_source / win30 — all None
+    # here (no ring stamp, no ledger doc). Every older key and value unchanged.
     assert d["aplus"] == [{"id": "GG:R1", "page": "gajjala", "date": RUN, "setup": "reversal_squeeze", "at_et": "09:40",
                            "play_day": RUN, "outcome": "win", "from_trigger_pct": 34.0, "passed": True,
-                           "after_run": False}]
+                           "after_run": False, "gg_like": None, "gg_like_source": None, "win30": None}]
     assert d["closed"]["aplus_later"] is False
     coll2 = Coll()
     seams["rings"].append({"id": "GG:R2", "page": "gajjala", "date": WIN[4], "symbol": "AIMD", "setup": "vcp",

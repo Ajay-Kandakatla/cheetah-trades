@@ -15,6 +15,7 @@
  * Display + his own 📅 list write only. Nothing rings; UNMEASURED. */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API } from './apiBase';
+import { parseGgLike, type GgLike } from './ggLike';   // 🧘 2026-11-27 (spec gglike, WP fe-watch) — no ./gajjalaWatch import
 
 /** == backend gajjala_watch/constants.API_RUNTRACK_PATH (contract — main session). */
 export const GGW_RUNTRACK_PATH = '/chart-maps/gajjala-watch/runners/track';
@@ -56,6 +57,9 @@ export type GgwRunRosterRow = {
   symbol: string; day_n: number | null; day_text: string | null; seat_text: string | null; seat_title: string | null;
   rule: string | null; run_day: string | null; broker_text: string | null; on_watch: boolean;
   on_watch_text: string | null; remove_title: string | null;
+  /** 🧘 2026-11-27 (spec gglike §3.8): the served chip of the runner's carded read (backend payload._roster_gg_like →
+   *  {setup, label, ...GL.row_chip}), parsed by lib/ggLike.parseGgLike. Set ONLY when it parses — absent otherwise. */
+  gg_like?: GgLike;
 };
 export type GgwRunNotSeated = { symbol: string | null; session: string | null; why: string | null; text: string };
 /** The served roster block (`board.runners`); `state` "unreadable" → `text` is the served fault line, no rows. */
@@ -71,6 +75,8 @@ export type GgwRunTrack = {
   state: string; title: string | null; text: string | null; summary_text: string | null; note: string | null;
   asof_text: string | null; shown_text: string | null; open_n: number | null; closed_n: number | null;
   table: GgwRunTable;
+  /** 🧘 2026-11-27 (spec gglike §3.8): the served ONE counts line of the 🧘 checks on these runners' A+ rings (null = none). */
+  gg_like_text: string | null;
 };
 export type GgwRunTrackDoc = {
   run_day: string | null; seat_text: string | null; state_text: string | null; base_note: string | null; table: GgwRunTable;
@@ -104,10 +110,12 @@ export function parseRunnerTag(v: unknown): GgwRunnerTag | null {
 
 function parseRosterRow(v: unknown): GgwRunRosterRow | null {
   if (!isObj(v) || !str(v.symbol)) return null;
+  const gl = parseGgLike(v.gg_like);
   return {
     symbol: (v.symbol as string).trim(), day_n: count(v.day_n), day_text: str(v.day_text), seat_text: str(v.seat_text),
     seat_title: str(v.seat_title), rule: str(v.rule), run_day: str(v.run_day), broker_text: str(v.broker_text),
     on_watch: v.on_watch === true, on_watch_text: str(v.on_watch_text), remove_title: str(v.remove_title),
+    ...(gl ? { gg_like: gl } : {}),
   };
 }
 
@@ -171,6 +179,7 @@ export function parseRunTrack(v: unknown): GgwRunTrack | null {
     state: v.state as string, title: str(v.title), text: str(v.text), summary_text: str(v.summary_text), note: str(v.note),
     asof_text: str(v.asof_text), shown_text: str(v.shown_text), open_n: count(v.open_n), closed_n: count(v.closed_n),
     table: parseRunTable(v.heads, v.rows),
+    gg_like_text: str(v.gg_like_text),
   };
 }
 

@@ -141,6 +141,24 @@ def _run_bases_of(frames: dict, who: str) -> dict:
     return out
 
 
+def _gg_like_of(rdoc: dict, sym: str, logged: Optional[dict] = None) -> dict:
+    """🧘 2026-11-27 (Ajay "find calmer and better setups.. I want to make sure we are finding similar setups to
+    Gajjala") — {setup: gg_like block} of ONE read doc about to be stored (gg_like.doc_blocks over its own stored frame
+    tile), {} on any fault (logged ONCE per `logged` dict — once per pass). Display only: stored on the read doc and
+    frozen on a ring, never in ctx / alert_ctx / pot_ctx, never a gate, a sort or a count. Observed on GG's example
+    charts, not his rule; UNMEASURED."""
+    try:
+        from chart_maps.gajjala import gg_like as GL
+        out = GL.doc_blocks(rdoc)
+        return out if isinstance(out, dict) else {}
+    except Exception as exc:                                    # noqa: BLE001
+        if logged is None or not logged.get("done"):
+            log.warning("gajjala pass: gg like check failed for %s: %s", sym, type(exc).__name__)
+            if logged is not None:
+                logged["done"] = True
+        return {}
+
+
 def in_window(now: datetime) -> bool:
     """PASS_OPEN_ET ≤ now ≤ PASS_CLOSE_ET (ET) on a market day (the house calendar)."""
     from catalysts.medical.reaction import is_market_day
@@ -653,6 +671,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                   if "si_ssr" in out else None)
         alert_ctx: dict = {}
         pot_ctx: dict = {}
+        gl_by: dict = {}                                        # 🧘 2026-11-27 — {SYM: {setup: block}}, frozen on a ring only
+        gl_log: dict = {}                                       # 🧘 a check fault is logged ONCE per pass
         for s, fr in frames.items():
             row = row_by.get(s) or {}
             fr_read = floats.get(s)
@@ -693,6 +713,10 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                     "listed": listed.get(s), "stopped_today": stopped}
             if isinstance(run_bases.get(s), dict):              # 📶 the key only when the count returned a block
                 rdoc["run_bases"] = run_bases[s]
+            gl = _gg_like_of(rdoc, s, gl_log)                   # 🧘 2026-11-27 — the key only when a setup was judged
+            if gl:
+                rdoc["gg_like"] = gl
+                gl_by[s] = gl
             st.upsert_read(session, s, rdoc, now=now)
             alert_ctx[s] = {"float_text": (fr_read or {}).get("text"), "price": row.get("price"),
                             "last_halt_resume_et": ctx["last_halt_resume_et"], "reg_gain_pct": ctx["reg_gain_pct"]}
@@ -706,7 +730,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         al_failed = False
         try:
             alerts = AL.run_pass(pr, pf, now, session, store=st, send=deps.send, owner=deps.owner,
-                                 dry=push_dry, ctx=alert_ctx)
+                                 dry=push_dry, ctx=alert_ctx,
+                                 **({"gg_like": gl_by} if gl_by else {}))   # 🧘 frozen on the claim only
         except Exception:                                       # noqa: BLE001 — D1: never silences the 🧠 gate
             log.exception("gajjala pass: the A+ gate failed")
             alerts, al_failed = {}, True
@@ -752,7 +777,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                                            si_ssr_hold=(frozenset(ss_adds & set(frames))
                                                         if ("si_ssr" in out or ss_adds) else None),
                                            # 2026-11-11 — the ⚡ break watch's 1M floor: `last.session_volume`
-                                           session_volume=sv)
+                                           session_volume=sv,
+                                           **({"gg_like": gl_by} if gl_by else {}))   # 🧘 frozen on the claim only
         except Exception:                                       # noqa: BLE001
             log.exception("gajjala pass: the potential gate failed")
             out["errors"].append("potential")

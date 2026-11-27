@@ -1,0 +1,44 @@
+/* 🧘 GG-like calm check (2026-11-27, spec gglike §3.9) — chip, check list, toggle line, fold note. House tokens only
+ * (--positive, --negative, --ink-subtle, --hairline, --ink); no new token. Phone (430 px): every piece wraps inside its
+ * card; nothing in this sheet stops a line from wrapping. */
+.gg-like-chip {
+  white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
+  font: inherit; font-size: 0.78rem; line-height: 1.3; padding: 0.1rem 0.45rem;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 999px; background: transparent;
+  display: inline-block; text-align: left;
+}
+button.gg-like-chip { cursor: pointer; }
+.gg-like-ok { color: var(--positive, #3F7A50); }
+.gg-like-no { color: var(--negative, #A34848); }
+.gg-like-unknown { color: var(--ink-subtle, #5F594F); }
+
+/* the card wrapper adds no box: the chip sits in the pills row, the open list takes a full row under it */
+.gg-like-card { display: contents; }
+.gg-like-list {
+  flex: 1 1 100%; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; max-width: 100%;
+  overflow-wrap: anywhere; font-size: 0.78rem;
+}
+.gg-like-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.gg-like-row { display: flex; flex-wrap: wrap; column-gap: 0.4rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.gg-like-row > span { min-width: 0; overflow-wrap: anywhere; }
+.gg-like-value::before, .gg-like-need::before { content: "·"; margin-right: 0.4rem; opacity: 0.5; }
+.gg-like-row--ok .gg-like-mark { color: var(--positive, #3F7A50); }
+.gg-like-row--no .gg-like-mark { color: var(--negative, #A34848); }
+.gg-like-row--na .gg-like-mark { color: var(--ink-subtle, #5F594F); }
+.gg-like-row--info { color: var(--ink-subtle, #5F594F); }
+
+.gg-like-muted { color: var(--ink-subtle, #5F594F); }
+.gg-like-line { margin: 0; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+
+/* the count line under the toggle (drawn only while the filter is ON) */
+.gg-like-hidden { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 0.78rem; }
+.gg-like-hidden-line { min-width: 0; overflow-wrap: anywhere; }
+.gg-like-show-all {
+  font: inherit; padding: 0 0.35rem; cursor: pointer; background: transparent; color: var(--ink, inherit);
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+}
+.gg-like-toggle { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+
+/* the ⓘ fold note */
+.gg-like-note { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.gg-like-note-rows { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }

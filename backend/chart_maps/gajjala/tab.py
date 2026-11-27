@@ -2955,6 +2955,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
           v=v, entries=_entries_once)                              # 🧭 2026-11-11 — display only, every card
     from chart_maps.gajjala import breakout_state as BS             # ⏸ 2026-11-12 — display only (Ajay: "…just sitting there")
     _soft("breakout lines", BS.tag, out, reads_by, v=v, pots=pot_docs)
+    if gg5 and (sub_k in per_setup or sub_k == GC.POTENTIAL_SUB):   # 🧘 2026-11-27 — display only; pots = the keep rule
+        from chart_maps.gajjala import gg_like as GL
+        _soft("gg like", GL.tag, out, reads_by, v=v, pots=pot_docs)
     _strip_private(out["tiles"])
     return _plain(out)
 

@@ -404,6 +404,12 @@ def main(argv=None) -> int:
         except Exception as exc:                                 # noqa: BLE001
             log.exception("gajjala nightly: the float source audit failed")
             out["gajjala_si_audit"] = {"error": f"audit: {type(exc).__name__}"}
+        try:                                                     # 🧘 2026-11-27: after 🩳, before 📅, fenced — never in errors / the exit code
+            from . import gg_like_track as GLT                   # the import inside the fence too
+            out["gajjala_gg_like"] = GLT.record_night(datetime.now(timezone.utc), later=False)   # never the "computed later" pass: that is the one-time run, his go (HIS CALL #11)
+        except Exception as exc:                                 # noqa: BLE001
+            log.exception("gajjala nightly: the 🧘 GG-like record failed")
+            out["gajjala_gg_like"] = {"error": f"record: {type(exc).__name__}"}
         try:                                                     # 📅 2026-11-26: after 🩳, fenced — never in errors / the exit code
             from chart_maps.gajjala_watch import runtrack as RTK  # the import inside the fence too
             out["gajjala_watch_runtrack"] = RTK.nightly(datetime.now(timezone.utc))

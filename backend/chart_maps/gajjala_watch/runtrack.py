@@ -76,6 +76,13 @@ SUMMARY_LATE = " · ran after the {close} close: {late_up} of {late_n} closed da
 SUMMARY_NO_PRICE = " · {no_price} finished with no price"
 EMPTY_TEXT = "Nothing recorded yet — the {at} ET nightly opens a record for every 📅 runner"
 ERROR_TEXT = "📅 the runners record could not be read"
+# 🧘 2026-11-27 (spec gg-like §3.7, WP be-track): ONE counts-only line over every doc's A+ rings — no R, no rate [C2, C6]
+GG_LIKE_LEAD = "🧘 A+ rings on these runners, frozen when they rang: "
+GG_LIKE_W30 = " ({w} of {m} ran +{pct}%)"
+GG_LIKE_W30_SHORT = " ({w} of {m})"
+GG_LIKE_LATER = "checked later {n}"
+GG_LIKE_NONE = "no check on file {n}"
+GG_LIKE_TAIL = " — UNMEASURED, counts only"
 OFF_TEXT = "📅 Runners is off"
 ASOF_TEXT = "recorded nightly at {at} ET · through {date}"
 ASOF_NONE = "recorded nightly at {at} ET"
@@ -571,15 +578,89 @@ def _grades(dates, stores) -> Optional[dict]:
     return out
 
 
+def _notes(dates, stores) -> Optional[dict]:
+    """🧘 2026-11-27 — the sibling of `_grades` over the same ledger docs: {ledger id: {"gg_like", "win30"}} (the notes
+    gg_like_track.record_night wrote through store.annotate_ledger) of these dates across the pages; None on a fault."""
+    out = {}
+    for k in C.RUNNERS_SEAT_PAGES:
+        st = (stores or {}).get(k)
+        if st is None:
+            continue
+        docs = st.ledger_docs(sorted(dates))
+        if docs is None:
+            return None
+        for d in docs:
+            if isinstance(d, dict) and d.get("_id"):
+                out[d["_id"]] = {"gg_like": d.get("gg_like"), "win30": d.get("win30")}
+    return out
+
+
+def _gg_like_of(ring, note) -> dict:
+    """🧘 the ring's three keys: gg_like (the verdict or None), gg_like_source ("ring" | "computed_later" | None) and win30
+    (True / False / None — None unless the source is "ring" [C2]) — gg_like_track's own stamp_of / win30_of."""
+    try:
+        from chart_maps.gajjala import gg_like_track as GLT
+        blk, src = GLT.stamp_of(ring, note if isinstance(note, dict) else None)
+        w = GLT.win30_of(note) if src == GLT.SOURCES[1] else None
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("runtrack: 🧘 stamp unreadable on %s: %s", (ring or {}).get("id"), type(exc).__name__)
+        blk, src, w = None, None, None
+    return {"gg_like": blk.get("verdict") if isinstance(blk, dict) else None, "gg_like_source": src, "win30": w}
+
+
+def gg_like_text(docs) -> Optional[str]:
+    """🧘 ONE counts line over every doc's A+ rings, de-duplicated by ring id (the first item seen wins): ring-stamped
+    groups with their +30% "x of m" (m = rings whose day was measured), then "checked later", then "no check on file". A
+    zero part is dropped; no R, no rate. None when no ring is on file."""
+    from chart_maps.gajjala import gg_like_track as GLT
+    seen: dict = {}
+    for d in docs or []:
+        for a in (d.get("aplus") or []) if isinstance(d, dict) else []:
+            if isinstance(a, dict) and a.get("id") is not None and a["id"] not in seen:
+                seen[a["id"]] = a
+    if not seen:
+        return None
+    groups = {g: [0, 0, 0] for g in GLT.GROUPS[:3]}            # [n, win30 yes, win30 measured]
+    later = none = 0
+    for a in seen.values():
+        src, g = a.get("gg_like_source"), a.get("gg_like")
+        if src == GLT.SOURCES[1] and g in groups:
+            groups[g][0] += 1
+            if isinstance(a.get("win30"), bool):
+                groups[g][2] += 1
+                groups[g][1] += 1 if a["win30"] else 0
+        elif src == GLT.SOURCES[2]:
+            later += 1
+        else:
+            none += 1
+    pct = C.RUNNERS_SEAT_APLUS_PCT
+    parts, first = [], True
+    for g in GLT.GROUPS[:3]:
+        n, w, m = groups[g]
+        if n <= 0:
+            continue
+        p = f"{GLT._group_word(g)} {n}"
+        if m > 0:
+            p += (GG_LIKE_W30 if first else GG_LIKE_W30_SHORT).format(w=w, m=m, pct=pct)
+            first = False
+        parts.append(p)
+    if later:
+        parts.append(GG_LIKE_LATER.format(n=later))
+    if none:
+        parts.append(GG_LIKE_NONE.format(n=none))
+    return GG_LIKE_LEAD + " · ".join(parts) + GG_LIKE_TAIL
+
+
 def _default_daily(sym, *, now=None):
     from sepa.prices import closed_daily_frame
     return closed_daily_frame(sym, now=now, use_cache=False)
 
 
-def _aplus_of(doc, rings, grades) -> list:
+def _aplus_of(doc, rings, grades, notes=None) -> list:
     """The doc's A+ rings: every ring of the symbol dated in its window, or measured on a window session (`play_day`).
     `after_run` = the ring's date > the run day (a ring ON the run day is listed, never "rang A+ later"). The seat's own
-    ring carries the seat's from-trigger %; every other ring None (nothing is measured here)."""
+    ring carries the seat's from-trigger %; every other ring None (nothing is measured here). 🧘 2026-11-27: every item
+    gains gg_like / gg_like_source / win30 (`_gg_like_of` over the ring's stamp and its ledger note in `notes`)."""
     k = CO.fold(doc.get("symbol") or "")
     win = set(doc.get("window") or [])
     rd = doc.get("run_day") or ""
@@ -596,7 +677,8 @@ def _aplus_of(doc, rings, grades) -> list:
                     "at_et": r.get("at_et") if isinstance(r.get("at_et"), str) else None, "play_day": pd_,
                     "outcome": (grades or {}).get(r.get("id")),
                     "from_trigger_pct": _fin(seat.get("run_pct")) if own else None, "passed": True if own else None,
-                    "after_run": bool(d and d > rd)})
+                    "after_run": bool(d and d > rd),
+                    **_gg_like_of(r, (notes or {}).get(r.get("id")))})
     out.sort(key=lambda a: (a["date"] or "", a["at_et"] or "", a["id"] or ""))
     return out
 
@@ -683,6 +765,13 @@ def nightly(now: datetime, *, db=None, stores=None, daily: Optional[Callable] = 
             grades = None
         if grades is None and "grades" not in out["faults"]:
             out["faults"].append("grades")
+        try:                                                    # 🧘 2026-11-27: the ledger notes (gg_like / win30)
+            notes = _notes(dates, stores)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("runtrack: the 🧘 ledger notes unreadable: %s", type(exc).__name__)
+            notes = None
+        if notes is None:
+            out["faults"].append("notes")
         trackers: dict = {}
         for iso in isos:
             try:
@@ -705,7 +794,7 @@ def nightly(now: datetime, *, db=None, stores=None, daily: Optional[Callable] = 
                 frames[sym] = None
                 out["failed"] += 1
         for d in open_docs:
-            _night_doc(d, frames.get(CO.house(d.get("symbol") or "")), t, now, rings, grades, trackers, out)
+            _night_doc(d, frames.get(CO.house(d.get("symbol") or "")), t, now, rings, grades, trackers, out, notes)
     writes = []
     for k, d in work.items():
         old = stored.get(k)
@@ -728,13 +817,13 @@ def nightly(now: datetime, *, db=None, stores=None, daily: Optional[Callable] = 
     return out
 
 
-def _night_doc(d, frame, t, now, rings, grades, trackers, out) -> None:
+def _night_doc(d, frame, t, now, rings, grades, trackers, out, notes=None) -> None:
     """One OPEN doc, in place: base + rows from tonight's frame (kept as stored when the frame failed), reads, rings,
     then the closing rule."""
     win = d.get("window") or window_of(d.get("run_day"))
     d["window"] = win
     if rings is not None:
-        d["aplus"] = _aplus_of(d, rings, grades)
+        d["aplus"] = _aplus_of(d, rings, grades, notes)
     by_ring_date: dict = {}
     for a in d.get("aplus") or []:
         by_ring_date.setdefault(a.get("date"), []).append({"symbol": d.get("symbol"), "date": a.get("date"),
@@ -888,7 +977,16 @@ def payload(now: datetime, symbol: Optional[str] = None, *, db=None, coll=None) 
             "asof_text": ASOF_TEXT.format(at=at, date=max(thr)) if thr else ASOF_NONE.format(at=at),
             "heads": _heads(CLOSED_HEADS), "rows": [_closed_row(d) for d in shown],
             "shown_text": SHOWN_TEXT.format(lim=ROWS_MAX, n=len(closed)) if len(closed) > ROWS_MAX else None,
-            "open_n": s["open"], "closed_n": s["closed"], "summary": s}
+            "open_n": s["open"], "closed_n": s["closed"], "summary": s,
+            "gg_like_text": _gg_like_text_soft(docs)}                                    # 🧘 2026-11-27
+
+
+def _gg_like_text_soft(docs) -> Optional[str]:
+    try:
+        return gg_like_text(docs)
+    except Exception as exc:                                    # noqa: BLE001 — the record is served without it
+        log.warning("runtrack: 🧘 line failed: %s", type(exc).__name__)
+        return None
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────────────────────────────────────────

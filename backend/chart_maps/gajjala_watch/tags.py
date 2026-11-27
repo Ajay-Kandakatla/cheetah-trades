@@ -32,7 +32,7 @@ from typing import Optional
 
 log = logging.getLogger("chart_maps.gajjala_watch.tags")
 
-TAGS_READ_FIELDS = {"symbol": 1, "setups": 1, "ctx.float": 1}          # never the tile bars
+TAGS_READ_FIELDS = {"symbol": 1, "setups": 1, "ctx.float": 1, "gg_like": 1}   # never the tile bars (🧘 gg_like 11-27)
 SCAN_TAG_FIELDS = {"symbol": 1, "date": 1, "held": 1, "last.trader": 1, "last.promo": 1, "last.promo_text": 1}
 TAGS_KEYS = ("on_board", "setups", "stages", "float", "broker_text", "trader_text", "promo_text")
 
@@ -88,6 +88,24 @@ def carded_setups(doc) -> list:
     return out
 
 
+# 🧘 2026-11-27 (spec gglike §3.8, WP be-serve-watch) — no digit in a string here (the source guard).
+def gg_like_of(doc, setup: str) -> Optional[dict]:
+    """🧘 the card block of `setup` built from the block the 🚩 pass
+    STORED on this read doc (`doc["gg_like"][setup]`): `gg_like.served(from_stamp(...))` when the stamp passes the shape
+    guard AND names this setup; else None. The Watch never computes a block (no bars are read here) and never invents
+    one; no `keep` is handed in — nothing is hidden on the Watch. A fault → None for this setup only, ONE log line."""
+    try:
+        from chart_maps.gajjala import gg_like as GL
+        stored = doc.get("gg_like") if isinstance(doc, dict) else None
+        blk = GL.from_stamp(stored.get(setup) if isinstance(stored, dict) else None)
+        if not isinstance(blk, dict) or blk.get("setup") != setup:
+            return None
+        return GL.served(blk)
+    except Exception as exc:                                            # noqa: BLE001
+        log.warning("gajjala_watch: gg_like tag unavailable: %s", type(exc).__name__)
+        return None
+
+
 def on_board(doc) -> bool:
     """The 🚩 board's card rule, nothing else — a tracker doc never makes a name carded."""
     return bool(doc) and bool(carded_setups(doc))
@@ -128,7 +146,8 @@ def blocks(names, session: date, is_today: bool, *, st) -> dict:
         out[s] = {
             "on_board": True,
             "setups": [{"setup": k, "label": tab._setup_label(k), "state": r.get("state"),
-                        "state_label": tab.state_label(r, tab._rang(entries_raw, session, sym, k))}   # tab.py:1536
+                        "state_label": tab.state_label(r, tab._rang(entries_raw, session, sym, k)),   # tab.py:1536
+                        "gg_like": gg_like_of(doc, k)}                  # 🧘 2026-11-27 — the pass's stored block only
                        for k in carded[s] for r in [setups.get(k) or {}]],
             "stages": SG.for_tile(by[sym], None, session) if by.get(sym) else None,   # no `here`: no single card
             "float": tab._float_chip(tab._float_read(doc, None)),       # the read's own ctx.float (no daily doc)

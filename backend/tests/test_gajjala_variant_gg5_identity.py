@@ -132,6 +132,18 @@ wording only; every other entry is the BOARD golden alone):
   ADDED, 0 changed, 0 removed, every one under <mode>/potential/all_potentials (30 per mode: one row, GGA 🚩 "✅ broke
   10:41" off its tracker A+ step, carded → href; title / order_text / rule_text / live true / as_of_text / counts). No
   other sub, tile, track or watch byte moved (docs/gajjala/potentials_all_tabs_2026_11_24.md).
+  2026-11-27 — Ajay "Can you update them please.. find calmer and better setups.." / "I want to make sure we are finding
+  similar setups to Gajjala" (🧘 GG-like calm check, SPEC gglike §4 WP main-session; the regen is the spec's HIS CALL #14
+  default, ADDED leaves only): BOARD and, for the fifth time, WRITES regenerated (`-k "test_gg5_writes_are_byte_identical
+  or test_gg5_board_is_byte_identical"`, hermetic conftest). ALL ADDED, 0 changed, 0 removed — every added leaf under a
+  `gg_like` / `gg_like_split` key (diffed leaf-for-leaf against the pre-regen files before keeping them). WRITES 5689 ->
+  6337 leaves (+648): `gg_like` on the three gajjala_reads replace_one docs per mode (278), on the A+ claim's
+  $setOnInsert (23) and on the 🧠 tracker's $set.push (23) per mode. BOARD 15625 -> 16393 leaves (+768): `gajjala.gg_like`
+  on the 16 card tiles (bull_flag / horizontal_fade / kiss_fly / potential × 2 tiles × 2 modes; 61-62 leaves each), the
+  board `gg_like` on the six setup + 🧠 subs per mode (19 each), `gg_like` on the 🏁 track_record day rows (12) and A+ rows
+  (6) and the 🏁 `gg_like_split` (5) per mode. Same check on the FE fixtures by their own `-k golden` recipes, `gg_like` /
+  `gg_like_split` ADDED only: 1m board 2206 -> 2207 (+1, `gg_like_split` null — GG1 serves no split), on_open 2326 -> 2425
+  (+99), potential 3967 -> 4351 (+384), track_record 2928 -> 2943 (+15) (docs/gajjala/gg_like_2026_11_27.md).
 """
 from __future__ import annotations
 

@@ -22,8 +22,15 @@
  * 📅 2026-11-26 (spec watchrun §3.5) — Ajay: "Ok then add them to our watch list and track them please.. I know he tracks
  * them for two weeks sometimes.. before he discards them..". A name seated on 📅 Runners that also has a tile carries the
  * served `row.runner`: GgwProvLine draws its two served chips (day · seat, hover = the served seat title) after the when
- * chip; GgwDrawer prints the served seat title (a phone has no hover). A row without `runner` draws nothing new. */
-import type { GgwRow } from '../lib/gajjalaWatch';
+ * chip; GgwDrawer prints the served seat title (a phone has no hover). A row without `runner` draws nothing new.
+ *
+ * 🧘 2026-11-27 (spec gglike §3.9, WP fe-watch) — Ajay: "find calmer and better setups.. I want to make sure we are finding
+ * similar setups to Gajjala". GgwGgLikeChip = the SERVED GG-like chip of the tile's setup (lib/gajjalaWatch.ggwTileGgLike:
+ * the served setup chip's key, else 🎾, else the first carded), a <span> right after GgwSetupChip; GgwDrawer prints that
+ * block's ✓ / ✗ / n/a rows (GgLikeList). Display only: NO toggle, NO hidden line, NO `hidden`, NO storage key — nothing on
+ * the Watch is ever hidden by 🧘 (every A+ push lands here). Observed on GG's example charts, not his rule; UNMEASURED. */
+import { ggwTileGgLike, type GgwRow } from '../lib/gajjalaWatch';
+import { GgLikeChip, GgLikeList } from './GgLike';
 import { GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
 
 /** The served setup chip of an organised row; nothing when none is served. */
@@ -35,6 +42,12 @@ export function GgwSetupChip({ row }: { row: GgwRow }) {
       {s.text}
     </span>
   );
+}
+
+/** 🧘 The served GG-like chip of the tile's setup (a span — the list lives in the ⋯ drawer); nothing without a block. */
+export function GgwGgLikeChip({ row }: { row: GgwRow }) {
+  const g = ggwTileGgLike(row);
+  return g ? <GgLikeChip like={g.like} sym={row.symbol} /> : null;
 }
 
 /** 📐 The row's served daily-zones line (row.levels — ok / retry / none / pending, every word served). No text → nothing. */
@@ -93,9 +106,15 @@ export function GgwDrawer({ row, open, tags, domId }: { row: GgwRow; open: boole
   const a = row.auto;
   const autoLines = a ? [a.added_text, a.volume_text, a.leaving_text].filter((x): x is string => !!x) : [];
   const past = o?.past_winner ?? null;
+  const like = ggwTileGgLike(row);
   return (
     <div className="ggw-drawer" id={domId} data-testid={`ggw-drawer-${sym}`} hidden={!open || undefined}>
       {tags ? <GgwTagsRow row={row} room={tags.room} study={tags.study} omitFloat omitBroker /> : null}
+      {like ? (
+        <div className="ggw-drawer-row ggw-gglike" data-testid={`ggw-gglike-${sym}`} data-setup={like.setup}>
+          <GgLikeList like={like.like} sym={sym} />
+        </div>
+      ) : null}
       {a ? (
         <div className="ggw-drawer-row">
           <span className="ggw-chip ggw-auto" data-testid="ggw-auto">{a.text}</span>

@@ -1592,6 +1592,15 @@
     },
     "empty_text": null,
     "entries_text": "🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session 1 win · 0 losses · 100% won · 0 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
+    "gg_like_split": {
+     "label": "🧘 GG-like vs not",
+     "lines": [
+      "No ring carries a frozen check yet — it is stamped on every ring from the day this shipped.",
+      "No check on file: 4 A+ · 6 🧠"
+     ],
+     "note": "Winner = your 11-26 rule: +30% above the A+ trigger, same session to 20:00 ET. R = GG's trade math on the same session (+1R, the stop, or the close); after costs = less 0.10% + $0.01 a share per side. Thin-R rows and duplicates are out of the R sums. Setups are never added together: the stop width differs by setup, and costs in R grow as the stop tightens. No average is printed — too few rings for one.",
+     "title": "🧘 GG-like vs not — UNMEASURED: counts of the rings as they rang, setup by setup; not a test, no rate, no rank"
+    },
     "grade_at_et": "20:15",
     "heads": [
      {
@@ -3156,6 +3165,15 @@
     },
     "empty_text": null,
     "entries_text": "🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session 1 win · 0 losses · 100% won · 0 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
+    "gg_like_split": {
+     "label": "🧘 GG-like vs not",
+     "lines": [
+      "No ring carries a frozen check yet — it is stamped on every ring from the day this shipped.",
+      "No check on file: 4 A+ · 4 🧠"
+     ],
+     "note": "Winner = your 11-26 rule: +30% above the A+ trigger, same session to 20:00 ET. R = GG's trade math on the same session (+1R, the stop, or the close); after costs = less 0.10% + $0.01 a share per side. Thin-R rows and duplicates are out of the R sums. Setups are never added together: the stop width differs by setup, and costs in R grow as the stop tightens. No average is printed — too few rings for one.",
+     "title": "🧘 GG-like vs not — UNMEASURED: counts of the rings as they rang, setup by setup; not a test, no rate, no rank"
+    },
     "grade_at_et": "20:15",
     "heads": [
      {
@@ -3950,6 +3968,15 @@
     },
     "empty_text": null,
     "entries_text": null,
+    "gg_like_split": {
+     "label": "🧘 GG-like vs not",
+     "lines": [
+      "No ring carries a frozen check yet — it is stamped on every ring from the day this shipped.",
+      "No check on file: 0 A+ · 2 🧠"
+     ],
+     "note": "Winner = your 11-26 rule: +30% above the A+ trigger, same session to 20:00 ET. R = GG's trade math on the same session (+1R, the stop, or the close); after costs = less 0.10% + $0.01 a share per side. Thin-R rows and duplicates are out of the R sums. Setups are never added together: the stop width differs by setup, and costs in R grow as the stop tightens. No average is printed — too few rings for one.",
+     "title": "🧘 GG-like vs not — UNMEASURED: counts of the rings as they rang, setup by setup; not a test, no rate, no rank"
+    },
     "grade_at_et": "20:15",
     "heads": [
      {

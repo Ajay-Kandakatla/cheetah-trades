@@ -355,6 +355,7 @@ def alert_of(doc: dict, kind: str, variant=None) -> Optional[dict]:
         extra["promo_text"] = doc.get("promo_text") if isinstance(doc.get("promo_text"), str) else None
     if line != LINES[2]:                                # 📶 2026-11-15: the claim's base-count stamp — keys ONLY then
         extra.update(_run_base_stamp(doc))
+        extra.update(_gg_like_stamp(doc, kind))         # 🧘 2026-11-27: the 🧘 check frozen at the ring — key ONLY then
     return {**extra, "id": rid, "date": d.isoformat(), "symbol": sym, "setup": setup,
             "kind": kind, "line": line, "at_utc": at, "at_et": at_et, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r": r, "r_pct": r_pct,
@@ -374,6 +375,23 @@ def _run_base_stamp(doc: dict) -> dict:
     if isinstance(n, bool) or not isinstance(n, int) or n < 0 or not isinstance(f, bool):
         return {}
     return {"run_base_n": n, "run_base_forming": f}
+
+
+def _gg_like_stamp(doc: dict, kind: str) -> dict:
+    """🧘 2026-11-27 (spec gg-like §3.6, the 📶 freeze-at-ring precedent): the 🧘 block the ring froze — `push.gg_like` on a
+    🧠 tracker doc, `gg_like` on an A+ claim doc — -> {"gg_like": block} ONLY when gg_like.from_stamp accepts it; else {}
+    (the row shape of before). A ⏪ replay row never calls it. INFORMATION ONLY — never a grade, gate, count or order input."""
+    try:
+        from . import gg_like as GL
+        src = (doc.get("push") or {}) if kind == KINDS[0] else doc
+        raw = src.get("gg_like") if isinstance(src, dict) else None
+        if raw is None:
+            return {}
+        blk = GL.from_stamp(raw)
+    except Exception as exc:                                    # noqa: BLE001 — a stamp never takes a row down
+        log.warning("gajjala ledger: 🧘 stamp unreadable on %s: %s", (doc or {}).get("_id"), type(exc).__name__)
+        return {}
+    return {"gg_like": blk} if isinstance(blk, dict) else {}
 
 
 def base_text_of(row: dict) -> Optional[str]:
@@ -1815,6 +1833,8 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     counts = {ln: {h: _counts_blank(h) for h in GC.LEDGER_HORIZONS} for ln in COUNT_LINES}
     any_prov = False
     built, facts = [], []
+    prov_same: set = set()                                      # 🧘 the row ids whose same cell is today's provisional read
+    same_by: dict = {}                                          # 🧘 {row id: the same column it was served from}
     for row in rows:
         replayed = row.get("line") == LINES[2]
         doc = stored.get(row["id"]) or {}
@@ -1833,8 +1853,11 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                     g, prov = grades_today[row["id"]], True
                 cells[h] = _cell(row, h, g, prov, now, session, is_today)
             gs[h] = g
+            if prov and h == GC.LEDGER_HORIZONS[0]:
+                prov_same.add(row["id"])                                                 # 🧘 2026-11-27 (R never read)
             if prov and _count_line(row) == COUNT_LINES[0]:
                 any_prov = True
+        same_by[row["id"]] = gs.get("same")
         # 🔁 2026-11-02: the row's neutral trade facts (the tally waits for dedupe_trades, below)
         facts.append(trade_facts(row, gs.get("same"), gs.get("next"), group=dup_group(row),
                                  rank=_setup_rank(row["setup"])))
@@ -1891,6 +1914,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             continue
         for h in GC.LEDGER_HORIZONS:
             _tally_into(counts[ln][h], b[h]["state"], bool(row.get("thin")))                    # THE thin rule
+    gl_split = _gg_like_post(rows, built, stored, same_by, prov_same, dups) if gg5 else None   # 🧘 2026-11-27
     for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
             # ⏪ the replayed line never reads a % (DECISIONS11 D5 / D7)
@@ -1952,8 +1976,41 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             # FE sorts by — the rows above stay in the served (chronological) order; the server never reorders
             "sorts": _sorts(), "sort_param": SORT_PARAM, "sort_default": SORT_KEYS[0], "bucket_order": list(BUCKETS),
             "aplus": aplus_block(ap, ap_days, has_replay, ap_prov)}
+    if gg5:                                     # 🧘 2026-11-27: GG5 only — a 🧪 block carries no new key
+        block["gg_like_split"] = gl_split
+    elif V.of(v) is V.GG1:                      # GG1 serves the key as None: the 🏁 1m/5m block-key parity pin
+        block["gg_like_split"] = None           # (tests/test_gajjala_track_parity_2026_11_05.py) — never read
     return block if gg5 else _variant_words(block, v, states={r["id"]: r.get("push_state") for r in rows
                                                                if r.get("kind") == KINDS[0]})
+
+
+def _gg_like_post(rows: list, built: list, stored: dict, same_by: dict, prov_same: set, dups: dict) -> Optional[dict]:
+    """🧘 2026-11-27 (spec gg-like §3.6 / §3.7, GG5 only): every chip and every fact computed FIRST, then assigned — a
+    fault leaves every row as before and answers None (the block serves `gg_like_split: None`). A row gains `gg_like`
+    (gg_like.row_chip) only when its ring stamp or its ledger doc carries a block; a ⏪ replayed row is never read. No
+    count line, %, category, sort or row order reads any of it. -> gg_like_track.split_block(facts) | None."""
+    try:
+        from . import gg_like as GL
+        from . import gg_like_track as GLT
+        chips, facts = {}, []
+        for row, b in zip(rows, built):
+            if row.get("line") == LINES[2]:
+                continue
+            doc = stored.get(row["id"]) or {}
+            blk, src = GLT.stamp_of(row, doc)
+            if blk is not None:
+                chip = GL.row_chip(blk, source=src)
+                if chip is not None:
+                    chips[id(b)] = (b, chip)
+            facts.append(GLT.ring_facts(row, same_by.get(row["id"]), doc, provisional=row["id"] in prov_same,
+                                        dup=b["id"] in dups))
+        split = GLT.split_block(facts)
+    except Exception as exc:                                    # noqa: BLE001 — the 🏁 block is served without it
+        log.warning("gajjala ledger: 🧘 split failed: %s", type(exc).__name__)
+        return None
+    for b, chip in chips.values():
+        b["gg_like"] = chip
+    return split
 
 
 POTENTIAL_STATE_WORD = {"shadow": "ledger_kind_potential_shadow", "pushed": "ledger_kind_potential_pushed"}

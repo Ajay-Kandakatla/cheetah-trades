@@ -1109,6 +1109,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -1588,6 +1611,46 @@
       "entry_bar_t": "2026-10-13 10:40",
       "flag_k": 1,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✓",
+         "need": "2 or more — the shortest counted on GG's valid Bull Flag examples",
+         "ok": true,
+         "value": "2 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "0.3% under 11.00"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 2 base closes"
+        }
+       ],
+       "chip": "🧘 GG-like",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": true,
+       "reason": null,
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 GG-like — every check we can read sits inside the range of GG's valid example charts · observed on his examples, not his rule · 6 of his 11 invalid examples pass the same checks · UNMEASURED",
+       "tone": "ok",
+       "verdict": "gg_like"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -1955,6 +2018,49 @@
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "2 or more — the shortest counted on GG's valid Bull Flag examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -3479,6 +3585,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -3990,6 +4119,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "9 or more — the shortest counted on GG's valid Horizontal Fade examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 21 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -4402,6 +4574,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "9 or more — the shortest counted on GG's valid Horizontal Fade examples",
+         "ok": false,
+         "value": "3 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 21 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 3 base closes"
+        }
+       ],
+       "chip": "🧘 3-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "3-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 3-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -4698,6 +4913,29 @@
       }
      }
     }
+   },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
    },
    "graveyard_today": [],
    "list_note": "🌀 2 with fewer than 2 contractions counted, not listed — his K4: a VCP needs at least 2 contractions, each tighter than the one before (S8 33:50)",
@@ -5049,6 +5287,29 @@
       }
      }
     }
+   },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
    },
    "graveyard_today": [],
    "kiss_filter": {
@@ -5533,6 +5794,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "3 or more — the shortest counted on GG's valid EMA Kiss & Fly examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -5925,6 +6229,49 @@
       "entry_bar_t": "2026-10-13 10:40",
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "3 or more — the shortest counted on GG's valid EMA Kiss & Fly examples",
+         "ok": false,
+         "value": "2 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "0.3% under 11.00"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 2 base closes"
+        }
+       ],
+       "chip": "🧘 2-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "2-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 2-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -8367,6 +8714,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "order_note": "🧠 trigger armed first · then highest volume",
@@ -8778,6 +9148,49 @@
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "2 or more — the shortest counted on GG's valid Bull Flag examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -9217,6 +9630,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "9 or more — the shortest counted on GG's valid Horizontal Fade examples",
+         "ok": false,
+         "value": "3 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 21 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 3 base closes"
+        }
+       ],
+       "chip": "🧘 3-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "3-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 3-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -10144,6 +10600,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -10914,6 +11393,14 @@
          "dup_text": null,
          "fill_px": null,
          "flag_text": null,
+         "gg_like": {
+          "chip": "🧘 GG-like",
+          "source": "ring",
+          "source_text": "frozen when it rang",
+          "title": "🧘 GG-like — every check we can read sits inside the range of GG's valid example charts · observed on his examples, not his rule · 6 of his 11 invalid examples pass the same checks · UNMEASURED",
+          "tone": "ok",
+          "verdict": "gg_like"
+         },
          "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
          "id": "2026-10-13|GGA|bull_flag|aplus",
          "key": "2026-10-13-GGA-bull_flag-aplus",
@@ -11225,6 +11712,14 @@
         "dup_text": null,
         "fill_px": null,
         "flag_text": null,
+        "gg_like": {
+         "chip": "🧘 GG-like",
+         "source": "ring",
+         "source_text": "frozen when it rang",
+         "title": "🧘 GG-like — every check we can read sits inside the range of GG's valid example charts · observed on his examples, not his rule · 6 of his 11 invalid examples pass the same checks · UNMEASURED",
+         "tone": "ok",
+         "verdict": "gg_like"
+        },
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
         "id": "2026-10-13|GGA|bull_flag|aplus",
         "key": "2026-10-13-GGA-bull_flag-aplus",
@@ -11268,6 +11763,14 @@
         "dup_text": null,
         "fill_px": null,
         "flag_text": null,
+        "gg_like": {
+         "chip": "🧘 1-bar base",
+         "source": "ring",
+         "source_text": "frozen when it rang",
+         "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+         "tone": "no",
+         "verdict": "not"
+        },
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
         "id": "2026-10-13|GGA|bull_flag|potential",
         "key": "2026-10-13-GGA-bull_flag-potential",
@@ -11311,6 +11814,15 @@
     },
     "empty_text": null,
     "entries_text": "🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 open · 1 not graded yet; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
+    "gg_like_split": {
+     "label": "🧘 GG-like vs not",
+     "lines": [
+      "🎯 A+ · 🚩 Bull Flag · GG-like: 1 ring · stop 1.4% wide (median)",
+      "🧠 armed · 🚩 Bull Flag · not GG-like: 1 ring · stop 1.1% wide (median)"
+     ],
+     "note": "Winner = your 11-26 rule: +30% above the A+ trigger, same session to 20:00 ET. R = GG's trade math on the same session (+1R, the stop, or the close); after costs = less 0.10% + $0.01 a share per side. Thin-R rows and duplicates are out of the R sums. Setups are never added together: the stop width differs by setup, and costs in R grow as the stop tightens. No average is printed — too few rings for one.",
+     "title": "🧘 GG-like vs not — UNMEASURED: counts of the rings as they rang, setup by setup; not a test, no rate, no rank"
+    },
     "grade_at_et": "20:15",
     "heads": [
      {
@@ -12537,6 +13049,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -13016,6 +13551,46 @@
       "entry_bar_t": "2026-10-13 10:40",
       "flag_k": 1,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✓",
+         "need": "2 or more — the shortest counted on GG's valid Bull Flag examples",
+         "ok": true,
+         "value": "2 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "0.3% under 11.00"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 2 base closes"
+        }
+       ],
+       "chip": "🧘 GG-like",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": true,
+       "reason": null,
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 GG-like — every check we can read sits inside the range of GG's valid example charts · observed on his examples, not his rule · 6 of his 11 invalid examples pass the same checks · UNMEASURED",
+       "tone": "ok",
+       "verdict": "gg_like"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -13383,6 +13958,49 @@
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "2 or more — the shortest counted on GG's valid Bull Flag examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -14907,6 +15525,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -15418,6 +16059,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "9 or more — the shortest counted on GG's valid Horizontal Fade examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 21 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -15830,6 +16514,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "9 or more — the shortest counted on GG's valid Horizontal Fade examples",
+         "ok": false,
+         "value": "3 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 21 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 3 base closes"
+        }
+       ],
+       "chip": "🧘 3-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "3-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 3-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -16126,6 +16853,29 @@
       }
      }
     }
+   },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
    },
    "graveyard_today": [],
    "list_note": "🌀 2 with fewer than 2 contractions counted, not listed — his K4: a VCP needs at least 2 contractions, each tighter than the one before (S8 33:50)",
@@ -16477,6 +17227,29 @@
       }
      }
     }
+   },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
    },
    "graveyard_today": [],
    "kiss_filter": {
@@ -16961,6 +17734,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "3 or more — the shortest counted on GG's valid EMA Kiss & Fly examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -17353,6 +18169,49 @@
       "entry_bar_t": "2026-10-13 10:40",
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "3 or more — the shortest counted on GG's valid EMA Kiss & Fly examples",
+         "ok": false,
+         "value": "2 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "0.3% under 11.00"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 2 base closes"
+        }
+       ],
+       "chip": "🧘 2-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "2-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 2-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -19795,6 +20654,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "order_note": "🧠 trigger armed first · then highest volume",
@@ -20206,6 +21088,49 @@
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "2 or more — the shortest counted on GG's valid Bull Flag examples",
+         "ok": false,
+         "value": "1 bar"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 9 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 1 base closes"
+        }
+       ],
+       "chip": "🧘 1-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "1-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -20645,6 +21570,49 @@
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
+      "gg_like": {
+       "checks": [
+        {
+         "info": false,
+         "key": "base_bars",
+         "label": "quiet base bars before the trigger",
+         "mark": "✗",
+         "need": "9 or more — the shortest counted on GG's valid Horizontal Fade examples",
+         "ok": false,
+         "value": "3 bars"
+        },
+        {
+         "info": false,
+         "key": "near_high",
+         "label": "trigger vs the day's high so far",
+         "mark": "✓",
+         "need": "within 15%",
+         "ok": true,
+         "value": "at the high"
+        },
+        {
+         "info": false,
+         "key": "ema_hold",
+         "label": "base closes on or above the 21 EMA",
+         "mark": "✓",
+         "need": "every base close",
+         "ok": true,
+         "value": "all 3 base closes"
+        }
+       ],
+       "chip": "🧘 3-bar base",
+       "info": "trigger within 4% of the day's high — where 30 of GG's 44 readable valid entries sat",
+       "keep": false,
+       "reason": {
+        "code": "base_bars",
+        "label": "3-bar base"
+       },
+       "source": "read",
+       "source_text": null,
+       "title": "🧘 not GG-like: 3-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+       "tone": "no",
+       "verdict": "not"
+      },
       "grade": null,
       "grade_label": null,
       "listed": {
@@ -21572,6 +22540,29 @@
      }
     }
    },
+   "gg_like": {
+    "all_hidden_text": "No card on this tab reads GG-like right now.",
+    "census_text": "On our own stored reads, 2026-11-13 → 2026-11-25 (9 sessions): 67 of 531 cards read GG-like — about 6 a day (3–13). 🎾 Reversal Squeeze: 3 of 285.",
+    "hidden_text": "{n} hidden",
+    "hint": "Show only the cards that pass the checks read off GG's valid example charts. A display filter on this device — nothing rings, gates or reorders. A card that rang, or one you opened from an alert, is never hidden.",
+    "kept_text": "{n} rang or opened from an alert — still shown",
+    "label": "🧘 GG-like only",
+    "label_n_text": "🧘 GG-like only · {n}",
+    "none_text": "{n} with no check — still shown",
+    "note": "Observed on GG's own example charts (55 valid, 11 invalid, his Reversal Squeeze video — read 2026-11-26), not his rule. Volume dry-up is not a check: it sat on his invalid charts too. UNMEASURED — hand-picked examples; our 11-26 smooth-vs-run study found no difference.",
+    "reason_text": "{n} {label}",
+    "rows": [
+     "Quiet base bars before the trigger, at least: Bull Flag 2 · EMA Kiss & Fly 3 · Horizontal Fade 9 · Intraday VCP 6 · Reversal Squeeze 4 — the shortest counted on his valid examples; 4 of his 14 valid Reversal Squeeze video charts show no counted wait at all (READ.md:13, :185).",
+     "Trigger within 15% of the day's high so far — the furthest under of his readable reversal-squeeze entries (READ.md:53, :16).",
+     "🎾 Reversal Squeeze: a tennis ball drop of 15% or more — no readable valid example is smaller; the read does not store the high it fell from, so the drop is a range, and a range across 15% is not judged (READ.md:36).",
+     "Every base close on or above the 9 EMA (Bull Flag, EMA Kiss & Fly) or the 21 EMA (Horizontal Fade, Intraday VCP, Reversal Squeeze) (READ.md:15).",
+     "Lower swing highs inside the 🎾 Reversal Squeeze base — shown, not counted: unreadable on many of our bases, and his valid VERB base pokes (READ.md:248, :80)."
+    ],
+    "separation_text": "Run over GG's own example charts, these checks pass 53 of his 55 valid — and 6 of his 11 invalid (3 fail one, 2 can't be read). They tell our looser reads from his charts; they do not tell his valid charts from his invalid ones. What his charts show as the difference — narrow base bars, no wide two-way wicks — has no number on them and is not checked.",
+    "show_all_text": "show all",
+    "source": "eod-audits/research/2026-11-26_gg_charts/READ.md",
+    "unknown_text": "{n} can't tell — still shown"
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -22342,6 +23333,14 @@
          "dup_text": null,
          "fill_px": null,
          "flag_text": null,
+         "gg_like": {
+          "chip": "🧘 GG-like",
+          "source": "ring",
+          "source_text": "frozen when it rang",
+          "title": "🧘 GG-like — every check we can read sits inside the range of GG's valid example charts · observed on his examples, not his rule · 6 of his 11 invalid examples pass the same checks · UNMEASURED",
+          "tone": "ok",
+          "verdict": "gg_like"
+         },
          "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
          "id": "2026-10-13|GGA|bull_flag|aplus",
          "key": "2026-10-13-GGA-bull_flag-aplus",
@@ -22653,6 +23652,14 @@
         "dup_text": null,
         "fill_px": null,
         "flag_text": null,
+        "gg_like": {
+         "chip": "🧘 GG-like",
+         "source": "ring",
+         "source_text": "frozen when it rang",
+         "title": "🧘 GG-like — every check we can read sits inside the range of GG's valid example charts · observed on his examples, not his rule · 6 of his 11 invalid examples pass the same checks · UNMEASURED",
+         "tone": "ok",
+         "verdict": "gg_like"
+        },
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
         "id": "2026-10-13|GGA|bull_flag|aplus",
         "key": "2026-10-13-GGA-bull_flag-aplus",
@@ -22696,6 +23703,14 @@
         "dup_text": null,
         "fill_px": null,
         "flag_text": null,
+        "gg_like": {
+         "chip": "🧘 1-bar base",
+         "source": "ring",
+         "source_text": "frozen when it rang",
+         "title": "🧘 not GG-like: 1-bar base — observed on GG's example charts, not his rule · UNMEASURED",
+         "tone": "no",
+         "verdict": "not"
+        },
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
         "id": "2026-10-13|GGA|bull_flag|potential",
         "key": "2026-10-13-GGA-bull_flag-potential",
@@ -22739,6 +23754,15 @@
     },
     "empty_text": null,
     "entries_text": null,
+    "gg_like_split": {
+     "label": "🧘 GG-like vs not",
+     "lines": [
+      "🎯 A+ · 🚩 Bull Flag · GG-like: 1 ring · stop 1.4% wide (median)",
+      "🧠 armed · 🚩 Bull Flag · not GG-like: 1 ring · stop 1.1% wide (median)"
+     ],
+     "note": "Winner = your 11-26 rule: +30% above the A+ trigger, same session to 20:00 ET. R = GG's trade math on the same session (+1R, the stop, or the close); after costs = less 0.10% + $0.01 a share per side. Thin-R rows and duplicates are out of the R sums. Setups are never added together: the stop width differs by setup, and costs in R grow as the stop tightens. No average is printed — too few rings for one.",
+     "title": "🧘 GG-like vs not — UNMEASURED: counts of the rings as they rang, setup by setup; not a test, no rate, no rank"
+    },
     "grade_at_et": "20:15",
     "heads": [
      {

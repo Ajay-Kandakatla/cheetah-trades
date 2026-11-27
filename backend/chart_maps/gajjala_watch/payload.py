@@ -1032,6 +1032,55 @@ def runners_section(cs, session, now: datetime, names: list) -> tuple:
         return None, {}
 
 
+# 🧘 GG-like row chip on the 📅 roster (2026-11-27, spec gglike §3.8, WP be-serve-watch). The roster prints what the 🚩
+# pass STORED (`gajjala_reads[...].gg_like`), never computes: ONE projected find of today's reads of the roster symbols
+# (never the tile bars), per row the 🎾 read first when it is carded (sections.RS_SETUP), else the first carded setup
+# (tags.carded_setups — the board's own card rule). Not carded today / no valid stored block → no key on that row.
+ROSTER_GG_LIKE_FIELDS = {"symbol": 1, "setups": 1, "gg_like": 1}      # never the tile bars
+
+
+def _roster_gg_like(roster, siso) -> None:
+    """Adds `row["gg_like"] = {setup, label, **gg_like.row_chip(blk, source="read")}` to the roster rows whose read is
+    carded on today's 🚩 board AND carries a stored block of that setup. Every chip is computed FIRST, then assigned —
+    a fault adds no key on any row (the roster is served as before) and logs ONE line. Display only: no filter, no
+    sort, nothing rings."""
+    rows = roster.get("rows") if isinstance(roster, dict) else None
+    if not isinstance(rows, list) or not rows:
+        return
+    try:
+        from chart_maps.gajjala import gg_like as GL
+        from chart_maps.gajjala import store as ST
+        from chart_maps.gajjala import tab
+        TG = importlib.import_module(TAGS_MODULE)
+        SEC = importlib.import_module(SECTIONS_MODULE)
+        syms = [r["symbol"] for r in rows if isinstance(r, dict) and isinstance(r.get("symbol"), str) and r["symbol"]]
+        if not syms:
+            return
+        docs = TG._find_reads(TG._store(), [ST.key(siso, s) for s in syms], fields=ROSTER_GG_LIKE_FIELDS)
+        add: dict = {}
+        for i, r in enumerate(rows):
+            if not (isinstance(r, dict) and isinstance(r.get("symbol"), str)):
+                continue
+            doc = docs.get(r["symbol"].upper())
+            carded = TG.carded_setups(doc)
+            if not carded:
+                continue
+            k = SEC.RS_SETUP if SEC.RS_SETUP in carded else carded[0]
+            stored = doc.get("gg_like") if isinstance(doc.get("gg_like"), dict) else {}
+            blk = GL.from_stamp(stored.get(k))
+            if not isinstance(blk, dict) or blk.get("setup") != k:
+                continue
+            chip = GL.row_chip(blk, source="read")
+            if not isinstance(chip, dict):
+                continue
+            add[i] = {"setup": k, "label": tab._setup_label(k), **chip}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: roster gg_like unavailable: %s", type(exc).__name__)
+        return
+    for i, v in add.items():
+        rows[i]["gg_like"] = v
+
+
 # ── 🎯 A+ tag (2026-11-17, spec ggwaplus) ───────────────────────────────────────────────────────────────────────────
 # Ajay 2026-11-17 ~12:58 ET, verbatim: "Also add an A+ tag on watch list as they become A+". Every row (his AND 🤖) carries
 # `aplus` when ANY Gajjala board's stored read of that name THIS session has a setup in tab.MARKED_STATES. Display only:
@@ -1295,6 +1344,7 @@ def _build(now: datetime, db, only) -> dict:
     runners_roster = None                                    # 📅 2026-11-26 — the full board only (never the `only` poll)
     if only is None and C.RUNNERS_SEAT_ON:
         runners_roster, tag_by = runners_section(cs, session, now, names)
+        _roster_gg_like(runners_roster, siso)                 # 🧘 2026-11-27 — a row chip on carded runners only
         for r in rows:
             t = tag_by.get(CO.fold(r["symbol"]))
             if t is not None:

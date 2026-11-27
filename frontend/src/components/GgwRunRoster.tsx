@@ -14,7 +14,11 @@
  * Phone: folded to its one header line until tapped (remembered beside `ggw.opened`); desktop: the first served `fold_at`
  * rows + the served "+n more". ONE ⓘ fold holds the served hint, the served not-seated sentences and — fetched only when
  * it opens — the record's served summary, note and closed table. No explanation text outside the fold; no word, number
- * or threshold typed here (control glyphs only). Display + his own 📅 list write only; UNMEASURED. */
+ * or threshold typed here (control glyphs only). Display + his own 📅 list write only; UNMEASURED.
+ *
+ * 🧘 2026-11-27 (spec gglike §3.9, WP fe-watch) — Ajay: "Continue to track the runners … I want to make sure we are finding
+ * similar setups to Gajjala". A row with a served `gg_like` prints its chip (a span, GgLikeChip) right after the seat chip
+ * — no filter on the roster; the record's served 🧘 counts line prints ONLY inside the ⓘ fold. */
 import { useEffect, useMemo, useState, type SyntheticEvent } from 'react';
 import { GGW_SECTION_GLYPH } from '../lib/gajjalaWatch';
 import { openGgRunChart, ggrcOpenTitle } from '../lib/ggRunChart';
@@ -24,6 +28,7 @@ import {
   type GgwRunRoster as GgwRunRosterBlock, type GgwRunRosterRow, type GgwRunTable,
 } from '../lib/ggwRunRoster';
 import { GgWatchButton } from './GgWatchButton';
+import { GgLikeChip } from './GgLike';
 import '../styles/ggwRunRoster.css';
 
 /** A served table in its own sideways scroll box (430 px: never wider than the viewport). Empty → nothing. */
@@ -58,6 +63,7 @@ function TrackAll({ open }: { open: boolean }) {
       {line('ggw-rr-track-title', d.title)}
       {line('ggw-rr-track-text', d.text)}
       {line('ggw-rr-track-summary', d.summary_text)}
+      {line('ggw-rr-track-gglike', d.gg_like_text)}
       {line('ggw-rr-track-note', d.note)}
       {line('ggw-rr-track-asof', d.asof_text)}
       <GgwRunTableView table={d.table} testid="ggw-rr-track-table" />
@@ -109,6 +115,7 @@ function Row({ row, syms, onRemove }: {
           {row.seat_text}
         </span>
       ) : null}
+      {row.gg_like ? <GgLikeChip like={row.gg_like} sym={sym} /> : null}
       {row.broker_text ? (
         <span className="ggw-chip ggw-rr-broker" data-testid={`ggw-rr-broker-${sym}`}>{row.broker_text}</span>
       ) : null}

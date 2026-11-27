@@ -256,6 +256,11 @@ import { GgFoldBody, GgFoldToggle, GgHeadPageContext, GgSubFoldContext } from '.
 import { GG_FOLD_HEADER, ggFoldScanAnswer, ggFoldSubKey, useGgFold } from '../lib/ggFold';
 import { GgTimeWindow } from './GgTimeWindow';
 import { GgCriteriaList } from './GgCriteria';   // ▶ 2026-11-24 (spec ggrun): the ONE rule-row printer, shared with the 👀 Watch panel
+import { GgLikeCard, GgLikeHiddenLine, GgLikeNote, GgLikeToggle } from './GgLike';   // 🧘 2026-11-27 (spec gglike §3.9)
+import {
+  GG_LIKE_LS, GG_LIKE_TONES, GG_LIKE_VERDICTS, ggLikeCount, ggLikeSplit, loadGgLikeOnly, parseGgLike, parseGgLikeBoard, saveGgLikeOnly,
+  type GgLike,
+} from '../lib/ggLike';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -612,8 +617,30 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
     setLook(next);
     saveGgLook(next);
   };
-  /* The live-patched cards the grid DRAWS (every card unless the 💋 toggle is ON), in the served order. */
-  const liveTiles = kissSplit.visible;
+  /* 🧘 2026-11-27 (spec gglike §3.9, Ajay 11-27: "find calmer and better setups.. I want to make sure we are finding similar
+   * setups to Gajjala"): the per-device GG-like filter, default OFF (lib/ggLike — ONE key). Offered only when the board
+   * SERVES `gg_like` and at least one card carries a parsed block. ON drops an un-kept ✗ card from the DRAWING only, after
+   * the 💋 split — the room POST, the live poll, the counts and the served order are untouched; a card served `keep`
+   * (it rang) and the `?focus=` name (opened from an alert) are never hidden [C1]. Every word is served. */
+  const [likeOn, setLikeOn] = useState<boolean>(() => loadGgLikeOnly(GG_LIKE_LS.board));
+  const likeBoard = useMemo(() => parseGgLikeBoard(board?.gg_like), [board]);
+  const likeOf = useCallback((t: GgTile): GgLike | null => parseGgLike(t.gajjala?.gg_like), []);
+  const likeAllowed = likeBoard != null && patchedTiles.some((t) => likeOf(t) != null);
+  const likeActive = likeAllowed && likeOn;
+  const likeSplit = ggLikeSplit(kissSplit.visible, likeOf, likeActive, (t) => t.symbol === focus);
+  const likeN = likeAllowed ? ggLikeCount(kissSplit.visible, likeOf) : 0;
+  const toggleLike = () => {
+    const next = !likeOn;
+    setLikeOn(next);
+    saveGgLikeOnly(GG_LIKE_LS.board, next);
+  };
+  const showAllLike = () => {
+    setLikeOn(false);
+    saveGgLikeOnly(GG_LIKE_LS.board, false);
+  };
+  /* The live-patched cards the grid DRAWS (every card unless the 💋 / 🧘 toggle is ON), in the served order — the card-watch
+   * layout, the 🚫 splice, the focus divider, the ⤢ stepper and the focus scroll all read this one list. */
+  const liveTiles = likeSplit.visible;
   /* ⤢ 2026-11-16 (ggcard3 §3.6) — Ajay: "when I click on a card from any of the Gajjala I would like us to open the 3 chart
    * extension like in the Watch list" · "instead of 3 mins make it 15 mins timeframe". A charted card's body opens the
    * Watch's full-screen view (GgCardView: 15-min / 5-min / 1-min); the stock page is the card's separate "SEPA page"
@@ -1001,11 +1028,22 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
               </button>
             ) : null}
             {cw.allowed ? <GgCardWatchToggle on={cw.on} onToggle={cw.toggle} /> : null}
+            {/* 🧘 2026-11-27: the GG-like toggle with its live count (the served label) — before he taps it [C3]. */}
+            {likeAllowed && likeBoard ? (
+              <GgLikeToggle board={likeBoard} n={likeN} on={likeOn} onToggle={toggleLike} testid="gg-like-toggle" />
+            ) : null}
             {/* 🧹 2026-11-24: the sub's ⓘ at the row's right end (the context key — nothing on the variants). */}
             <GgFoldToggle testid="gg-sub-toggle" controls="gg-sub-body" />
           </div>
           {/* 🧹 2026-11-24 [C3]: the sub's text opens UNDER the controls row (notes → panel → tally, the panel's own order). */}
-          {subKey ? <GgFoldBody id="gg-sub-body" testid="gg-sub-body">{subNotes}{subPanels}</GgFoldBody> : null}
+          {subKey ? (
+            <GgFoldBody id="gg-sub-body" testid="gg-sub-body">
+              {subNotes}
+              {/* 🧘 2026-11-27: the served GG-like note — inside the sub's fold ONLY, never above the cards [C3, C5]. */}
+              {likeBoard ? <GgLikeNote board={likeBoard} testid="gg-like-note" /> : null}
+              {subPanels}
+            </GgFoldBody>
+          ) : null}
           {/* the served state lines (a name missing from the cards) — printed only while the fold is closed. */}
           {subKey ? (<>
             {activeSub === GG_DIVERGENCE_SUB ? <GgDivergenceState block={board.divergence ?? null} /> : null}
@@ -1060,6 +1098,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
               </button>
               {kissLine ? <span className="gg-muted gg-kiss-filter-line" data-testid="gg-kiss-filter-line">{kissLine}</span> : null}
             </div>
+          ) : null}
+          {/* 🧘 2026-11-27: while ON, the served hidden / kept / can't-tell line + show all — drawn even when every card is
+              hidden (the all-hidden line) [C3], and show all drawn even when nothing is hidden (T10). */}
+          {likeActive && likeBoard ? (
+            <GgLikeHiddenLine board={likeBoard} split={likeSplit} onShowAll={showAllLike} testid="gg-like-hidden" on />
           ) : null}
           {/* 🔝 2026-11-11 (proposal #9): the served Focus header above the first card — display only. */}
           {focusText ? <GgFoldBody testid="gg-sub-body-focus"><div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div></GgFoldBody> : null}
@@ -1129,7 +1172,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     </div>
                   )}
                   <GgZoneLines tile={t} />
-                  <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} sym={t.symbol} live={liveVsText(t)} />
+                  <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} sym={t.symbol} live={liveVsText(t)} like={likeOf(t)} />
                   {brokerEditable && brokerBlock ? (
                     <BrokerToggle sym={t.symbol} on={typeof t.broker_text === 'string' && t.broker_text.trim() !== ''}
                                   block={brokerBlock} busy={brokerBusy} onWrite={brokerWrite} />
@@ -1330,8 +1373,8 @@ function GgRunBasesLine({ bases, sym }: { bases: GgRunBases | null | undefined; 
 }
 
 /** State pill, plan line, the 🔴 served live line, criteria checklist and the chip row under a tile. */
-function CardExtras({ read, board, sub, sym, live }: {
-  read: GgRead | null; board: GgBoard; sub: GgSub | null; sym: string; live: string | null;
+function CardExtras({ read, board, sub, sym, live, like = null }: {
+  read: GgRead | null; board: GgBoard; sub: GgSub | null; sym: string; live: string | null; like?: GgLike | null;
 }) {
   if (!read) return null;
   const chips = read.chips || {};
@@ -1370,6 +1413,9 @@ function CardExtras({ read, board, sub, sym, live }: {
         {grade ? <span className="gg-variant" data-testid="gg-grade">{grade}</span> : null}
         {/* 💧 2026-11-11 (proposal #4): the served marker beside the state pill — an indicator, never a gate. */}
         {volDried ? <span className="gg-vol-dried" data-testid={`gg-vol-dried-${sym}`}>{volDried}</span> : null}
+        {/* 🧘 2026-11-27 (spec gglike §3.9): the ONE served GG-like chip beside the 💧 marker; a tap opens the served check
+            list on its own row under the pills (closed by default). No block → nothing (today's pills row). */}
+        <GgLikeCard like={like} sym={sym} />
       </div>
       {plan ? <div className="gg-plan" data-testid="gg-plan">{plan}</div> : null}
       <GgBreakoutLine breakout={read.breakout} sym={sym} />
@@ -1568,6 +1614,8 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
         {trChip(row.thin_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-thin-${row.key}`}>{row.thin_text}</span> : null}
         {/* 📶 2026-11-15: the served base-count chip of the claim at its entry bar (ledger BASE_TEXT), verbatim. */}
         {trChip(row.base_text) ? <span className="gg-tr-chip gg-tr-base" data-testid={`gg-tr-base-${row.key}`}>{row.base_text}</span> : null}
+        {/* 🧘 2026-11-27: the served GG-like row chip (gg_like.row_chip), verbatim, its served title (+ source words) on hover. */}
+        <GgTrLikeChip chip={row.gg_like} testid={`gg-tr-like-${row.key}`} />
       </td>
     );
     case 'plan': return (
@@ -1665,8 +1713,43 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
           {tr.rule_text}
         </details>
       ) : null}
+      <GgTrLikeFold block={tr.gg_like_split} />
       {tr.honesty ? <div className="gg-muted" data-testid="gg-tr-honesty">{tr.honesty}</div> : null}
     </section>
+  );
+}
+
+/** 🧘 2026-11-27 (spec gglike §3.8): a served 🏁 row chip `{verdict, chip, tone, title, source, source_text}` — printed only
+ *  when `verdict` is a served verdict and `chip` a non-blank string; the tone is a CSS hook only. Anything else → nothing. */
+function GgTrLikeChip({ chip, testid }: { chip: unknown; testid: string }) {
+  if (!chip || typeof chip !== 'object') return null;
+  const c = chip as Record<string, unknown>;
+  if (!(GG_LIKE_VERDICTS as readonly unknown[]).includes(c.verdict) || !trChip(c.chip)) return null;
+  const tone = typeof c.tone === 'string' && GG_LIKE_TONES.includes(c.tone) ? c.tone : 'unknown';
+  const title = [c.title, c.source_text].filter(trChip).join(' · ');
+  return (
+    <span className={`gg-tr-chip gg-like-chip gg-like-${tone}`} data-testid={testid} title={title || undefined}>
+      {c.chip as string}
+    </span>
+  );
+}
+
+/** 🧘 2026-11-27 (spec gglike §3.7): the served GG-like-vs-not counts fold, CLOSED, after the rule fold — summary = the
+ *  served label, then the served title, every served line in order and the served note. No block → nothing. */
+function GgTrLikeFold({ block }: { block: GgTrackRecord['gg_like_split'] }) {
+  if (!block || typeof block !== 'object') return null;
+  const lines = (Array.isArray(block.lines) ? block.lines : []).filter(trChip);
+  const label = trChip(block.label) ? block.label : null;
+  const title = trChip(block.title) ? block.title : null;
+  const note = trChip(block.note) ? block.note : null;
+  if (!label && !title && !note && !lines.length) return null;
+  return (
+    <details className="gg-tr-rule gg-tr-like" data-testid="gg-tr-like">
+      {label ? <summary>{label}</summary> : null}
+      {title ? <div className="gg-muted" data-testid="gg-tr-like-title">{title}</div> : null}
+      {lines.map((l, i) => <div key={`${i}-${l}`} className="gg-line" data-testid="gg-tr-like-line">{l}</div>)}
+      {note ? <div className="gg-muted" data-testid="gg-tr-like-note">{note}</div> : null}
+    </details>
   );
 }
 

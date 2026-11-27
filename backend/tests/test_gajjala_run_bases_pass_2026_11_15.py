@@ -32,6 +32,14 @@ def gg1_on():
 
 GG5_KEYS = {"as_of_bar_t5", "as_of_bar_t15", "setups", "ctx", "tile", "listed", "stopped_today", "date", "symbol",
             "updated_at", "at"}
+# 🧘 2026-11-27 (spec gg-like §3.6 / §3.8, suite refix): the pass also stores `gg_like` on a read doc when a setup was
+# judged — a sibling ADDED key of its own, pinned in tests/test_gajjala_gg_like_suite_2026_11_27.py. The 📶 pins below
+# compare the doc's keys with it set aside; it is never in ctx either way.
+GL_KEY = "gg_like"
+
+
+def _keys(doc) -> set:
+    return set(doc) - {"_id", GL_KEY}
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +62,7 @@ def test_every_gg5_read_doc_carries_the_block_of_its_5m_frame():
     assert docs
     for sym, doc in docs.items():
         blk = doc["run_bases"]
-        assert set(doc) - {"_id"} == GG5_KEYS | {"run_bases"}, sym
+        assert _keys(doc) == GG5_KEYS | {"run_bases"}, sym
         assert blk["version"] == RB.VERSION and blk["frame"] == GC.RUN_BASE_FRAME
         assert blk["as_of_bar_t"] == doc["as_of_bar_t5"]
         assert "run_bases" not in doc["ctx"]                           # NEGATIVE: never in ctx (🧠 copies it)
@@ -97,7 +105,7 @@ def test_NEGATIVE_a_raising_count_still_writes_every_read_doc_without_the_key(mo
     docs = _reads(st)
     assert len(docs) == 2
     for doc in docs.values():
-        assert set(doc) - {"_id"} == GG5_KEYS
+        assert _keys(doc) == GG5_KEYS
     assert len([r for r in caplog.records if "base count failed" in r.getMessage()]) == 1     # once per pass
 
 
@@ -105,7 +113,7 @@ def test_NEGATIVE_a_none_count_adds_no_key(monkeypatch):
     monkeypatch.setattr(RB, "count", lambda *a, **k: None)
     st = fake_store()
     RUN.run_pass(NOW, store=st, deps=make_deps()[0])
-    assert all(set(d) - {"_id"} == GG5_KEYS for d in _reads(st).values())
+    assert all(_keys(d) == GG5_KEYS for d in _reads(st).values())
 
 
 def test_NEGATIVE_the_pass_summary_is_byte_equal_with_and_without_the_count(monkeypatch):

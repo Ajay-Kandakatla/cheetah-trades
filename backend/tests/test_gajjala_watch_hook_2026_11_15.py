@@ -86,8 +86,12 @@ def test_only_gajjala_run_py_names_the_watch():
     # 📅 2026-11-26 (spec watchrun WP-2 be-track, refix): nightly.py runs gajjala_watch.runtrack.nightly after 🩳, in its
     # own fence, the import inside the fence. runtrack ONLY — pinned by the NEGATIVE
     # test_NEGATIVE_nightly_names_the_watch_only_for_runtrack_inside_the_fence. Widened; nothing else may join.
-    assert hits == ["accountability_api.py", "alerts.py", "card_frames.py", "high_si.py", "high_si_cross.py",
-                    "live_events.py", "nightly.py", "run.py", "si_track.py", "tab.py"]
+    # 🧘 2026-11-27 (spec gg-like §3.7, WP be-track; suite refix): gg_like_track.py (the nightly +30% record of ring-stamped
+    # A+ rows, display only) reads gajjala_watch.constants (RUNNERS_SEAT_APLUS_PCT) and runseat (the split guard, the play
+    # day and from_trigger — the ONE +30% engine). Pinned by
+    # test_NEGATIVE_gg_like_track_names_the_watch_only_for_the_seat_pct_and_runseat. Widened; nothing else may join.
+    assert hits == ["accountability_api.py", "alerts.py", "card_frames.py", "gg_like_track.py", "high_si.py",
+                    "high_si_cross.py", "live_events.py", "nightly.py", "run.py", "si_track.py", "tab.py"]
 
 
 def test_NEGATIVE_accountability_api_names_the_watch_only_for_owner_only_payload_and_normalize():
@@ -100,6 +104,18 @@ def test_NEGATIVE_accountability_api_names_the_watch_only_for_owner_only_payload
     for banned in ("gajjala_watch import colls", "gajjala_watch import loop", "gajjala_watch import build",
                    "gajjala_watch import constants", "gajjala_watch.cross_alerts", "_popen", "spawn_child",
                    "spawn_loop", "WCO."):
+        assert banned not in src, banned
+
+
+def test_NEGATIVE_gg_like_track_names_the_watch_only_for_the_seat_pct_and_runseat():
+    # 🧘 2026-11-27 (spec gg-like §3.7): never the Watch's switch, store, loop, colls, build, payload or cross engine.
+    mods, reads = _watch_imports_and_wc_reads("gg_like_track.py")
+    assert mods == ["chart_maps.gajjala_watch.constants", "chart_maps.gajjala_watch.runseat"]
+    assert reads == ["RUNNERS_SEAT_APLUS_PCT"]
+    src = (GG_DIR / "gg_like_track.py").read_text(encoding="utf-8")
+    for banned in ("gajjala_watch import colls", "gajjala_watch import loop", "gajjala_watch import build",
+                   "gajjala_watch import payload", "gajjala_watch import store", "gajjala_watch.cross_alerts",
+                   "ENV_ENABLED", "_popen", "spawn_child", "spawn_loop"):
         assert banned not in src, banned
 
 

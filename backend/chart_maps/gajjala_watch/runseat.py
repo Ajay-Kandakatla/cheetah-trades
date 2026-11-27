@@ -434,7 +434,8 @@ def _default_stores() -> dict:
 
 def aplus_rings(dates, *, stores) -> list:
     """Every 🚩 A+ ring (kind aplus, lines live / shadow) of `dates` on each page of C.RUNNERS_SEAT_PAGES —
-    {id, page, date, symbol, setup, at_utc, at_et, trigger, play_day}. RAISES on a LedgerReadError."""
+    {id, page, date, symbol, setup, at_utc, at_et, trigger, play_day, gg_like} (🧘 gg_like = the row's ring stamp or
+    None, 2026-11-27 — a passthrough, read by nothing here). RAISES on a LedgerReadError."""
     vs = {v.key: v for v in V.VARIANTS}
     out = []
     for page in C.RUNNERS_SEAT_PAGES:
@@ -452,7 +453,8 @@ def aplus_rings(dates, *, stores) -> list:
             pd_ = play_day(d, at) if at is not None else d
             out.append({"id": r.get("id"), "page": page, "date": d.isoformat(), "symbol": str(r["symbol"]).upper(),
                         "setup": r.get("setup"), "at_utc": at, "at_et": r.get("at_et"), "trigger": r.get("trigger"),
-                        "play_day": pd_.isoformat()})
+                        "play_day": pd_.isoformat(),
+                        "gg_like": r.get("gg_like")})          # 🧘 2026-11-27: the ring's frozen 🧘 block (passthrough)
     return out
 
 

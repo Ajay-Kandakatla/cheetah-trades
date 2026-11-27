@@ -1361,6 +1361,20 @@ def _gg_watch_runseat_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_like_clause() -> str:
+    """🧘 2026-11-27 (spec gglike rev 2 §4 main-session — Ajay "find calmer and better setups.. I want to make sure we are
+    finding similar setups to Gajjala") — the section note's ONE clause on the 🧘 GG-like calm check (display only),
+    built by chart_maps.gajjala.gg_like.rules_line() (every number a constant read at call time — never typed here):
+    " " + the line, or "" when the module cannot load or the line raises (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import gg_like as GGL
+        line = GGL.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala gg-like clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_watch_overlays_clause() -> str:
     """📈📐 2026-11-23 (spec vwapzones §3.6b — Ajay "can you add vwap and supply demand zone in the daily time frame on
     the watch list please" / "Add vwap and supply demand too") — the section note's clause on the Watch's VWAP line and
@@ -1744,6 +1758,7 @@ def _gajjala_section() -> dict:
                  + _gg_break_clause()                      # ⚡ 2026-11-11 — the break of an armed 🧠 plan (entry spec §3.1)
                  + _gg_fade_cross_clause()                 # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross (marks + push)
                  + _gg_vol_dried_clause()                  # 💧 2026-11-24 — the "Armed, volume dried" push + its record
+                 + _gg_like_clause()                       # 🧘 2026-11-27 — the GG-like calm check (display only)
                  + _gg_run_bases_clause()                  # 📶 2026-11-15 — GG's base count (information only)
                  + _gg_ema_blink_clause()                  # 🔀 2026-11-15 — the 9 / 21 EMA blinker (information only)
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push

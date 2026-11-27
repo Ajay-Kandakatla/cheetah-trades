@@ -15,7 +15,12 @@ import golden from './__fixtures__/gajjala_potential_golden_2026_10_15.json';
  *
  * WIDENED 2026-11-23 — Ajay: "Also add traderview charts on charts please.. Yahoo has been hard to configure" (question
  * card: "TV ↗ button only"). The `.snap` was regenerated ONCE: the only change is one `TV ↗` button (cm-tv, testid
- * tv-link-SYM) right before every tile's Yahoo ↗ — 11 inserts, the rest byte-identical (checked by stripping them). */
+ * tv-link-SYM) right before every tile's Yahoo ↗ — 11 inserts, the rest byte-identical (checked by stripping them).
+ *
+ * WIDENED 2026-11-27 — Ajay: "find calmer and better setups.." (🧘 GG-like check, spec gglike §4 WP main-session). The
+ * potential golden was regenerated with the served `gajjala.gg_like` block, so the `.snap` was regenerated ONCE more: the
+ * only change is one `gg-like-card` chip (testid gg-like-card-SYM) on the 6 potential tiles that carry a block — 6
+ * inserts, the rest byte-identical (checked by stripping them). The bull_flag grid (hand fixture) did not move. */
 
 vi.mock('./GrowthChip', () => ({ GrowthChip: () => <span /> }));
 vi.mock('./ShortInterestChip', () => ({ ShortInterestChip: () => <span /> }));

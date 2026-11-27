@@ -19880,6 +19880,167 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧘 GG-like calm check (2026-11-27): BE VERDICTS == FE; CHECK_KEYS order; FE types no served word; ONE device key; keep arg; note in a fold; ℹ️ + ✨ from the constants',
+    file: '../backend/chart_maps/gajjala/gg_like.py',
+    // Ajay 2026-11-27 ~00:15 ET, verbatim: "Yes please, I think we are in bear market and looking at bad setups and make
+    // them work, forcing them to work honestly..." · "Can you update them please.. find calmer and better setups.." ·
+    // "Continue to track the runners we might evolve and find patterns in the current runners too but I want to make sure
+    // we are finding similar setups to Gajjala". Spec gglike rev 2 §4 main-session. gg_like.py is the ONE engine; the
+    // frontend prints served words only; ONE per-device key (gg-like-only:board) — the 👀 Watch filter was CUT [C1];
+    // GajjalaBoard passes the ?focus= keep callback [C1]; the note lives only inside the sub's ⓘ fold [C3, C5].
+    checks: (gl) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const pyTuple = (src, name) => {
+        const m = new RegExp(`^${name} = \\(([^)]*)\\)`, 'm').exec(src);
+        return m ? [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : null;
+      };
+      const pyNum = (src, name) => {
+        const m = new RegExp(`^${name} = ([0-9.]+)`, 'm').exec(src);
+        return m ? Number(m[1]) : null;
+      };
+      const walk = (dir, out = []) => {
+        for (const e of readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true })) {
+          if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+          const p = `${dir}/${e.name}`;
+          if (e.isDirectory()) walk(p, out);
+          else if (/\.(ts|tsx)$/.test(e.name)) out.push(p);
+        }
+        return out;
+      };
+      const isTest = (f) => /\.test\.(ts|tsx)$/.test(f);
+      const SRC = walk('src');
+      const PROD = SRC.filter((f) => !isTest(f));
+
+      // 1. BE VERDICTS == FE GG_LIKE_VERDICTS (same order)
+      const beV = pyTuple(gl, 'VERDICTS');
+      const feLib = quiet('src/lib/ggLike.ts');
+      const feM = /export const GG_LIKE_VERDICTS[^=]*=\s*Object\.freeze\(\[([^\]]*)\]/.exec(feLib);
+      const feV = feM ? [...feM[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : null;
+      if (!beV) errs.push('gg_like.py must declare VERDICTS = ( … ) as a plain tuple');
+      if (!feV) errs.push('lib/ggLike.ts must declare GG_LIKE_VERDICTS = Object.freeze([ … ])');
+      if (beV && feV && JSON.stringify(beV) !== JSON.stringify(feV)) errs.push(`BE gg_like.VERDICTS ${JSON.stringify(beV)} != FE GG_LIKE_VERDICTS ${JSON.stringify(feV)}`);
+      const feType = /export type GgLikeVerdict = ([^;]+);/.exec(feLib);
+      const feT = feType ? [...feType[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : null;
+      if (beV && (!feT || JSON.stringify([...feT].sort()) !== JSON.stringify([...beV].sort()))) errs.push(`FE type GgLikeVerdict ${JSON.stringify(feT)} must name exactly BE VERDICTS ${JSON.stringify(beV)}`);
+
+      // 2. BE CHECK_KEYS — the display order; the info keys sit last; the frontend never types a check key
+      const WANT_KEYS = ['base_bars', 'near_high', 'tennis_drop', 'ema_hold', 'lower_highs'];
+      const keys = pyTuple(gl, 'CHECK_KEYS');
+      if (!keys || JSON.stringify(keys) !== JSON.stringify(WANT_KEYS)) errs.push(`gg_like.CHECK_KEYS must be ${JSON.stringify(WANT_KEYS)} in that order (found ${JSON.stringify(keys)})`);
+      const info = pyTuple(gl, 'INFO_KEYS');
+      if (!info || !info.length) errs.push('gg_like.INFO_KEYS must be a non-empty tuple');
+      else if (keys && JSON.stringify(keys.slice(keys.length - info.length)) !== JSON.stringify(info)) errs.push(`gg_like.INFO_KEYS ${JSON.stringify(info)} must be the LAST CHECK_KEYS (info rows print last, never counted)`);
+      const FE_OWN = ['src/lib/ggLike.ts', 'src/components/GgLike.tsx'];
+      const literals = (s) => [...s.matchAll(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g)].map((m) => m[0]);
+      for (const f of FE_OWN) {
+        const lits = literals(tsCode(quiet(f)));
+        for (const k of WANT_KEYS) if (lits.some((l) => l.slice(1, -1) === k)) errs.push(`${f} types the check key '${k}' — the frontend prints the served rows only`);
+      }
+
+      // 3. the frontend types no served word (the same guard as GgLike.test.tsx) and never the BE chip word
+      const SERVED_CS = /GG-like|\bEMA\b/;
+      const SERVED_CI = /tennis|(^|[^-\w])hidden($|[^-\w])|still shown|show all|can.t tell|under high|unmeasured|observed|\brang\b|alert/i;
+      for (const f of FE_OWN) {
+        for (const l of literals(tsCode(quiet(f)))) if (SERVED_CS.test(l) || SERVED_CI.test(l)) errs.push(`${f} types the served word ${l} — every 🧘 word is typed once in gg_like.py`);
+      }
+      const chipOk = /^CHIP_OK = "([^"]+)"/m.exec(gl);
+      if (!chipOk) errs.push('gg_like.py must type CHIP_OK = "…" (the ONE place the pass word is typed)');
+      else for (const f of PROD) if (f !== 'src/lib/newFeatures.ts' && literals(tsCode(quiet(f))).some((l) => l.includes(chipOk[1]))) errs.push(`${f} types the served chip "${chipOk[1]}" — it is gg_like.CHIP_OK, served`);
+
+      // 4. ONE per-device key: gg-like-only:board, once, in lib/ggLike.ts; the Watch key only inside test files
+      const boardKeyAt = PROD.filter((f) => quiet(f).includes("'gg-like-only:board'"));
+      if (JSON.stringify(boardKeyAt) !== JSON.stringify(['src/lib/ggLike.ts'])) errs.push(`'gg-like-only:board' must be typed once, in src/lib/ggLike.ts only (found in ${JSON.stringify(boardKeyAt)})`);
+      if ((feLib.match(/'gg-like-only:board'/g) || []).length !== 1) errs.push("src/lib/ggLike.ts must type 'gg-like-only:board' exactly once");
+      for (const f of PROD) {
+        const t = quiet(f);
+        for (const m of t.matchAll(/gg-like-only:([\w-]+)/g)) if (m[1] !== 'board') errs.push(`${f} types the key gg-like-only:${m[1]} — ONE key only (gg-like-only:board); the 👀 Watch filter was CUT [C1]`);
+      }
+      const watchNeg = 'src/components/GajjalaWatchBoard.gg_like.test.tsx';
+      if (!quiet(watchNeg).includes("'gg-like-only:watch'")) errs.push(`${watchNeg} must keep the NEGATIVE: the Watch key set by hand hides nothing`);
+
+      // 5. GajjalaBoard passes the keep callback (the ?focus= name) as ggLikeSplit's FOURTH argument [C1]
+      const gb = tsCode(quiet('src/components/GajjalaBoard.tsx'));
+      const calls = [];
+      for (let i = gb.indexOf('ggLikeSplit('); i >= 0; i = gb.indexOf('ggLikeSplit(', i + 1)) {
+        let d = 0; let n = 1; let j = i + 'ggLikeSplit('.length;
+        for (; j < gb.length; j++) {
+          const ch = gb[j];
+          if ('([{'.includes(ch)) d++;
+          else if (')]}'.includes(ch)) { if (d === 0) break; d--; } else if (ch === ',' && d === 0) n++;
+        }
+        calls.push(n);
+      }
+      if (!calls.length) errs.push('GajjalaBoard.tsx must call ggLikeSplit (the 🚩 filter)');
+      for (const n of calls) if (n !== 4) errs.push(`GajjalaBoard.tsx calls ggLikeSplit with ${n} argument(s) — the fourth (keep: the ?focus= name) is mandatory [C1]`);
+
+      // 6. GgLikeNote — mounted once, inside the sub's ⓘ fold (GgFoldBody), never above the cards [C3, C5]
+      const mounts = PROD.flatMap((f) => (tsCode(quiet(f)).match(/<GgLikeNote\b/g) || []).map(() => f));
+      if (JSON.stringify(mounts) !== JSON.stringify(['src/components/GajjalaBoard.tsx'])) errs.push(`<GgLikeNote> must be mounted exactly once, in GajjalaBoard.tsx (found ${JSON.stringify(mounts)})`);
+      const at = gb.indexOf('<GgLikeNote');
+      if (at >= 0) {
+        const open = gb.lastIndexOf('<GgFoldBody', at);
+        const close = gb.lastIndexOf('</GgFoldBody>', at);
+        if (open < 0 || close > open) errs.push('<GgLikeNote> must sit inside a <GgFoldBody> (the sub\'s ⓘ fold) — never above the cards');
+      }
+
+      // 7. the ℹ️ line: rules_info calls gg_like.rules_line() once, in the 🚩 section note
+      const ri = pyCode(quiet('../backend/supply_demand/rules_info.py'));
+      if (!/def _gg_like_clause\(\) -> str:[\s\S]*?from chart_maps\.gajjala import gg_like as GGL[\s\S]*?GGL\.rules_line\(\)/.test(ri)) errs.push('rules_info.py: _gg_like_clause() must call chart_maps.gajjala.gg_like.rules_line() (never retype the numbers)');
+      if ((ri.match(/\+ _gg_like_clause\(\)/g) || []).length !== 1) errs.push('rules_info.py: _gg_like_clause() must be added to the 🚩 section note exactly once');
+      if (!/^def rules_line\(\) -> str:/m.test(gl)) errs.push('gg_like.py must define rules_line() -> str');
+
+      // 8. the ✨ — his words verbatim, every number from the constants, past index 100 right above the 📅 Runners entry
+      const ID = 'gajjala-gg-like-calm-check-2026-11-27';
+      const HIS = ['Yes please, I think we are in bear market and looking at bad setups and make them work, forcing them to work honestly...',
+        'Can you update them please.. find calmer and better setups..',
+        'Continue to track the runners we might evolve and find patterns in the current runners too but I want to make sure we are finding similar setups to Gajjala'];
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-27') errs.push(`the 🧘 ✨ addedAt must be 2026-11-27 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala') errs.push(`the 🧘 ✨ route must be /chart-maps?tab=gajjala (found ${lab[3]})`);
+        for (const h of HIS) if (!L.includes(`“${h}”`)) errs.push(`the 🧘 ✨ must quote him verbatim inside curly quotes: ${h}`);
+        const cen = (k) => { const m = new RegExp(`"${k}": ([0-9]+)`).exec(gl); return m ? Number(m[1]) : null; };
+        const str = (k) => { const m = new RegExp(`"${k}": "([^"]+)"`).exec(gl); return m ? m[1] : null; };
+        const rs = /"reversal_squeeze": \(([0-9]+), ([0-9]+)\)/.exec(gl);
+        const sepInv = /"invalid": \{"n": ([0-9]+), "pass_all": ([0-9]+)/.exec(gl);
+        const want = [
+          `${str('from')} → ${str('to')}`,
+          `about ${cen('median')} cards a day`,
+          `(${cen('gg_like')} of ${cen('carded')})`,
+          rs ? `(${rs[1]} of ${rs[2]})` : 'CENSUS by_setup reversal_squeeze',
+          sepInv ? `pass ${sepInv[2]} of his ${sepInv[1]} invalid examples` : 'SEPARATION invalid',
+          `within ${pyNum(gl, 'MAX_UNDER_HIGH_PCT')}% of the day's high so far`,
+          `tennis ball drop of ${pyNum(gl, 'TENNIS_MIN_DROP_PCT')}% or more`,
+        ];
+        for (const w of want) if (!L.includes(w)) errs.push(`the 🧘 ✨ must say "${w}" (built from gg_like.py's CENSUS / SEPARATION / bounds)`);
+        const tones = [...quiet('../backend/chart_maps/gajjala/bars.py').matchAll(/\("ema\d+", "(\d+) EMA", GC\.EMA_(?:FAST|SLOW)\)/g)].map((m) => m[1]);
+        if (tones.length !== 2 || !L.includes(`the ${tones[0]} or ${tones[1]} EMA`)) errs.push(`the 🧘 ✨ must name the EMAs from bars.EMA_TONES (the ${tones.join(' or ')} EMA)`);
+        if (chipOk && !L.includes(chipOk[1])) errs.push(`the 🧘 ✨ must name the chip as served (${chipOk[1]})`);
+        for (const w of ['never hidden', 'not a test of his valid vs invalid charts', 'Display only — no rule, gate, count, sort or push changed', 'UNMEASURED', 'Not advice.']) if (!L.includes(w)) errs.push(`the 🧘 ✨ must say: ${w}`);
+        if (/\b(signal|edge)s?\b/i.test(L) || /bounc/i.test(L)) errs.push('the 🧘 ✨ must never say signal / edge / bounce');
+      }
+      const ati = ids.indexOf(ID);
+      if (ati <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${ati}) — no NEW_FEATURES[n] pin moves`);
+      if (ati >= 0 && ids[ati + 1] !== 'gajjala-si-float-accuracy-guard-2026-11-26') errs.push(`the ✨ '${ID}' must sit right above the 🧮 float-guard entry (moved 2026-11-27 on rebase; found ${ids[ati + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 9. ship together
+      for (const f of ['src/lib/ggLike.ts', 'src/lib/ggLike.test.ts', 'src/components/GgLike.tsx', 'src/components/GgLike.test.tsx', 'src/styles/ggLike.css',
+        'src/components/GajjalaBoard.gg_like.test.tsx', watchNeg, 'src/lib/newFeatures.gg_like.test.ts',
+        '../backend/chart_maps/gajjala/gg_like_track.py', '../backend/scripts/gg_like_census.py',
+        '../backend/tests/test_gajjala_gg_like_2026_11_27.py', '../backend/tests/test_gajjala_gg_like_rules_info_2026_11_27.py',
+        '../backend/tests/fixtures/gajjala/gg_like_census_2026_11_27.json', '../docs/gajjala/gg_like_2026_11_27.md']) if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

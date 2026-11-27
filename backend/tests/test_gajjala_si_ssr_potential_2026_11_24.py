@@ -229,7 +229,10 @@ def test_NEGATIVE_the_gates_and_the_board_import_no_ssr(name):
 
 
 def test_the_engines_the_c1_hold_never_edits_are_byte_unchanged():
-    """Recorded on the untouched tree (origin/main 5dec3c6b / 7540094b) BEFORE any edit of WP be-pass."""
+    """Recorded on the untouched tree (origin/main 5dec3c6b / 7540094b) BEFORE any edit of WP be-pass.
+    WIDENED 2026-11-27 (spec gg-like §3.6, suite refix): alerts.run_pass gains the `gg_like` kwarg + one
+    `base.update(_gl_fields(...))` line (the 🧘 block frozen on the claim, never a gate). ADDED-only: undoing those lines
+    reproduces the old d2ded91a… (tests/test_gajjala_gg_like_suite_2026_11_27.py). Every other engine here UNCHANGED."""
     from chart_maps.gajjala import audited_pass as AP
     from chart_maps.gajjala import stages as SG
     from chart_maps.gajjala import vol_dried as VD
@@ -237,7 +240,7 @@ def test_the_engines_the_c1_hold_never_edits_are_byte_unchanged():
         "potential.potential_kind": (PT.potential_kind,
                                      "ac772217dc447021e13cec40c418c5d8f06cdc0790efac2ea98ae396348ac3d9"),
         "potential.eligible": (PT.eligible, "819f8d4f8eed7cd2f03a22a5f582e0b97cfa707a9bee2e6de69a48b53193e107"),
-        "alerts.run_pass": (AL.run_pass, "d2ded91a11f4fecd41deb023adb6ca4104ba9fcebbea8c808ebb8fff9acbc778"),
+        "alerts.run_pass": (AL.run_pass, "e3bd70e8dc89477f2f3b8868baa135280e40a3ad7715a70c6a5812d8abb3a6fc"),
         "stages.steps": (SG.steps, "73110327d1518ea04868e97cdcd58f7b86f5e960c416a3d047b0781058c3f291"),
         "vol_dried.run_step": (VD.run_step, "ac3ab4eb6cdb0ae835025e55a19387c0f52c4d4ce7ee8984241d69dc4ad541b8"),
         "audited_pass.run_step": (AP.run_step, "61f04fff612f0558a040d6e5b571d3542d893cea972d4a98d8cddd792084f120"),

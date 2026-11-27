@@ -15,7 +15,8 @@
  * to serve a reason). UNMEASURED: a 9 / 21 cross is information, not an entry. */
 import type { CSSProperties } from 'react';
 import { EMA_BOLD, toneColor, VWAP_LINE_W, type CmAxis, type CmEmaBlink, type CmLineTone, type CmTile } from './chartMaps';
-import { ggRunBasesLine, type GgStages } from './gajjala';
+import { ggRunBasesLine, type GgSetup, type GgStages } from './gajjala';
+import { parseGgLike, type GgLike } from './ggLike';   // 🧘 2026-11-27 (spec gglike, WP fe-watch)
 import { parseGgwBroker, type GgwBroker } from './ggwBroker';   // 🚫 2026-11-19 (spec watchfid)
 import { parseRunnerTag, parseRunRoster, type GgwRunnerTag, type GgwRunRoster } from './ggwRunRoster';   // 📅 2026-11-26 (spec watchrun)
 
@@ -431,7 +432,10 @@ export type GgwRowAplus = { tag: string; text: string; title: string | null; ite
  *  information for me to read, like here". The 🚩 GG5 card's own served tags of a Watch name CARDED ON TODAY'S BOARD
  *  (backend gajjala_watch/tags.py). null = no card on the board (or the read faulted): the tile then prints only its
  *  🚀 / 🩳 chips and the existing 🤖 / 🎯. Every word served. */
-export type GgwTagSetup = { setup: string; label: string; state: string; state_label: string | null };
+/** 🧘 2026-11-27 (spec gglike §3.8 / §3.9, WP fe-watch): `gg_like` = the SERVED card block of THIS setup's stored read
+ *  (backend gajjala_watch/tags.py → GL.served), parsed by lib/ggLike.parseGgLike. Set ONLY when it parses (junk / a
+ *  null / an older server → the key is absent and the tile draws nothing new). Display only — nothing is hidden. */
+export type GgwTagSetup = { setup: string; label: string; state: string; state_label: string | null; gg_like?: GgLike };
 export type GgwTagFloat = { text: string; shares: number | null; src: string | null; as_of: string | null; suspect: boolean };
 export type GgwRowTags = {
   on_board: true; setups: GgwTagSetup[]; stages: GgStages | null; float: GgwTagFloat | null;
@@ -463,6 +467,9 @@ export type GgwRan = {
 export type GgwPastWinner = { text: string; items: string[]; more: string | null; title: string | null };
 export type GgwOrg = {
   group: string; when: GgwWhen | null; setup: GgwSetupTag | null; ran: GgwRan | null; past_winner: GgwPastWinner | null;
+  /** 🧘 2026-11-27: the setup KEY the served setup chip names (backend sections.setup_block `setup`) — set ONLY when the
+   *  chip parses and a non-blank key is served, so the 🧘 chip is the block of THAT setup (ggwTileGgLike). */
+  setup_key?: string;
 };
 /** One served section, in served order: `key` = any non-blank served key (the FE holds NO key list — a later served
  *  key renders without an FE change), `text` = the header words, `hint` = its served explanation. */
@@ -696,7 +703,13 @@ export function parseRowTags(v: unknown): GgwRowTags | null {
     on_board: true,
     setups: (Array.isArray(v.setups) ? v.setups : [])
       .filter((it: unknown) => isObj(it) && str(it.setup) && str(it.label))
-      .map((it: any) => ({ setup: it.setup, label: it.label, state: str(it.state) ?? '', state_label: str(it.state_label) })),
+      .map((it: any) => {
+        const gl = parseGgLike(it.gg_like);
+        return {
+          setup: it.setup, label: it.label, state: str(it.state) ?? '', state_label: str(it.state_label),
+          ...(gl ? { gg_like: gl } : {}),
+        };
+      }),
     stages: isObj(v.stages) && str(v.stages.title) ? (v.stages as GgStages) : null,
     float: fl ? {
       text: fl.text as string, shares: num(fl.shares), src: str(fl.src), as_of: str(fl.as_of), suspect: fl.suspect === true,
@@ -805,7 +818,25 @@ export function parseRowOrg(v: unknown): GgwOrg | null {
   return {
     group: (v.group as string).trim(),
     when: parseWhen(v.when), setup: parseSetupTag(v.setup), ran: parseRan(v.ran), past_winner: parsePastWinner(v.past_winner),
+    ...(parseSetupTag(v.setup) && isObj(v.setup) && str(v.setup.setup) ? { setup_key: (v.setup.setup as string).trim() } : {}),
   };
+}
+
+/** 🎾 the setup key the 🧘 fallback picks first (== backend gajjala_watch/sections.RS_SETUP; typed by GgSetup, so a key
+ *  that is not one of lib/gajjala's setups fails tsc). */
+const GGW_RS_SETUP: GgSetup = 'reversal_squeeze';
+
+/** 🧘 2026-11-27 (spec gglike §3.9, WP fe-watch) — the served GG-like block a Watch tile prints, or null. The tile's setup
+ *  = the served setup chip's key (`org.setup_key`), else 🎾 when carded, else the first carded; the block is THAT
+ *  setup's own served `tags.setups[].gg_like` (never another setup's, never computed here). No tags / no block → null. */
+export function ggwTileGgLike(row: { org?: GgwOrg | null; tags?: GgwRowTags | null }): { setup: string; like: GgLike } | null {
+  const ss = row?.tags?.setups ?? [];
+  if (!ss.length) return null;
+  const want = row?.org?.setup_key ?? null;
+  const pick = want
+    ? ss.find((x) => x.setup === want)
+    : (ss.find((x) => x.setup === GGW_RS_SETUP) ?? ss[0]);
+  return pick && pick.gg_like ? { setup: pick.setup, like: pick.gg_like } : null;
 }
 
 /** 🗂 The served sections, in SERVED order: ANY non-blank string key is kept (no key list here — the server owns the

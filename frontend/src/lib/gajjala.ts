@@ -260,6 +260,9 @@ export type GgRead = {
    *  definition is Cheetah's, UNMEASURED, information only). Absent / null when the current run has no base. The FE prints
    *  `text` verbatim with `title` on hover; it composes no word. */
   run_bases?: GgRunBases | null;
+  /** 🧘 2026-11-27 (spec gglike §3.8): the served GG-like block of this card (gg_like.served — incl. `keep`); parsed by
+   *  lib/ggLike.parseGgLike, never read raw. Absent when the card is not judged. */
+  gg_like?: unknown;
 };
 
 /* ---- 📶 Base count (2026-11-15) — every word SERVED; the FE types none. ---- */
@@ -584,6 +587,9 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   /** 📶 2026-11-15: the served base-count chip of the claim at its entry bar (ledger BASE_TEXT "📶 base n" /
    *  BASE_FORMING_TEXT "📶 base n forming") — absent when the claim carries no count or n is 0 and not forming. */
   base_text?: string | null;
+  /** 🧘 2026-11-27 (spec gglike §3.8): the served row chip (gg_like.row_chip — verdict / chip / tone / title / source);
+   *  absent when the row carries no block. */
+  gg_like?: unknown;
   /** 🔁 One count per stock per day (2026-11-02, Ajay: "make sure you are not accounting for duplicates of the same stock
    *  as winner unless it did the same pattern again and met all the criteria on the same day"): `dup_of` = the id of the
    *  counted row this one duplicates (ledger.dedupe_trades), `dup_text` = its served 🔁 chip; null / absent on a counted
@@ -621,6 +627,9 @@ export type GgTrackRecord = { title: string; rule_label?: string | null; rule_te
   sorts?: GgTrSort[] | null; sort_param?: string | null; sort_default?: string | null;
   /** 🔁 (2026-11-02) the served duplicate counts per count line (ledger.served_block) — absent on an older API. */
   dup_counts?: Record<string, number> | null;
+  /** 🧘 2026-11-27 (spec gglike §3.7): the served GG-like-vs-not counts fold (gg_like_track.split_block) — GG5 only; null on
+   *  a fault, absent on an older API → no fold. */
+  gg_like_split?: { label?: string | null; title?: string | null; lines?: string[] | null; note?: string | null } | null;
   bucket_order?: string[] | null };
 /** ✅ one served sort chip: `bucket_sort` says whether it orders the rows by the served `bucket_order` (a boolean —
  *  the FE types no sort key); false / absent = the served order. */
@@ -1015,6 +1024,9 @@ export type GgBoard = {
   day2?: GgDay2Block | null;
   /** 💋 2026-11-11: the served "lifting off the 9 EMA" toggle block (the 💋 sub only); absent elsewhere → no toggle. */
   kiss_filter?: GgKissFilter | null;
+  /** 🧘 2026-11-27 (spec gglike §3.5): the served GG-like filter block (gg_like.board_block — GG5 setup subs + 🧠); parsed
+   *  by lib/ggLike.parseGgLikeBoard. Absent elsewhere → no toggle. */
+  gg_like?: unknown;
   /** 🟢 ✨ 2026-11-12 (entry marks §3.5): the served per-sub green count + chip blinker; absent on an older API → no mark. */
   entry_marks?: GgEntryMarks | null;
   /** 🔄 the served as-of / scanning line (every sub); absent on an older API. */

@@ -785,10 +785,29 @@ def _frame_close(frames_obj) -> Optional[float]:
     return _num(c[-1]) if c else None
 
 
+def _gl_claim(gg_like: Optional[dict], sym: str, setup: str, r: dict) -> dict:
+    """🧘 2026-11-27 (Ajay "find calmer and better setups.. I want to make sure we are finding similar setups to
+    Gajjala") — {"gg_like": block} of (sym, setup) from the pass's {SYM: {setup: block}} map ONLY when the block passes
+    gg_like.from_stamp AND its as_of is THIS read's as_of bar; {} otherwise or on any fault. Frozen on the 🧠 claim (the
+    settle's dotted $set never touches it) — display / record only, never a gate, a hold or a count."""
+    if not isinstance(gg_like, dict):
+        return {}
+    try:
+        from chart_maps.gajjala import gg_like as GL
+        by = gg_like.get(sym)
+        blk = GL.from_stamp(by.get(setup)) if isinstance(by, dict) else None
+        as_of = (r or {}).get("as_of_bar_t")
+        if isinstance(blk, dict) and isinstance(as_of, str) and blk.get("as_of") == as_of:
+            return {"gg_like": blk}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala potential: gg like stamp failed for %s: %s", sym, type(exc).__name__)
+    return {}
+
+
 def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Callable] = None, owner=None,
              dry=False, tape=None, live_rows: Optional[dict] = None, trader_hold: Optional[dict] = None,
              promo_hold: Optional[dict] = None, session_volume: Optional[dict] = None,
-             si_ssr_hold: Optional[frozenset] = None) -> dict:
+             si_ssr_hold: Optional[frozenset] = None, gg_like: Optional[dict] = None) -> dict:
     """Track every potential of the pass and ring each FIRST sighting once (K3), live, owner-only.
 
     `reads` = {SYM: {setup: Read}}; `frames` = {SYM: bars.Frames}; `ctx` = {SYM: the read doc's ctx}; `rows` = {SYM:
@@ -814,7 +833,10 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     switch is ON — `halt_resume_et` / `reg_gain_pct` from `ctx`; None (the 1-minute page) → no key, its bytes unchanged.
     ⛔🔒 (2026-11-24, SPEC sissr §3.5, C1): `si_ssr_hold` = the ⛔🔒 ADDS read this pass (run.py); a potential of one is
     HELD SI_SSR_HELD at ANY volume (after the floor holds, before name_held), counted SI_SSR_COUNT_KEY — a key present
-    ONLY when the set is not None. `ctx[SYM]["si_ssr"]` (the tag) goes to `track` (the stamp) and `compose` (the lead)."""
+    ONLY when the set is not None. `ctx[SYM]["si_ssr"]` (the tag) goes to `track` (the stamp) and `compose` (the lead).
+    🧘 2026-11-27: `gg_like` = {SYM: {setup: gg_like block}} (GG5's run.py only, passed only when non-empty) — the claim
+    gains `push.gg_like` (`_gl_claim`) only when the block is valid and judged at THIS read's as_of bar; None (the
+    1-minute page, 🧪) → no key, every byte as before. Never read by a gate, `compose`, a hold or a count."""
     from . import alerts as AL
     from . import store as ST
     from . import tab as GT
@@ -955,7 +977,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
         claim = store.claim_potential_push(_id, {"state": "claimed", "at": _utc(now).isoformat(),
                                                  "at_et": _hhmm(now), "kind_at_push": kind,
                                                  "trigger": _num(r.get("trigger")), "stop": _num(r.get("stop")),
-                                                 "px": px_of(sym)})
+                                                 "px": px_of(sym), **_gl_claim(gg_like, sym, setup, r)})
         if claim != "claimed":
             again = store.get_potential(session, sym, setup) if claim == "taken" else None
             if isinstance(again, dict) and "push" in again:

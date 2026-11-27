@@ -1,0 +1,1162 @@
+{
+ "read_sha256": "7cdd7ad6f5f3be77f9a45e8a02aaf57f440373e067f21e1e560e620c88802363",
+ "need": {
+  "base_min_bars": {
+   "bull_flag": 2,
+   "kiss_fly": 3,
+   "intraday_vcp": 6,
+   "horizontal_fade": 9,
+   "reversal_squeeze": 4
+  },
+  "max_under_high_pct": 15.0,
+  "tennis_min_drop_pct": 15.0
+ },
+ "labels": {
+  "valid": 55,
+  "invalid": 11
+ },
+ "rows": [
+  {
+   "line": 78,
+   "file": "reversal_squeeze_03_TPST.png",
+   "ticker": "TPST",
+   "label": "valid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~60 flat; ~8–9 step bars before trigger",
+   "high_cell": "at/above PM high ~1.25 (0%)",
+   "base_bars": 8,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": [
+    20,
+    20
+   ],
+   "ema_hold": null
+  },
+  {
+   "line": 79,
+   "file": "reversal_squeeze_04/05_YELL.png",
+   "ticker": "YELL",
+   "label": "valid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~52; ~14 narrow at top",
+   "high_cell": "~level with 9:00 high (axis cropped)",
+   "base_bars": 14,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 80,
+   "file": "reversal_squeeze_06_VERB.png",
+   "ticker": "VERB",
+   "label": "valid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~60, wicky pokes, dip under EMAs",
+   "high_cell": "just under day high, % n/r",
+   "base_bars": 60,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": false
+  },
+  {
+   "line": 81,
+   "file": "reversal_squeeze_07_HUDI.png",
+   "ticker": "HUDI",
+   "label": "valid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~6 + ~45 stair-step",
+   "high_cell": "under run's first high, % n/r",
+   "base_bars": 6,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 82,
+   "file": "reversal_squeeze_08/09_POL.png",
+   "ticker": "POL",
+   "label": "valid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~18 after a -28% flush",
+   "high_cell": "~15% under PM 2.50",
+   "base_bars": 18,
+   "under_pct": [
+    15,
+    15
+   ],
+   "tennis_pct": [
+    28,
+    28
+   ],
+   "ema_hold": null
+  },
+  {
+   "line": 83,
+   "file": "reversal_squeeze_10/11_BACK.png",
+   "ticker": "BACK",
+   "label": "valid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~28 + ~28 after tennis ball",
+   "high_cell": "not marked; video ~at 3.65 run high, under 4.1 wick (approx)",
+   "base_bars": 28,
+   "under_pct": null,
+   "tennis_pct": [
+    16,
+    16
+   ],
+   "ema_hold": null
+  },
+  {
+   "line": 85,
+   "file": "reversal_squeeze_12_SNES.jpg",
+   "ticker": "SNES",
+   "label": "invalid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~10, under EMAs",
+   "high_cell": "fill 1.9228, ~6% ABOVE overnight high (corrected)",
+   "base_bars": 10,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": false
+  },
+  {
+   "line": 86,
+   "file": "reversal_squeeze_13_SASI.jpg",
+   "ticker": "SASI",
+   "label": "invalid",
+   "setup": "reversal_squeeze",
+   "base_cell": "~200 chop, lower highs",
+   "high_cell": "none marked",
+   "base_bars": 200,
+   "under_pct": null,
+   "tennis_pct": [
+    12,
+    12
+   ],
+   "ema_hold": null
+  },
+  {
+   "line": 87,
+   "file": "reversal_squeeze_14_SGD.png",
+   "ticker": "SGD",
+   "label": "invalid",
+   "setup": "reversal_squeeze",
+   "base_cell": "none; lower highs",
+   "high_cell": "none marked",
+   "base_bars": 0,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 93,
+   "file": "bull_flag_03_VCIG.png",
+   "ticker": "VCIG",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "2",
+   "high_cell": "~3% under",
+   "base_bars": 2,
+   "under_pct": [
+    3,
+    3
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 94,
+   "file": "bull_flag_04_LIFW.png",
+   "ticker": "LIFW",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "3",
+   "high_cell": "at HOD",
+   "base_bars": 3,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 95,
+   "file": "bull_flag_05_BRSH.png",
+   "ticker": "BRSH",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "4 and 3",
+   "high_cell": "just under leg high, % n/r",
+   "base_bars": 3,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 96,
+   "file": "bull_flag_06/07/08_NXTP.png",
+   "ticker": "NXTP",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "4 (wide bars)",
+   "high_cell": "~16–19% under PM spike; top of RTH run",
+   "base_bars": 4,
+   "under_pct": [
+    16,
+    19
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 97,
+   "file": "bull_flag_09_DWAC.png",
+   "ticker": "DWAC",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "2–3",
+   "high_cell": "~1–3%",
+   "base_bars": 2,
+   "under_pct": [
+    1,
+    3
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 98,
+   "file": "bull_flag_10_UPST.png",
+   "ticker": "UPST",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "3",
+   "high_cell": "under 8:35 high, % n/r",
+   "base_bars": 3,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 99,
+   "file": "bull_flag_11/12_ZYNE.png/.jpg",
+   "ticker": "ZYNE",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "~5",
+   "high_cell": "at HOD",
+   "base_bars": 5,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 100,
+   "file": "bull_flag_13_EHTH.png",
+   "ticker": "EHTH",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "4",
+   "high_cell": "~0.3%",
+   "base_bars": 4,
+   "under_pct": [
+    0.3,
+    0.3
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 101,
+   "file": "bull_flag_14_SECO.png",
+   "ticker": "SECO",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "2",
+   "high_cell": "at HOD so far",
+   "base_bars": 2,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 102,
+   "file": "bull_flag_15_FEMY.jpg (15m)",
+   "ticker": "FEMY",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "2",
+   "high_cell": "at HOD",
+   "base_bars": 2,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 103,
+   "file": "bull_flag_16_OPGN.png",
+   "ticker": "OPGN",
+   "label": "valid",
+   "setup": "bull_flag",
+   "base_cell": "2, deep",
+   "high_cell": "at HOD",
+   "base_bars": 2,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 104,
+   "file": "bull_flag_17_RKDA.png",
+   "ticker": "RKDA",
+   "label": "invalid",
+   "setup": "bull_flag",
+   "base_cell": "2, ~54% giveback",
+   "high_cell": "% n/r",
+   "base_bars": 2,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 105,
+   "file": "bull_flag_18_NVCT.png",
+   "ticker": "NVCT",
+   "label": "invalid",
+   "setup": "bull_flag",
+   "base_cell": "5, 1-bar run",
+   "high_cell": "~6% under",
+   "base_bars": 5,
+   "under_pct": [
+    6,
+    6
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 106,
+   "file": "bull_flag_19_OCX.png",
+   "ticker": "OCX",
+   "label": "invalid",
+   "setup": "bull_flag",
+   "base_cell": "~3+, lower highs",
+   "high_cell": "~6% under",
+   "base_bars": 3,
+   "under_pct": [
+    6,
+    6
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 112,
+   "file": "kiss_fly_03/04/05_USEA.png",
+   "ticker": "USEA",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~5, wicky",
+   "high_cell": "0%",
+   "base_bars": 5,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 113,
+   "file": "kiss_fly_06/07_BBBY.png",
+   "ticker": "BBBY",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "4",
+   "high_cell": "~2%",
+   "base_bars": 4,
+   "under_pct": [
+    2,
+    2
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 114,
+   "file": "kiss_fly_08/09_MEGL.png",
+   "ticker": "MEGL",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "5",
+   "high_cell": "~4%",
+   "base_bars": 5,
+   "under_pct": [
+    4,
+    4
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 115,
+   "file": "kiss_fly_10_AERC.png",
+   "ticker": "AERC",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "5 / 3 / 3",
+   "high_cell": "n/r (late fills -3.4%)",
+   "base_bars": 3,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 116,
+   "file": "kiss_fly_11_AERC.png",
+   "ticker": "AERC",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "8–9, then shorter",
+   "high_cell": "n/r (fills -7% on one bar)",
+   "base_bars": 8,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 117,
+   "file": "kiss_fly_12_NRDY.png",
+   "ticker": "NRDY",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~7, wide wicks",
+   "high_cell": "at/near high",
+   "base_bars": 7,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 118,
+   "file": "kiss_fly_13_HKD.png",
+   "ticker": "HKD",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~9",
+   "high_cell": "under wick high, % n/r",
+   "base_bars": 9,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 119,
+   "file": "kiss_fly_14/15_SATX.png",
+   "ticker": "SATX",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~7",
+   "high_cell": "leaves base ~14% under; through high in same bar",
+   "base_bars": 7,
+   "under_pct": [
+    14,
+    14
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 120,
+   "file": "kiss_fly_16_GNS.png",
+   "ticker": "GNS",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~11 / 8 / 8",
+   "high_cell": "~6%",
+   "base_bars": 8,
+   "under_pct": [
+    6,
+    6
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 121,
+   "file": "kiss_fly_17/18_ELOX.png",
+   "ticker": "ELOX",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~7",
+   "high_cell": "~2%",
+   "base_bars": 7,
+   "under_pct": [
+    2,
+    2
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 122,
+   "file": "kiss_fly_19_TUP.png",
+   "ticker": "TUP",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~4",
+   "high_cell": "late fill ~2% (not the marked base)",
+   "base_bars": 4,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 123,
+   "file": "kiss_fly_20_ICCT.png",
+   "ticker": "ICCT",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~10",
+   "high_cell": "~1.5%",
+   "base_bars": 10,
+   "under_pct": [
+    1.5,
+    1.5
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 124,
+   "file": "kiss_fly_21_VFS.png",
+   "ticker": "VFS",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "4",
+   "high_cell": "0% (at/above)",
+   "base_bars": 4,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 125,
+   "file": "kiss_fly_22_NBSE.png",
+   "ticker": "NBSE",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~8",
+   "high_cell": "~8% (bar leaving base)",
+   "base_bars": 8,
+   "under_pct": [
+    8,
+    8
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 126,
+   "file": "kiss_fly_23_BNOX.png",
+   "ticker": "BNOX",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~7",
+   "high_cell": "0%",
+   "base_bars": 7,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 127,
+   "file": "kiss_fly_24/25_TPST.png",
+   "ticker": "TPST",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~6, wicky",
+   "high_cell": "0%",
+   "base_bars": 6,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 128,
+   "file": "kiss_fly_26/27_LIFW.png",
+   "ticker": "LIFW",
+   "label": "valid",
+   "setup": "kiss_fly",
+   "base_cell": "~8, wide",
+   "high_cell": "~10%",
+   "base_bars": 8,
+   "under_pct": [
+    10,
+    10
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 135,
+   "file": "horiz_fade_04_AERC.png",
+   "ticker": "AERC (KALA?)",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~30",
+   "high_cell": "at high",
+   "base_bars": 30,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 136,
+   "file": "horiz_fade_05_KALA.png",
+   "ticker": "KALA",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~13 (base 1)",
+   "high_cell": "at high",
+   "base_bars": 13,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 137,
+   "file": "horiz_fade_06_PALT.png (3m)",
+   "ticker": "PALT",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~12 / ~12",
+   "high_cell": "~8% (base 1); ~12–20% (base 2, bodies vs wick)",
+   "base_bars": 12,
+   "under_pct": [
+    12,
+    20
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 138,
+   "file": "horiz_fade_07/08_APLD.png (15m)",
+   "ticker": "APLD",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~9",
+   "high_cell": "~8%",
+   "base_bars": 9,
+   "under_pct": [
+    8,
+    8
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 139,
+   "file": "horiz_fade_09_HKD.png",
+   "ticker": "HKD",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~65",
+   "high_cell": "under spike high, % n/r",
+   "base_bars": 65,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 140,
+   "file": "horiz_fade_11_PXMD.png",
+   "ticker": "PXMD",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~17",
+   "high_cell": "~1%",
+   "base_bars": 17,
+   "under_pct": [
+    1,
+    1
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 141,
+   "file": "horiz_fade_12_MEGL.png",
+   "ticker": "MEGL",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~10, long wicks",
+   "high_cell": "under 8:50 high, % n/r",
+   "base_bars": 10,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 142,
+   "file": "horiz_fade_13/14_VVOS.png (15m)",
+   "ticker": "VVOS",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~12",
+   "high_cell": "~10–12%",
+   "base_bars": 12,
+   "under_pct": [
+    10,
+    12
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 143,
+   "file": "horiz_fade_15_MLGO.png",
+   "ticker": "MLGO",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~28",
+   "high_cell": "0% (entry 1); ~4.5–8% (entry 2)",
+   "base_bars": 28,
+   "under_pct": [
+    4.5,
+    8
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 144,
+   "file": "horiz_fade_16/17_SPRB.png",
+   "ticker": "SPRB",
+   "label": "valid",
+   "setup": "horizontal_fade",
+   "base_cell": "~18",
+   "high_cell": "0%",
+   "base_bars": 18,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 145,
+   "file": "horiz_fade_18/19/20_BWV.png",
+   "ticker": "BWV",
+   "label": "invalid",
+   "setup": "horizontal_fade",
+   "base_cell": "~24, wide, crossing 9 EMA",
+   "high_cell": "~6% (impatient fill)",
+   "base_bars": 24,
+   "under_pct": [
+    6,
+    6
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 151,
+   "file": "intraday_vcp_04/05_ELEV.png",
+   "ticker": "ELEV",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~28",
+   "high_cell": "~13.5%",
+   "base_bars": 28,
+   "under_pct": [
+    13.5,
+    13.5
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 152,
+   "file": "intraday_vcp_06/07_DWAC.png",
+   "ticker": "DWAC",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "8 / ~34",
+   "high_cell": "~2% / ~4%",
+   "base_bars": 8,
+   "under_pct": [
+    4,
+    4
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 153,
+   "file": "intraday_vcp_08_PHUN.png",
+   "ticker": "PHUN",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~6",
+   "high_cell": "just under spike high, % n/r",
+   "base_bars": 6,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 154,
+   "file": "intraday_vcp_09_SHOT.png",
+   "ticker": "SHOT",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~20",
+   "high_cell": "~7.6%",
+   "base_bars": 20,
+   "under_pct": [
+    7.6,
+    7.6
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 155,
+   "file": "intraday_vcp_10_SIGA.png",
+   "ticker": "SIGA",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~33",
+   "high_cell": "~1.7%",
+   "base_bars": 33,
+   "under_pct": [
+    1.7,
+    1.7
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 156,
+   "file": "intraday_vcp_11_BWV.png",
+   "ticker": "BWV",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~26",
+   "high_cell": "~9%",
+   "base_bars": 26,
+   "under_pct": [
+    9,
+    9
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 157,
+   "file": "intraday_vcp_12_SHPH.png",
+   "ticker": "SHPH",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~8",
+   "high_cell": "at/slightly above",
+   "base_bars": 8,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 158,
+   "file": "intraday_vcp_13_SHFS.png",
+   "ticker": "SHFS",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~20",
+   "high_cell": "~9%",
+   "base_bars": 20,
+   "under_pct": [
+    9,
+    9
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 159,
+   "file": "intraday_vcp_14_CFVI.png",
+   "ticker": "CFVI",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~19",
+   "high_cell": "~3.6%",
+   "base_bars": 19,
+   "under_pct": [
+    3.6,
+    3.6
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 160,
+   "file": "intraday_vcp_15_DWAC.png",
+   "ticker": "DWAC",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~19",
+   "high_cell": "0%",
+   "base_bars": 19,
+   "under_pct": [
+    0,
+    0
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 161,
+   "file": "intraday_vcp_16_NVVE.png",
+   "ticker": "NVVE",
+   "label": "valid",
+   "setup": "intraday_vcp",
+   "base_cell": "~33",
+   "high_cell": "~14%",
+   "base_bars": 33,
+   "under_pct": [
+    14,
+    14
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 162,
+   "file": "intraday_vcp_18/19_LQR.png/.jpg",
+   "ticker": "LQR",
+   "label": "invalid",
+   "setup": "intraday_vcp",
+   "base_cell": "~40 flat, far under",
+   "high_cell": "far under, % n/r",
+   "base_bars": 40,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 163,
+   "file": "intraday_vcp_20_AYLA.png",
+   "ticker": "AYLA",
+   "label": "invalid",
+   "setup": "intraday_vcp",
+   "base_cell": "~20, wide/wicky",
+   "high_cell": "~15% (fills)",
+   "base_bars": 20,
+   "under_pct": [
+    15,
+    15
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 164,
+   "file": "intraday_vcp_21_BE.png",
+   "ticker": "BE",
+   "label": "invalid",
+   "setup": "intraday_vcp",
+   "base_cell": "base halfway down spike",
+   "high_cell": ">= 5%",
+   "base_bars": null,
+   "under_pct": [
+    5,
+    null
+   ],
+   "tennis_pct": null,
+   "ema_hold": null
+  },
+  {
+   "line": 165,
+   "file": "intraday_vcp_22_MNRA.png",
+   "ticker": "MRNA",
+   "label": "invalid",
+   "setup": "intraday_vcp",
+   "base_cell": "chop",
+   "high_cell": "fills 163.08 / 162.80",
+   "base_bars": null,
+   "under_pct": null,
+   "tennis_pct": null,
+   "ema_hold": null
+  }
+ ],
+ "video": [
+  {
+   "line": 182,
+   "chart": "TPST",
+   "label": "valid",
+   "wait_cell": "~8, then steps",
+   "wait_bars": 8
+  },
+  {
+   "line": 183,
+   "chart": "MSS",
+   "label": "valid",
+   "wait_cell": "none flat",
+   "wait_bars": null
+  },
+  {
+   "line": 184,
+   "chart": "YELL",
+   "label": "valid",
+   "wait_cell": "~15–17",
+   "wait_bars": 15
+  },
+  {
+   "line": 185,
+   "chart": "VERB",
+   "label": "valid",
+   "wait_cell": "4–6",
+   "wait_bars": 4
+  },
+  {
+   "line": 186,
+   "chart": "UCAR #1",
+   "label": "valid",
+   "wait_cell": "short",
+   "wait_bars": null
+  },
+  {
+   "line": 187,
+   "chart": "UCAR #2",
+   "label": "valid",
+   "wait_cell": "5–6",
+   "wait_bars": 5
+  },
+  {
+   "line": 188,
+   "chart": "OMH",
+   "label": "valid",
+   "wait_cell": "climbs in steps",
+   "wait_bars": null
+  },
+  {
+   "line": 189,
+   "chart": "\"TOP\" (ticker cut)",
+   "label": "valid",
+   "wait_cell": "none clear",
+   "wait_bars": null
+  },
+  {
+   "line": 190,
+   "chart": "ticker n/r (11/3/22)",
+   "label": "valid",
+   "wait_cell": "~9 tight bars",
+   "wait_bars": 9
+  },
+  {
+   "line": 191,
+   "chart": "VVOS",
+   "label": "valid",
+   "wait_cell": "35–40",
+   "wait_bars": 35
+  },
+  {
+   "line": 192,
+   "chart": "NBSE",
+   "label": "valid",
+   "wait_cell": "8–12",
+   "wait_bars": 8
+  },
+  {
+   "line": 193,
+   "chart": "POL",
+   "label": "valid",
+   "wait_cell": "8–10",
+   "wait_bars": 8
+  },
+  {
+   "line": 194,
+   "chart": "BACK",
+   "label": "valid",
+   "wait_cell": "more than 20",
+   "wait_bars": 20
+  },
+  {
+   "line": 195,
+   "chart": "CING",
+   "label": "valid",
+   "wait_cell": "6–8",
+   "wait_bars": 6
+  },
+  {
+   "line": 196,
+   "chart": "SNES",
+   "label": "invalid",
+   "wait_cell": "none",
+   "wait_bars": 0
+  },
+  {
+   "line": 197,
+   "chart": "Sigma Additive",
+   "label": "invalid",
+   "wait_cell": "none",
+   "wait_bars": 0
+  },
+  {
+   "line": 198,
+   "chart": "Omega",
+   "label": "invalid",
+   "wait_cell": "none",
+   "wait_bars": 0
+  },
+  {
+   "line": 199,
+   "chart": "Safe & Green",
+   "label": "invalid",
+   "wait_cell": "none",
+   "wait_bars": 0
+  }
+ ]
+}

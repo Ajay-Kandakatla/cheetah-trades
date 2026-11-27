@@ -48,13 +48,17 @@ PASS_OK = {"status": "ok", "stale": False, "warming": False, "as_of_et": "10:31 
 # stages.steps are UNCHANGED (still the 5dec3c6b values).
 # WIDENED 2026-11-25 (sissr review defect 3): compose puts the ticker first and the lead right after it
 # ("🧠 AKAN · ⛔ SSR … · 🚩 …") — a 119-char lead in front pushed the ticker off the lock screen. Placement is HIS CALL.
+# WIDENED 2026-11-27 (spec gg-like §3.6, WP be-serve-board; suite refix): potential.run_pass and alerts.run_pass gain the
+# `gg_like` kwarg — the 🧘 block frozen on the claim (`_gl_claim` / `_gl_fields`), never a gate, a hold or a count.
+# ADDED-only: undoing exactly those lines reproduces the old values (629c24a6… / d2ded91a…), pinned by
+# tests/test_gajjala_gg_like_suite_2026_11_27.py. potential_kind, eligible, track, compose, stages.steps UNCHANGED.
 PUSH_PATH_SHA = {
-    "potential.run_pass": "629c24a61435d57743a7be44ed6f30ad15adde584b3d674ae9d99397354f49a0",
+    "potential.run_pass": "28d202c297eb453817cc61ffc81f2d76d5faf80b664b2ecf7a04aacf728628c6",
     "potential.potential_kind": "ac772217dc447021e13cec40c418c5d8f06cdc0790efac2ea98ae396348ac3d9",
     "potential.eligible": "819f8d4f8eed7cd2f03a22a5f582e0b97cfa707a9bee2e6de69a48b53193e107",
     "potential.track": "6fb63d1f722d8ad7aba6753c746edbc1128708fc2b275e4179eab5f0c20c5fe5",
     "potential.compose": "21197e6b7e47e0d039869fdac0ae3e6cc2bfc8588292974779ae3a8755503d3c",
-    "alerts.run_pass": "d2ded91a11f4fecd41deb023adb6ca4104ba9fcebbea8c808ebb8fff9acbc778",
+    "alerts.run_pass": "e3bd70e8dc89477f2f3b8868baa135280e40a3ad7715a70c6a5812d8abb3a6fc",
     "stages.steps": "73110327d1518ea04868e97cdcd58f7b86f5e960c416a3d047b0781058c3f291",
 }
 

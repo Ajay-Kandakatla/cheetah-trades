@@ -68,7 +68,11 @@
  * when I can add a small slide in in the chart window …". ONE opt-in prop `run` on Tile and GgwStretch (the Watch passes
  * it; GgCardGrid / GgCardView never do → their DOM is byte-identical): `run.button` rides the action group right after
  * `actions` (board AND ⤢ view); while `run.open` the chart window gains `ggw-charts--run` and `run.panel` as its LAST
- * child (a pending tile hosts it in `ggw-dark ggw-run-host` after its pending words). Closed → today's DOM exactly. */
+ * child (a pending tile hosts it in `ggw-dark ggw-run-host` after its pending words). Closed → today's DOM exactly.
+ *
+ * 🧘 2026-11-27 (spec gglike §3.9, WP fe-watch) — Ajay: "find calmer and better setups..". A compact tile prints the
+ * SERVED GG-like chip (GajjalaWatchCompact.GgwGgLikeChip) right after the setup chip; the ✓ / ✗ rows sit in the ⋯ drawer.
+ * Nothing is hidden, toggled or stored; a row without a served block draws nothing new. UNMEASURED. */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -80,7 +84,7 @@ import { GgSiExtremeNote } from './GgSiExtremeNote';
 import { GgHardToBorrowChip } from './GgHardToBorrow';
 import { GgSsrChip } from './GgSsr';
 import { GgwBrokerChip, GgwFloatChip, GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
-import { GgwDrawer, GgwLevelsLine, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
+import { GgwDrawer, GgwGgLikeChip, GgwLevelsLine, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
 import { GgwPendingPanel, ggwPendingPanelShown } from './GajjalaWatchPending';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { openTvChart, tvLinkTestId, tvTitle, TV_LABEL } from '../lib/tvChart';
@@ -261,6 +265,9 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         ) : null}
         {/* 🗂 2026-11-22 compact head: the served setup chip, then the float and 🚫 chips (the drawer's tags row omits them). */}
         {compact ? <GgwSetupChip row={row} /> : null}
+        {/* 🧘 2026-11-27 (spec gglike §3.9): the served GG-like chip of THAT setup, right after it (a span; its ✓ / ✗ rows
+            are in the ⋯ drawer). Display only — nothing on the Watch is hidden by it. No served block → nothing. */}
+        {compact ? <GgwGgLikeChip row={row} /> : null}
         {compact ? <GgwFloatChip row={row} /> : null}
         {compact ? <GgwBrokerChip row={row} /> : null}
         {/* 🤖 the served auto chip (watch-auto 2026-11-17) — its text verbatim; hover = the served added / volume /

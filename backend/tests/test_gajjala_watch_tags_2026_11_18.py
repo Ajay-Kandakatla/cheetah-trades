@@ -159,7 +159,8 @@ def test_a_carded_name_serves_the_cards_own_tags(monkeypatch):
     assert set(t) == set(TG.TAGS_KEYS) and t["on_board"] is True
     r = _r("forming", at=None)
     assert t["setups"] == [{"setup": "reversal_squeeze", "label": tab._setup_label("reversal_squeeze"),
-                            "state": "forming", "state_label": tab.state_label(r, None)}]
+                            "state": "forming", "state_label": tab.state_label(r, None),
+                            "gg_like": None}]                         # RE-PINNED 2026-11-27 (spec gglike): no stored block
     assert t["setups"][0]["state_label"] == tab.state_label(r)          # a forming read: rang is irrelevant
     st = t["stages"]
     assert st["title"] == SG.TITLE
@@ -363,7 +364,8 @@ def test_projection_pins_reads_and_scan(monkeypatch):
     _rows()
     ids = [ST.key(SESSION, "OMH"), ST.key(SESSION, "NVDA")]
     assert w.c[ST.READS].finds == [({"_id": {"$in": ids}}, TG.TAGS_READ_FIELDS)]
-    assert "tile" not in TG.TAGS_READ_FIELDS and set(TG.TAGS_READ_FIELDS) == {"symbol", "setups", "ctx.float"}
+    # RE-PINNED 2026-11-27 (spec gglike be-serve-watch): + "gg_like" — the pass's stored block, still never the tile bars
+    assert "tile" not in TG.TAGS_READ_FIELDS and set(TG.TAGS_READ_FIELDS) == {"symbol", "setups", "ctx.float", "gg_like"}
     win = SC._window(FRI)
     assert w.c[ST.SCAN].finds == [({"date": {"$in": [d.isoformat() for d in win]}, "symbol": {"$in": ["OMH"]}},
                                    TG.SCAN_TAG_FIELDS)]

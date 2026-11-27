@@ -706,6 +706,148 @@
        }
       },
       "date": "2026-10-13",
+      "gg_like": {
+       "bull_flag": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "horizontal_fade": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 9,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "horizontal_fade",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "intraday_vcp": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 6,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "intraday_vcp",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "kiss_fly": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 3,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "kiss_fly",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       }
+      },
       "listed": {
        "day_n": 1,
        "last_qualified": "2026-10-13",
@@ -1328,6 +1470,41 @@
        "push": {
         "at": "2026-10-13T14:31:00+00:00",
         "at_et": "10:31",
+        "gg_like": {
+         "as_of": "2026-10-13 10:30",
+         "checks": [
+          {
+           "key": "base_bars",
+           "need": 2,
+           "ok": false,
+           "value": 1
+          },
+          {
+           "high": 11.0,
+           "key": "near_high",
+           "need": 15.0,
+           "ok": true,
+           "tight": true,
+           "value": 0.0
+          },
+          {
+           "bars": 1,
+           "key": "ema_hold",
+           "need": "fast",
+           "ok": true,
+           "value": 0
+          }
+         ],
+         "entry_bar_t": null,
+         "failed": [
+          "base_bars"
+         ],
+         "frame": "5m",
+         "setup": "bull_flag",
+         "unknown": [],
+         "v": 1,
+         "verdict": "not"
+        },
         "kind_at_push": "armed",
         "px": 10.9375,
         "state": "claimed",
@@ -2246,6 +2423,148 @@
        }
       },
       "date": "2026-10-13",
+      "gg_like": {
+       "bull_flag": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": true,
+          "value": 2
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.3
+         },
+         {
+          "bars": 2,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": "2026-10-13 10:40",
+        "failed": [],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "gg_like"
+       },
+       "horizontal_fade": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 9,
+          "ok": false,
+          "value": 3
+         },
+         {
+          "high": 11.25,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 3,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "horizontal_fade",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "intraday_vcp": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 6,
+          "ok": null,
+          "value": null,
+          "why": "no_base"
+         },
+         {
+          "high": 11.25,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": null,
+          "value": null,
+          "why": "no_base"
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [],
+        "frame": "5m",
+        "setup": "intraday_vcp",
+        "unknown": [
+         "base_bars",
+         "ema_hold"
+        ],
+        "v": 1,
+        "verdict": "unknown"
+       },
+       "kiss_fly": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 3,
+          "ok": false,
+          "value": 2
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.3
+         },
+         {
+          "bars": 2,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": "2026-10-13 10:40",
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "kiss_fly",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       }
+      },
       "listed": {
        "day_n": 1,
        "last_qualified": "2026-10-13",
@@ -2811,6 +3130,148 @@
        }
       },
       "date": "2026-10-13",
+      "gg_like": {
+       "bull_flag": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "horizontal_fade": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 9,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "horizontal_fade",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "intraday_vcp": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 6,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "intraday_vcp",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "kiss_fly": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 3,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "kiss_fly",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       }
+      },
       "listed": {
        "day_n": 1,
        "last_qualified": "2026-10-13",
@@ -3355,6 +3816,39 @@
        "date": "2026-10-13",
        "entry_bar_t": "2026-10-13 10:40",
        "frame": "5m",
+       "gg_like": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": true,
+          "value": 2
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.3
+         },
+         {
+          "bars": 2,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": "2026-10-13 10:40",
+        "failed": [],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "gg_like"
+       },
        "kind": "gajjala_setup",
        "mode": "live",
        "price": 11.2,
@@ -4926,6 +5420,148 @@
        }
       },
       "date": "2026-10-13",
+      "gg_like": {
+       "bull_flag": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "horizontal_fade": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 9,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "horizontal_fade",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "intraday_vcp": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 6,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "intraday_vcp",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "kiss_fly": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 3,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "kiss_fly",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       }
+      },
       "listed": {
        "day_n": 1,
        "last_qualified": "2026-10-13",
@@ -5548,6 +6184,41 @@
        "push": {
         "at": "2026-10-13T14:31:00+00:00",
         "at_et": "10:31",
+        "gg_like": {
+         "as_of": "2026-10-13 10:30",
+         "checks": [
+          {
+           "key": "base_bars",
+           "need": 2,
+           "ok": false,
+           "value": 1
+          },
+          {
+           "high": 11.0,
+           "key": "near_high",
+           "need": 15.0,
+           "ok": true,
+           "tight": true,
+           "value": 0.0
+          },
+          {
+           "bars": 1,
+           "key": "ema_hold",
+           "need": "fast",
+           "ok": true,
+           "value": 0
+          }
+         ],
+         "entry_bar_t": null,
+         "failed": [
+          "base_bars"
+         ],
+         "frame": "5m",
+         "setup": "bull_flag",
+         "unknown": [],
+         "v": 1,
+         "verdict": "not"
+        },
         "kind_at_push": "armed",
         "px": 10.9375,
         "state": "claimed",
@@ -6466,6 +7137,148 @@
        }
       },
       "date": "2026-10-13",
+      "gg_like": {
+       "bull_flag": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": true,
+          "value": 2
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.3
+         },
+         {
+          "bars": 2,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": "2026-10-13 10:40",
+        "failed": [],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "gg_like"
+       },
+       "horizontal_fade": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 9,
+          "ok": false,
+          "value": 3
+         },
+         {
+          "high": 11.25,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 3,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "horizontal_fade",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "intraday_vcp": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 6,
+          "ok": null,
+          "value": null,
+          "why": "no_base"
+         },
+         {
+          "high": 11.25,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": null,
+          "value": null,
+          "why": "no_base"
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [],
+        "frame": "5m",
+        "setup": "intraday_vcp",
+        "unknown": [
+         "base_bars",
+         "ema_hold"
+        ],
+        "v": 1,
+        "verdict": "unknown"
+       },
+       "kiss_fly": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 3,
+          "ok": false,
+          "value": 2
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.3
+         },
+         {
+          "bars": 2,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": "2026-10-13 10:40",
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "kiss_fly",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       }
+      },
       "listed": {
        "day_n": 1,
        "last_qualified": "2026-10-13",
@@ -7031,6 +7844,148 @@
        }
       },
       "date": "2026-10-13",
+      "gg_like": {
+       "bull_flag": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "horizontal_fade": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 9,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "horizontal_fade",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "intraday_vcp": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 6,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "slow",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "intraday_vcp",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       },
+       "kiss_fly": {
+        "as_of": "2026-10-13 10:30",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 3,
+          "ok": false,
+          "value": 1
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.0
+         },
+         {
+          "bars": 1,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": null,
+        "failed": [
+         "base_bars"
+        ],
+        "frame": "5m",
+        "setup": "kiss_fly",
+        "unknown": [],
+        "v": 1,
+        "verdict": "not"
+       }
+      },
       "listed": {
        "day_n": 1,
        "last_qualified": "2026-10-13",
@@ -7575,6 +8530,39 @@
        "date": "2026-10-13",
        "entry_bar_t": "2026-10-13 10:40",
        "frame": "5m",
+       "gg_like": {
+        "as_of": "2026-10-13 10:40",
+        "checks": [
+         {
+          "key": "base_bars",
+          "need": 2,
+          "ok": true,
+          "value": 2
+         },
+         {
+          "high": 11.0,
+          "key": "near_high",
+          "need": 15.0,
+          "ok": true,
+          "tight": true,
+          "value": 0.3
+         },
+         {
+          "bars": 2,
+          "key": "ema_hold",
+          "need": "fast",
+          "ok": true,
+          "value": 0
+         }
+        ],
+        "entry_bar_t": "2026-10-13 10:40",
+        "failed": [],
+        "frame": "5m",
+        "setup": "bull_flag",
+        "unknown": [],
+        "v": 1,
+        "verdict": "gg_like"
+       },
        "kind": "gajjala_setup",
        "mode": "shadow",
        "note": "shadow — not sent",

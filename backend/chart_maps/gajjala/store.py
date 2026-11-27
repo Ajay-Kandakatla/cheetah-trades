@@ -111,6 +111,10 @@ OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS,
 SHARED = (SCAN, AH_CARRY, POST, HALTS, DAILY)
 # 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
 LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
+# 🧘 2026-11-27 (spec gg-like §3.6 [C8]): the ONLY keys annotate_ledger may set on a graded ledger doc — never a grade
+# column; written ONLY by gg_like_track.record_night (the grade and the 🧪 copy write NAMED keys: a note is never copied
+# and never wiped)
+LEDGER_NOTE_KEYS = frozenset({"gg_like", "win30"})
 # 🧪 2026-11-01: the fixed top-level keys of an exits doc (upsert_exits refuses any other key but the exit columns
 # its caller names — audited_rules.EXIT_COLS)
 EXITS_KEYS = frozenset({"date", "symbol", "setup", "kind", "alert", "graded_at", "version"})
@@ -1015,6 +1019,25 @@ class GajjalaStore:
             log.warning("gajjala.store: ledger write failed for %s: %s", _id, exc)
             return False
 
+    def annotate_ledger(self, _id: str, sets: dict) -> str:
+        """🧘 2026-11-27 [C8] — "matched" | "unmatched" | "refused" | "error": ONE `update_one({"_id": _id}, {"$set": sets})`
+        on gajjala_ledger, NEVER an upsert — a row with no graded doc is left alone ("unmatched", no doc is created).
+        "refused" (logged, no write) when `sets` is empty, `_id` is not a non-empty str, or a key falls outside
+        LEDGER_NOTE_KEYS. Written ONLY by gg_like_track.record_night."""
+        bad = set(sets or {}) - LEDGER_NOTE_KEYS
+        if not sets or bad or not isinstance(_id, str) or not _id:
+            log.warning("gajjala.store: refused ledger note %s (keys outside LEDGER_NOTE_KEYS: %s)", _id, sorted(bad))
+            return "refused"
+        c = self.coll(LEDGER)
+        if c is None:
+            return "error"
+        try:
+            res = c.update_one({"_id": _id}, {"$set": dict(sets)})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: ledger note failed for %s: %s", _id, exc)
+            return "error"
+        return "matched" if int(getattr(res, "matched_count", 0) or 0) > 0 else "unmatched"
+
     # ── 🧨 gajjala_divergence (2026-11-18 — written ONLY by divergence.run_step / grade_step; GG5 only) ──────────────────
     def upsert_divergence(self, _id: str, insert_fields: dict, set_fields: dict) -> bool:
         """THE divergence write: ONE `update_one({_id}, {"$setOnInsert": insert_fields, "$set": set_fields},
@@ -1243,7 +1266,7 @@ for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_c
               "release_lease", "types_map", "set_types_map", "alerts_coll", "coll", "potentials", "get_potential",
               "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",
               "claim_potential_push", "settle_potential_push", "mark_potential_graveyard", "potential_pushes",
-              "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger", "replay_rows",
+              "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger", "annotate_ledger", "replay_rows",
               "replay_dates", "records_on", "upsert_replay", "set_broker_flag", "upsert_divergence",
               "divergence_docs", "divergence_dates"):
     globals()[_name] = _delegate(_name)

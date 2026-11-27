@@ -508,16 +508,36 @@ def _rb_fields(frames, sym, entry_t, logged: Optional[dict] = None) -> dict:
         return {}
 
 
+def _gl_fields(gg_like: Optional[dict], sym: str, setup: str, entry_t: str) -> dict:
+    """🧘 2026-11-27 (Ajay "find calmer and better setups.. I want to make sure we are finding similar setups to
+    Gajjala") — {"gg_like": block} of (sym, setup) from the pass's {SYM: {setup: block}} map ONLY when the block passes
+    gg_like.from_stamp AND was judged at THIS entry bar; {} otherwise or on any fault. Frozen on the claim / refusal /
+    shadow record like the 📶 stamp — never read by `compose`, `refusal` or a count; never a gate."""
+    if not isinstance(gg_like, dict):
+        return {}
+    try:
+        from chart_maps.gajjala import gg_like as GL
+        by = gg_like.get(sym)
+        blk = GL.from_stamp(by.get(setup)) if isinstance(by, dict) else None
+        if isinstance(blk, dict) and isinstance(entry_t, str) and blk.get("entry_bar_t") == entry_t:
+            return {"gg_like": blk}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala alerts: gg like stamp failed for %s: %s", sym, type(exc).__name__)
+    return {}
+
+
 def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: Optional[Callable] = None,
              owner: Optional[str] = None, dry: bool = False, ctx: Optional[dict] = None,
-             mode: Optional[str] = None) -> dict:
+             mode: Optional[str] = None, gg_like: Optional[dict] = None) -> dict:
     """Ring (or, in shadow, record) every claimed, pushable, in-window A+ of this pass — each its own push.
 
     `reads` = {SYM: {setup: Read}}; `frames` = {SYM: bars.Frames} (the per-frame latest bar); `ctx` = {SYM: {float_text,
     last_halt_resume_et, reg_gain_pct}}; `store` = the GajjalaStore (its `alerts_coll()`); `send(owner, payload)`
     defaults to push.hooks.notify_gajjala_setup. `dry` → nothing claimed, recorded or sent (counted "dry").
     -> counts (COUNT_KEYS). 2026-10-27: the variant is the store's (`V.of(store)` — GG5 for today's store): its claim
-    prefix, kind, freshness clock, default mode (push_mode(v)) and default sender; the signature is unchanged."""
+    prefix, kind, freshness clock, default mode (push_mode(v)) and default sender; the signature is unchanged.
+    🧘 2026-11-27: `gg_like` = {SYM: {setup: gg_like block}} (GG5's run.py only, passed only when non-empty) — frozen
+    on the record by `_gl_fields`; None (the 1-minute page, 🧪) → no key, every byte as before."""
     from . import store as ST
     from .tab import broker_text_for
     v = V.of(store)
@@ -558,6 +578,7 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             if isinstance(c.get("promo_text"), str) and c["promo_text"]:
                 base["promo_text"] = c["promo_text"]
         base.update(_rb_fields(frames, sym, entry_t, rb_log))   # 📶 2026-11-15 — the base count AT the entry bar (keys only when known)
+        base.update(_gl_fields(gg_like, sym, setup, entry_t))   # 🧘 2026-11-27 — the check AT the entry bar (the key only when judged there)
         state = refusal(dict(r, setup=setup), sym, entry_t, frames.get(sym) if isinstance(frames, dict) else None,
                         now, session, ctx.get(sym), v, coll, closed=closed)
         if state == "claimed_before":
