@@ -223,6 +223,7 @@ import {
 } from '../lib/cardLive';
 import type { CmBand, CmTapeSession } from '../lib/chartMaps';
 import { useCurrentUser } from '../hooks/useUser';
+import { PlaybookVideosOwner } from './PlaybookVideos';
 import { outerChipsFor } from '../lib/outerChips';
 import { VIDEO_LOOK_H } from '../lib/videoLook';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
@@ -2130,6 +2131,7 @@ function PlaybookPanel({ pb }: { pb: GgPlaybook | null }) {
     <div className="gg-playbook" data-testid="gg-playbook">
       {pb.title ? <h3 className="gg-pb-h">{pb.title}</h3> : null}
       {pb.note ? <div className="cm-note">{pb.note}</div> : null}
+      <PlaybookVideosOwner where="playbook" />
       {(pb.sections || []).map((s) => (
         <section key={s.title} className="gg-pb-section">
           <h4 className="gg-pb-h">{s.title}</h4>

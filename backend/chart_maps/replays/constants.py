@@ -166,3 +166,30 @@ SEEK_WORDS = "⏩ opens at the peak minute, {t} ET"                       # t = 
 SEEK_NONE_WORDS = "no peak time on this replay — it opens at the start"  # MINE
 JUMP_MISSING_WORDS = "That replay is no longer listed."                  # MINE
 assert HHMM_RE.fullmatch(WINDOW_T0) and HHMM_RE.fullmatch(WINDOW_T1)
+
+# ── 📚 Playbook learning (spec playbook videos §3.3, WP-be, 2026-11-27) ─────────────────────────────────────────────
+# Ajay 2026-11-27 ~02:15 ET, verbatim: "I loved the video can you move them under our replay tab with a PLaybook learning
+# and also add it to the playbook tab too with videos". The narrated setups film, published by the host script
+# eod-audits/research/2026-11-27_gg_film/engine/publish.py into videos/playbook/<film-slug>/ (inside the existing :ro
+# bind) with one sidecar per mp4. NEVER under a date folder, never a `window` key: the nightly and 🏆 lists cannot see
+# it. Owner-only (third-party teaching charts). Display only — no rule, gate, threshold, push or trade. UNMEASURED.
+PLAYBOOK_SUB = "playbook"                                   # videos/playbook/<film-slug>/ — == publish.py DEST_SUB
+PLAYBOOK_KIND = "playbook"                                  # == publish.py KIND
+PLAYBOOK_SCHEMA = 1                                         # == publish.py SCHEMA
+PLAYBOOK_API_PATH = API_PATH + "/playbook"
+PLAYBOOK_VIDEO_PATH = PLAYBOOK_API_PATH + "/video/{film}/{name}"
+PLAYBOOK_SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$", re.ASCII)          # fullmatch ONLY (the DATE_RE rule above)
+PLAYBOOK_CHAPTER_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_]{0,63}$", re.ASCII)         # fullmatch ONLY
+PLAYBOOK_ROLES = ("chapter", "full")
+PLAYBOOK_VARIANTS = (("phone", "📱 phone"), ("desktop", "🖥 desktop"))    # key, switch label — the served order
+PLAYBOOK_VARIANT_KEYS = tuple(k for k, _ in PLAYBOOK_VARIANTS)
+PLAYBOOK_NN_MAX = 99
+PLAYBOOK_TITLE_MAX, PLAYBOOK_SUBTITLE_MAX, PLAYBOOK_DESCRIPTION_MAX = 120, 200, 300   # text hygiene — MINE, == publish.py
+PLAYBOOK_TITLE = "📚 Playbook learning"                      # his words — == FE PBV_WHERE.replays.title (contract-pinned)
+PLAYBOOK_NOTE = ("Study films — hand-picked teaching charts: they show what he looks for, not how often it works. "
+                 "Descriptive, UNMEASURED, not a signal.")   # the film's own content rule (FILM/SPEC.md, selection bias)
+PLAYBOOK_EMPTY_TEXT = "No playbook videos yet."
+PLAYBOOK_FULL_TITLE = "Full film"
+PLAYBOOK_FULL_SUB_WORDS = ("{n} chapter", "{n} chapters back to back")            # singular, plural — the concat can join ONE chapter
+PLAYBOOK_SUMMARY_PARTIAL = "{n} of {total} chapters · {m} min so far"
+PLAYBOOK_SUMMARY_ALL = ("{n} chapter · {m} min", "{n} chapters · {m} min")      # singular, plural

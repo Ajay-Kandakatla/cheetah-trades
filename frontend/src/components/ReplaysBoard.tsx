@@ -40,6 +40,7 @@ import {
 import { useRpFocus } from '../hooks/useRpFocus';
 import { TickerLink } from './TickerLink';
 import ReplaysPastWinners from './ReplaysPastWinners';
+import { PlaybookVideos } from './PlaybookVideos';
 import '../styles/replays.css';
 
 /* `d` = the URL session the answer was fetched for (null = the default session). */
@@ -147,6 +148,7 @@ export default function ReplaysBoard() {
   const date = params.get(RP_DATE_PARAM);
   const [load, setLoad] = useState<Load>({ phase: 'loading' });
   const [jumpN, setJumpN] = useState(0);                 // 🏆 chip clicks: the same chip tapped again is a new jump
+  const [ownerSeen, setOwnerSeen] = useState(false);
 
   /* ONE GET on mount and on every session change; no polling (the folder grows once a night). */
   useEffect(() => {
@@ -158,18 +160,21 @@ export default function ReplaysBoard() {
       .then((j) => {
         if (!alive) return;
         const ok = j && typeof j === 'object' && typeof j.state === 'string' && STATES.has(j.state);
+        if (ok) setOwnerSeen(true);
         setLoad(ok ? { phase: 'loaded', p: j as RpPayload, d: date } : { phase: 'failed', d: date });
       })
       .catch(() => { if (alive) setLoad({ phase: 'failed', d: date }); });
     return () => { alive = false; };
   }, [date]);
 
+  const pbSlot = ownerSeen ? <PlaybookVideos where="replays" /> : null;
   if (load.phase === 'loading' || load.d !== date) {
-    return <><div className="rp-board" data-state="loading" /><ReplaysPastWinners boardReady={false} jumpN={jumpN} /></>;
+    return <>{pbSlot}<div className="rp-board" data-state="loading" /><ReplaysPastWinners boardReady={false} jumpN={jumpN} /></>;
   }
   if (load.phase === 'failed') {
     return (
       <>
+        {pbSlot}
         <div className="rp-board" data-state="failed"><p className="rp-line" data-testid="rp-failed">{FETCH_FAILED}</p></div>
         <ReplaysPastWinners boardReady={true} jumpN={jumpN} />
       </>
@@ -190,6 +195,7 @@ export default function ReplaysBoard() {
 
   return (
     <>
+    {pbSlot}
     <div className="rp-board" data-state={p.state}>
       <Line text={p.title} className="rp-title" testId="rp-title" />
       {options.length ? (

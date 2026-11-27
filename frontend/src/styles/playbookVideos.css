@@ -1,0 +1,29 @@
+/* 📚 Playbook learning / 🎬 Videos (2026-11-27, playbookvid spec §3.6) — one sheet, both mounts (🎬 Replays, 📓 Playbook).
+   Rows are text until tapped; ONE .pbv-video mounts under the tapped row. 📱 430 px: every container carries min-width 0
+   + max-width 100%, every row and chip row wraps, every text and chip wraps, so one long served word never pushes the
+   page sideways. The player is capped at 60rem on wide screens. */
+.pbv-section { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.45rem; margin: 0.4rem 0 0.8rem; }
+.pbv-toggle { align-self: flex-start; min-width: 0; max-width: 100%; font-size: 0.95rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); background: transparent; color: inherit; cursor: pointer; white-space: normal; overflow-wrap: anywhere; }
+.pbv-film { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.3rem; }
+.pbv-row { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.3rem; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); }
+.pbv-head { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.pbv-chips { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.pbv-variants { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.pbv-markers { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.pbv-player { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.3rem; width: 100%; }
+.pbv-line, .pbv-film-head, .pbv-nn, .pbv-title, .pbv-sub, .pbv-chip, .pbv-vchip, .pbv-marker { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.pbv-line { margin: 0; font-size: 0.8rem; }
+.pbv-muted, .pbv-sub { color: var(--ink-subtle, #94a3b8); }
+.pbv-film-head { margin: 0.3rem 0 0.1rem; font-size: 0.9rem; font-weight: 600; }
+.pbv-nn { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: var(--ink-muted, #64748b); }
+.pbv-title { font-size: 0.85rem; font-weight: 600; }
+.pbv-sub { font-size: 0.78rem; }
+.pbv-chip { display: inline-block; padding: 0.04rem 0.4rem; border-radius: 999px; font-size: 0.74rem; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); }
+.pbv-vchip, .pbv-marker { font-size: 0.78rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); background: transparent; color: inherit; cursor: pointer; }
+.pbv-vchip[aria-pressed="true"] { font-weight: 600; border-color: currentColor; }
+.pbv-play { flex: 0 0 auto; min-width: 2rem; font-size: 0.85rem; padding: 0.1rem 0.5rem; border-radius: 6px; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); background: transparent; color: inherit; cursor: pointer; }
+.pbv-play[aria-pressed="true"] { border-color: currentColor; }
+.pbv-video { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; border-radius: 4px; }
+
+@media (min-width: 769px) { .pbv-player { max-width: 60rem; } }
+@media (max-width: 640px) { .pbv-chip, .pbv-vchip, .pbv-marker { font-size: 0.7rem; } }

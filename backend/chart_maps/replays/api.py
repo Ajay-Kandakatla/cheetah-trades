@@ -14,6 +14,7 @@ Ajay 2026-11-17, verbatim: "Can you store the videos in to the app please".
 PRIMARY OWNER ONLY on both routes through `require_primary_admin` — a DEPENDENCY, so it resolves before the path is
 looked at: anyone else gets the same stealth 404 for a real file, a traversal attempt or a bad date; no header → 401
 (`auth.current_user_email`). The admin email is never typed here. Read-only; UNMEASURED.
+📚 Playbook learning (2026-11-27): `/playbook` + `/playbook/video/{film}/{name}` live in `playbook_api.py`, included below.
 """
 from __future__ import annotations
 
@@ -64,3 +65,7 @@ async def replay_winner_video(sub: str, name: str, email: str = Depends(require_
     if path is None:
         raise HTTPException(status_code=404, detail="Not Found")
     return FileResponse(str(path), media_type="video/mp4", headers=C.VIDEO_HEADERS)
+
+
+from .playbook_api import router as playbook_router  # noqa: E402  📚 Playbook learning (2026-11-27), owner-only
+router.include_router(playbook_router)

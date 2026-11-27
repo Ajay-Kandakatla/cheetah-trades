@@ -1,0 +1,94 @@
+{
+  "ready": {
+    "title": "📚 Playbook learning", "tab": "replays", "state": "ready", "text": null,
+    "note": "Study films — hand-picked teaching charts: they show what he looks for, not how often it works. Descriptive, UNMEASURED, not a signal.",
+    "variant_options": [{"key": "phone", "label": "📱 phone"}, {"key": "desktop", "label": "🖥 desktop"}],
+    "counts": {"films": 1, "chapters": 2, "videos": 5, "skipped_bad": 0, "no_sidecar": 0},
+    "films": [{
+      "slug": "2026-11-27_gg_film", "title": "Gajjala's Five Setups",
+      "description": "his teaching charts, read bar by bar",
+      "summary_text": "2 of 9 chapters · 18 min so far",
+      "chapters": [
+        {
+          "key": "00_intro", "nn": 0, "nn_text": "00", "id": "intro",
+          "title": "Gajjala's Five Setups", "subtitle": "his teaching charts, read bar by bar",
+          "variants": [
+            {"key": "phone", "label": "📱 phone", "file": "00_intro_phone.mp4",
+             "src": "/chart-maps/replays/playbook/video/2026-11-27_gg_film/00_intro_phone.mp4",
+             "duration_s": 438.167, "length_text": "7:18", "bytes": 28812421, "size_text": "29 MB",
+             "height": 720, "quality_text": "720p"},
+            {"key": "desktop", "label": "🖥 desktop", "file": "00_intro.mp4",
+             "src": "/chart-maps/replays/playbook/video/2026-11-27_gg_film/00_intro.mp4",
+             "duration_s": 438.167, "length_text": "7:18", "bytes": 114514062, "size_text": "115 MB",
+             "height": 1080, "quality_text": "1080p"}
+          ]
+        },
+        {
+          "key": "01_bull_flag", "nn": 1, "nn_text": "01", "id": "bull_flag",
+          "title": "Bull Flag", "subtitle": "a 2 to 5 bar pause at the top of the run",
+          "variants": [
+            {"key": "phone", "label": "📱 phone", "file": "01_bull_flag_phone.mp4",
+             "src": "/chart-maps/replays/playbook/video/2026-11-27_gg_film/01_bull_flag_phone.mp4",
+             "duration_s": 632.667, "length_text": "10:33", "bytes": 29013930, "size_text": "29 MB",
+             "height": 720, "quality_text": "720p"},
+            {"key": "desktop", "label": "🖥 desktop", "file": "01_bull_flag.mp4",
+             "src": "/chart-maps/replays/playbook/video/2026-11-27_gg_film/01_bull_flag.mp4",
+             "duration_s": 632.667, "length_text": "10:33", "bytes": 185568401, "size_text": "186 MB",
+             "height": 1080, "quality_text": "1080p"}
+          ]
+        }
+      ],
+      "full": {
+        "key": "full", "title": "Full film", "subtitle": "2 chapters back to back",
+        "variants": [
+          {"key": "desktop", "label": "🖥 desktop", "file": "GG_setups_full.mp4",
+           "src": "/chart-maps/replays/playbook/video/2026-11-27_gg_film/GG_setups_full.mp4",
+           "duration_s": 1070.833, "length_text": "17:51", "bytes": 300082463, "size_text": "300 MB",
+           "height": 1080, "quality_text": "1080p"}
+        ],
+        "markers": [
+          {"start_s": 0.0, "text": "0:00 Gajjala's Five Setups"},
+          {"start_s": 438.167, "text": "7:18 Bull Flag"}
+        ]
+      }
+    }]
+  },
+  "partial": {
+    "title": "📚 Playbook learning", "tab": "replays", "state": "ready", "text": null,
+    "note": "Study films — hand-picked teaching charts: they show what he looks for, not how often it works. Descriptive, UNMEASURED, not a signal.",
+    "variant_options": [{"key": "desktop", "label": "🖥 desktop"}],
+    "counts": {"films": 1, "chapters": 1, "videos": 1, "skipped_bad": 0, "no_sidecar": 0},
+    "films": [{
+      "slug": "2026-11-27_gg_film", "title": "Gajjala's Five Setups",
+      "description": "his teaching charts, read bar by bar",
+      "summary_text": "1 of 9 chapters · 7 min so far",
+      "chapters": [
+        {
+          "key": "00_intro", "nn": 0, "nn_text": "00", "id": "intro",
+          "title": "Gajjala's Five Setups", "subtitle": "his teaching charts, read bar by bar",
+          "variants": [
+            {"key": "desktop", "label": "🖥 desktop", "file": "00_intro.mp4",
+             "src": "/chart-maps/replays/playbook/video/2026-11-27_gg_film/00_intro.mp4",
+             "duration_s": 438.167, "length_text": "7:18", "bytes": 114514062, "size_text": "115 MB",
+             "height": 1080, "quality_text": "1080p"}
+          ]
+        }
+      ],
+      "full": null
+    }]
+  },
+  "empty": {
+    "title": "📚 Playbook learning", "tab": "replays", "state": "empty", "text": "No playbook videos yet.",
+    "note": "Study films — hand-picked teaching charts: they show what he looks for, not how often it works. Descriptive, UNMEASURED, not a signal.",
+    "variant_options": [],
+    "counts": {"films": 0, "chapters": 0, "videos": 0, "skipped_bad": 0, "no_sidecar": 0},
+    "films": []
+  },
+  "no_folder": {
+    "title": "📚 Playbook learning", "tab": "replays", "state": "no_folder", "text": "The replay folder is not mounted on this server.",
+    "note": "Study films — hand-picked teaching charts: they show what he looks for, not how often it works. Descriptive, UNMEASURED, not a signal.",
+    "variant_options": [],
+    "counts": {"films": 0, "chapters": 0, "videos": 0, "skipped_bad": 0, "no_sidecar": 0},
+    "films": []
+  }
+}
