@@ -639,7 +639,7 @@
    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
    "fetched_at": "2026-11-24T23:40:05Z",
    "chip": "🩳 SI EXTREME 26.4% float · <0.1d · 11/13 · ⚠️ float updated · ✂️ split due 11/30 · 📄 8-K 3.02 11/20 +4",
-   "title": "🩳 Short interest — FINRA settlement 2026-11-13 (published ~2026-11-24). 439,892 shares short (no % vs 2026-10-30 — the 1-for-6 reverse split executed 10/30, a settlement day, and which side of it that count is on is not known). 26.4% of float — float 1.7M, yfinance floatShares (shares_cache, current row), as of 2026-11-25. 19.8% of shares outstanding — 2.2M, yfinance sharesOutstanding (shares_cache, current row), as of 2026-11-25. Tier: EXTREME (20% or more of the float). Float check: confirmed — 19.8% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 0.05 days to cover — 439,892 shares short ÷ 8,981,291 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1. A split executed inside that window, so the average may mix share counts. Share counts: the record carried 978,675 (11/7), under the SEC 10-Q cover count 1,788,532 (11/3) already dated — growth is read from the SEC count: 2,220,906 (Yahoo, 11/25) = 1.2×. Charter filing (a reverse split is filed under this item; so are other charter changes): 8-K Item 3.03/5.03 11/24. ⚠️ float updated — 1,667,144 (Yahoo 11/25) replaced 53,655 (11/7). ✂️ 1-for-4 reverse split due 11/30. 📄 5 dilution filings since 11/7: 8-K 3.02 11/20 · 424B3 11/18 · 8-K 3.02 11/18 (+2 more) — 15 prospectus copies of same-day reports not counted (one document filed under several registrations). Float sources — float: Yahoo 1,667,144 (read 11/25) = 26.4% · Massive 239,842 (as of 10/8) — not compared: the splits on file start 10/30, after the second float's date. Share-count check: SEC cover count: read 11/26 04:41 ET · splits (Massive): read 11/26 04:41 ET · Yahoo shares outstanding: 2,220,906 as of 2026-11-25. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+   "title": "🩳 Short interest — FINRA settlement 2026-11-13 (published ~2026-11-24). 439,892 shares short (no % vs 2026-10-30 — the 1-for-6 reverse split executed 10/30, a settlement day, and which side of it that count is on is not known). 26.4% of float — float 1.7M, yfinance floatShares (shares_cache, current row), as of 2026-11-25. 19.8% of shares outstanding — 2.2M, yfinance sharesOutstanding (shares_cache, current row), as of 2026-11-25. Tier: EXTREME (20% or more of the float). Float check: confirmed — 19.8% of shares outstanding is short, at least the 10% of shares outstanding that EXTREME also needs. 0.05 days to cover — 439,892 shares short ÷ 8,981,291 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1. Share counts: the record carried 978,675 (11/7), under the SEC 10-Q cover count 1,788,532 (11/3) already dated — growth is read from the SEC count: 2,220,906 (Yahoo, 11/25) = 1.2×. Dates: short interest counted 11/13; the float is read 11/25; shares outstanding 1,788,532 (SEC 10-Q cover, 11/3) → 2,220,906 (Yahoo, 11/25) in between. Charter filing (a reverse split is filed under this item; so are other charter changes): 8-K Item 3.03/5.03 11/24. ⚠️ float updated — 1,667,144 (Yahoo 11/25) replaced 53,655 (11/7). ✂️ 1-for-4 reverse split due 11/30. 📄 5 dilution filings since 11/7: 8-K 3.02 11/20 · 424B3 11/18 · 8-K 3.02 11/18 (+2 more) — 15 prospectus copies of same-day reports not counted (one document filed under several registrations). Float sources — float: Yahoo 1,667,144 (read 11/25) = 26.4% · Massive 239,842 (as of 10/8) — not compared: the splits on file start 10/30, after the second float's date. Share-count check: SEC cover count: read 11/26 04:41 ET · splits (Massive): read 11/26 04:41 ET · Yahoo shares outstanding: 2,220,906 as of 2026-11-25. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
    "rows": [
     {
      "k": "Settlement",
@@ -667,7 +667,7 @@
     },
     {
      "k": "Days to cover",
-     "v": "0.05 — 439,892 shares short ÷ 8,981,291 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1. A split executed inside that window, so the average may mix share counts."
+     "v": "0.05 — 439,892 shares short ÷ 8,981,291 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1."
     },
     {
      "k": "Freshness",
@@ -680,6 +680,10 @@
     {
      "k": "Note",
      "v": "Share counts: the record carried 978,675 (11/7), under the SEC 10-Q cover count 1,788,532 (11/3) already dated — growth is read from the SEC count: 2,220,906 (Yahoo, 11/25) = 1.2×."
+    },
+    {
+     "k": "Note",
+     "v": "Dates: short interest counted 11/13; the float is read 11/25; shares outstanding 1,788,532 (SEC 10-Q cover, 11/3) → 2,220,906 (Yahoo, 11/25) in between."
     },
     {
      "k": "Note",
@@ -713,7 +717,7 @@
    "extreme": {
     "text": "🩳 SI EXTREME 26.4% float · <0.1d · 11/13 · ⚠️ float updated · ✂️ split due 11/30 · 📄 8-K 3.02 11/20 +4",
     "short": "🩳 SI EXTREME 26.4% float · ⚠️ float updated · ✂️ split due 11/30 · 📄 8-K 3.02 11/20 +4",
-    "title": "🩳 EXTREME short interest — 26.4% of the float is sold short at the FINRA settlement 2026-11-13 (published ~2026-11-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 19.8% of shares outstanding (2.2M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 0.05 days to cover — 439,892 shares short ÷ 8,981,291 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1. A split executed inside that window, so the average may mix share counts. Float basis: Yahoo's newer float (1,667,144 shares, yfinance floatShares (shares_cache, current row), as of 2026-11-25), which replaced the older float stored with this short-interest record. ⚠️ float updated — 1,667,144 (Yahoo 11/25) replaced 53,655 (11/7) ✂️ 1-for-4 reverse split due 11/30 📄 5 dilution filings since 11/7: 8-K 3.02 11/20 · 424B3 11/18 · 8-K 3.02 11/18 (+2 more) — 15 prospectus copies of same-day reports not counted (one document filed under several registrations) Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
+    "title": "🩳 EXTREME short interest — 26.4% of the float is sold short at the FINRA settlement 2026-11-13 (published ~2026-11-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 19.8% of shares outstanding (2.2M). That is at or above the 10% of shares outstanding that confirms the float (SI_EXTREME_MIN_PCT_SHARES_OUT). 0.05 days to cover — 439,892 shares short ÷ 8,981,291 average daily volume (the provider's window). FINRA's file shows 1.00 for any value at or under 1. Float basis: Yahoo's newer float (1,667,144 shares, yfinance floatShares (shares_cache, current row), as of 2026-11-25), which replaced the older float stored with this short-interest record. ⚠️ float updated — 1,667,144 (Yahoo 11/25) replaced 53,655 (11/7) ✂️ 1-for-4 reverse split due 11/30 📄 5 dilution filings since 11/7: 8-K 3.02 11/20 · 424B3 11/18 · 8-K 3.02 11/18 (+2 more) — 15 prospectus copies of same-day reports not counted (one document filed under several registrations) Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
     "basis": "si_doc_float"
    },
    "basis": {
@@ -864,6 +868,15 @@
      }
     ],
     "issuances": [],
+    "date_gap": {
+     "settlement_date": "2026-11-13",
+     "float_asof": "2026-11-25",
+     "from_shares": 1788532,
+     "from_asof": "2026-11-03",
+     "to_shares": 2220906,
+     "to_asof": "2026-11-25",
+     "flag": false
+    },
     "float_sources": [
      {
       "key": "yahoo",

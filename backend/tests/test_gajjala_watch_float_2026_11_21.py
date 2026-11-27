@@ -172,7 +172,7 @@ def test_stale_served_keeps_the_stale_text_and_says_older_than():
     old = datetime(2026, 11, 3, 15, 0, tzinfo=UTC).timestamp()
     st, _d, _s = _world()
     f = _sec(["OMH"], Lookup({"OMH": (dict(VALS, as_of=old), "stale_served")}), st)["OMH"]
-    assert "(stale, as of" in f["text"]
+    assert "(stale, read" in f["text"] and "(stale, as of" not in f["text"]   # PIN MOVED 2026-11-27 B3
     assert FR.FLOAT_STALE_SOURCE_WORDS["float"].format(days=7) in f["title"] and "older than 7 days" in f["title"]
     assert "kept up to" not in f["title"]                                             # NEGATIVE
 

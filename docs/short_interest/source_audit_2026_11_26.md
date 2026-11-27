@@ -115,3 +115,7 @@ docker exec -i -w /app cheetah-market-app-api-1 python -m short_interest.source_
 - `backend/tests/test_gajjala_si_track_guards_2026_11_26.py` `IMPORTERS` must gain `short_interest/source_audit.py` (predicted pin move — main session).
 - No ✨ entry (main session). No contracts.mjs block (main session).
 - No word, tier, sort, gate or push changes: the audit only reads and logs.
+
+## 2026-11-27 — the 🚩 group (spec sicheck rev 2 §3.3, package si-io)
+
+Ajay 2026-11-27: "Anytime something is in our Gajjalas we need to initiate a flow checking these values". A fourth group, `entered` (word 🚩), is LAST in `GROUPS = ("listed", "followed", "watch", "entered")`: the names the 🚩 pass checked on entry that day, `short_interest.entry_check.entered(session, source=entry_check.SRC_GAJJALA, strict=True)`, read in its own try (a read fault is named `entered` in `faults`; the other three stand). A row queued only by 👀 Watch is never listed under 🚩; a row both sources queued is. Being last, the night's `max_refresh()` budget falls on it first. `RULE_HEAD` names the fourth list. Each built row gains `flagged` = the chip carries `source_check.SHORT_SOURCES`; `_word` and `_sort_key` treat `flagged` like `contested`. No new state: `WHY` and `source_check.STATES` are unchanged. With no entry rows the three groups are exactly as before. Display only; not a signal; UNMEASURED. The entry flow itself: `docs/short_interest/entry_check_flow_2026_11_27.md`.

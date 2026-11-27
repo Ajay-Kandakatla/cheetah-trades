@@ -255,6 +255,8 @@ KF_FILTER_LINE = "{shown} shown · {hidden} hidden (not at the 9 EMA now) · {un
 # constant read by name (GC.FOCUS_N); nothing here is a gate, an order or a push.
 PLAN_ENTRY_HEAD = "Entry above"                   # an entry read (_is_entry_read: A+ or forming-ready)
 PLAN_LEVEL_HEAD = "trigger"                       # every other read with a trigger (the FE's words until 2026-11-11)
+READ_AT_MIN_LAG_SEC = 1                            # the "older than the shown pass by ≥ 1 s" rule — _read_at_text + _row_asof
+ROW_ASOF_TEXT = "as of {hhmm}"                     # D4 2026-11-27 — chips.row_asof: the card's scan row is from an earlier pass
 VOL_DRIED_TEXT = "💧 volume dried up"              # chips.vol_dried — the read's own k3_vol criterion met, an indicator
 FOCUS_TEXT = ("🔝 Focus 5 — the first five cards in this board's own order (GG keeps 4–5 names active). Display only: "
               "nothing measured says these five win more.")   # "5" / "five" pinned to GC.FOCUS_N by the WP-TAB test
@@ -1027,9 +1029,27 @@ def _read_at_text(doc: dict, pass_at: Optional[datetime]) -> Optional[str]:
     and says so. None when the read is the shown pass's own (or either stamp is missing)."""
     upd = _stamp_utc(doc.get("updated_at")) if isinstance(doc, dict) else None
     pa = _stamp_utc(pass_at)
-    if upd is None or pa is None or (pa - upd).total_seconds() < 1:
+    if upd is None or pa is None or (pa - upd).total_seconds() < READ_AT_MIN_LAG_SEC:
         return None
     return f"read at the {_et(upd).strftime('%H:%M')} ET pass"
+
+
+def _row_asof(scan_doc, pass_at: Optional[datetime]) -> Optional[dict]:
+    """D4 (2026-11-27): {"text": "as of HH:MM"} when the name's scan doc was last qualified on an EARLIER pass than the
+    one shown (its `last_qualified_at` older than `pass_at` by ≥ READ_AT_MIN_LAG_SEC) — the card's Change / Volume are
+    that older row's, and the stamp says how old; the numbers themselves are not touched (HIS CALL #15). HH:MM = the
+    row's own `last.last_trade_et`, else the qualify stamp in ET. None when the row is the shown pass's own, or either
+    stamp is missing."""
+    if not isinstance(scan_doc, dict):
+        return None
+    lq = _stamp_utc(scan_doc.get("last_qualified_at"))
+    pa = _stamp_utc(pass_at)
+    if lq is None or pa is None or (pa - lq).total_seconds() < READ_AT_MIN_LAG_SEC:
+        return None
+    last = scan_doc.get("last") if isinstance(scan_doc.get("last"), dict) else {}
+    lt = _hhmm(last.get("last_trade_et")) if isinstance(last.get("last_trade_et"), str) else None
+    hhmm = lt if lt and re.fullmatch(r"\d\d:\d\d", lt) else _hhmm(lq)
+    return {"text": ROW_ASOF_TEXT.format(hhmm=hhmm)}
 
 
 def _float_read(doc: dict, daily: Optional[dict]):
@@ -1052,7 +1072,7 @@ def _float_shares_of(fr) -> Optional[int]:
 
 
 def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_doc, daily: Optional[dict],
-           pass_at: Optional[datetime] = None) -> dict:
+           pass_at: Optional[datetime] = None, row_asof: Optional[dict] = None) -> dict:
     ctx = doc.get("ctx") if isinstance(doc.get("ctx"), dict) else {}
     fr = _float_read(doc, daily)
     daily = daily or {}
@@ -1081,6 +1101,8 @@ def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_d
     vd = vol_dried_text(read)                                        # 💧 2026-11-11 (#4) — the key only when met
     if vd:
         out["vol_dried"] = vd
+    if row_asof:                                                     # D4 2026-11-27 — the key only when given (_row_asof)
+        out["row_asof"] = row_asof
     return out
 
 
@@ -1507,7 +1529,7 @@ def _on_bars(markers: list, bars: list) -> list:
 def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, listed: Optional[dict],
                halt_doc=None, daily=None, pass_at: Optional[datetime] = None, v=None,
                carry: Optional[dict] = None, prev_iso: Optional[str] = None, rang: Optional[bool] = None,
-               kf_rank: bool = False) -> dict:
+               kf_rank: bool = False, row_asof: Optional[dict] = None) -> dict:
     """One card: bars + 9/21 EMA + served volume average of `tf` (tile_tf), BUY/STOP lines, the A+ marker when its bar
     is served, and the read in words (state pill, criteria, chips; `pass_at` = the shown pass's clock → the
     "read at …" chip, 2026-10-15).
@@ -1518,7 +1540,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     `rang` (D10, 2026-11-11) = _rang's answer, handed to state_label (only a `triggered` read uses it).
     💋 `kf_rank` (2026-11-11) = True ONLY at build's setup-sub call: a GC.RVOL_SORT_SETUPS card stashes `_rvol` (this
     pass's ctx["rvol"], chart_maps.drop10_tab.rvol_read's dict) + `_kiss_gap_pct` for order_key, prints a "Rel volume"
-    stat (drop10_tab.rvol_text) right after Volume when known, and a 💋 card serves `kiss_now` (kiss_now_of)."""
+    stat (drop10_tab.rvol_text) right after Volume when known, and a 💋 card serves `kiss_now` (kiss_now_of).
+    `row_asof` (D4, 2026-11-27) = _row_asof's answer → chips.row_asof; None → no key (every card before the stamp)."""
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = (doc.get("symbol") or "").upper()
     vv = V.of(v)
@@ -1538,7 +1561,7 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     if cross:
         markers = markers + _on_bars([{"date": m["t"], "kind": EMA_CROSS_MARK[m["dir"]], "label": m["text"],
                                        "price": m["ema"]} for m in cross.pop("_marks")], fr["bars"])
-    chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily, pass_at=pass_at)
+    chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily, pass_at=pass_at, row_asof=row_asof)
     stats = [s for s in ({"k": "Change", "v": _pct(scan_row.get("change_pct"))},
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
     g = {k: read.get(k) for k in ("setup", "state", "frame", "ready", "broke", "trigger", "stop", "risk_pct",
@@ -2264,10 +2287,11 @@ def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_win
 def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, sess: dict, listed: dict,
                      halts_by: dict, pass_at: Optional[datetime] = None, v=None,
                      carry: Optional[dict] = None, prev_iso: Optional[str] = None,
-                     entries: Optional[dict] = None) -> list:
+                     entries: Optional[dict] = None, row_asof=None) -> list:
     """§3.9 (b) — one tile per SYMBOL: the existing `setup_tile` card of its PRIMARY potential (the first by
     potential.order_key), with `gajjala.potential` (W12) and the 🧩 other setups forming on it (GG S9 1:59:01).
-    `entries` (D10, 2026-11-11) = build's ONE _entry_times read on a live-push page, else None → each card's `rang`."""
+    `entries` (D10, 2026-11-11) = build's ONE _entry_times read on a live-push page, else None → each card's `rang`.
+    `row_asof` (D4, 2026-11-27) = build's callable SYM → _row_asof's answer; None → no stamp on any card."""
     by_sym: dict = {}
     for p in pots:
         by_sym.setdefault(p[1]["symbol"], []).append(p)
@@ -2280,7 +2304,8 @@ def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, se
         tile = setup_tile(doc, setup, tile_tf(read, tf_ask, vv.primary, vv), scan_row=scan_row(sym), sess=sess,
                           listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily, pass_at=pass_at, v=vv,
                           carry=carry, prev_iso=prev_iso,                 # 🎾 2026-11-08 — build's ONE carry read
-                          rang=_rang(entries, session, sym, setup))       # D10 2026-11-11 — None → today's words
+                          rang=_rang(entries, session, sym, setup),       # D10 2026-11-11 — None → today's words
+                          row_asof=row_asof(sym) if callable(row_asof) else None)   # D4 2026-11-27
         first = row["first_seen_et"]
         tile["gajjala"]["potential"] = {
             "kind": row["kind"], "kind_label": row["kind_label"], "setup": setup, "setup_label": _setup_label(setup),
@@ -2678,6 +2703,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     def _row(sym):
         return dict(((scan_by.get(sym) or {}).get("last") or {}))
 
+    def _asof(sym):                                                 # D4 2026-11-27 — the card's "as of HH:MM" stamp
+        return _row_asof(scan_by.get(sym), pass_at)
+
     # D10 2026-11-11 + 🧭 review fix: ONE alert_rows read per build, over the listing window (SC._window(session) ⊇
     # [session, prev]), made at most once and only when a consumer needs it — the setup-sub words, the 🧠 entries, the
     # 🌙 recap and the 🧭 stages all share it. Every consumer looks up (date_iso, SYM, setup), so the older window days
@@ -2730,7 +2758,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                     tiles.append(setup_tile(doc, setup, tfr, scan_row=_row(sym), sess=sess,
                                             listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
                                             pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(),
-                                            rang=_rang(words_entries, session, sym, setup), kf_rank=True))
+                                            rang=_rang(words_entries, session, sym, setup), kf_rank=True,
+                                            row_asof=_asof(sym)))
         tiles.sort(key=order_key)                                       # 🚫 the partition runs at the serving site, AFTER the cut
         if blink_sort and setup == sub_k:                               # 🔀 2026-11-15 opt-in — BEFORE the cut, stable (📋 never)
             tiles = blink_sorted(tiles)
@@ -2850,7 +2879,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                                       tf_ask=tf_ask, scan_row=_row, sess=sess, listed=listed,
                                                       halts_by=halts_by, pass_at=pass_at, v=v, carry=ah_prev,
                                                       prev_iso=prev.isoformat(),
-                                                      entries=entries if live_push else None, default=[]))
+                                                      entries=entries if live_push else None, row_asof=_asof,
+                                                      default=[]))
                                       if pot_ok else [])[:lim], order_flags)   # 🚫 2026-11-09 — his names last among the cards shown
         out["order_note"] = POT_ORDER_TEXT                              # 2026-11-09 — the 🧠 ordering word, served
         _soft("ema blink sort chips", blink_board, out, blink_sort)     # 🔀 2026-11-15 — sorts / sort / info (+ the 🔀 note)

@@ -618,7 +618,7 @@ def test_NEGATIVE_stale_served_float_says_stale_with_its_date():
                               "as_of": int(old.timestamp())}, "stale_served")})
     r = _floats(["AAA"], y, refine=False)["AAA"]
     assert r["as_of"] == old.isoformat()
-    assert r["text"] == f"Float 3.1M (stale, as of {old.date().isoformat()})"
+    assert r["text"] == f"Float 3.1M (stale, read {old.date().isoformat()})"   # PIN MOVED 2026-11-27 B3: "as of" → "read"
     assert r["shares"] == 3_100_000, "still served — floats move rarely and Yahoo cannot be asked"
 
 

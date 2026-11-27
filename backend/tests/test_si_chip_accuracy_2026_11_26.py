@@ -382,9 +382,16 @@ def test_WHLR_days_to_cover_is_computed_and_names_the_floor():
 
 
 def test_the_split_note_only_when_basis_change_is_a_dict():
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4 B1): the note needs a split STRICTLY after the prior settlement and on or
+    # before this one. WHLR's 10/30 split IS its prior settlement day → a change dict, but no sentence now; the same
+    # doc with the split moved to 11/2 (inside the window) keeps the sentence.
     b = SR.si_block(whlr_rec(), TODAY, basis=whlr_doc())
     assert isinstance(b["basis"]["change"], dict)
-    assert SR.DTC_SPLIT_NOTE.strip() in b["title"] and SR.DTC_SPLIT_NOTE.strip() in _row(b, "Days to cover")
+    assert SR.DTC_SPLIT_NOTE.strip() not in b["title"] and SR.DTC_SPLIT_NOTE.strip() not in _row(b, "Days to cover")
+    inside = [dict(r, execution_date="2026-11-02") if r["execution_date"] == "2026-10-30" else r for r in WHLR_SPLITS]
+    b1 = SR.si_block(whlr_rec(), TODAY, basis=whlr_doc(splits=inside))
+    assert isinstance(b1["basis"]["change"], dict)
+    assert SR.DTC_SPLIT_NOTE.strip() in b1["title"] and SR.DTC_SPLIT_NOTE.strip() in _row(b1, "Days to cover")
     b2 = SR.si_block(whlr_rec(), TODAY, basis=whlr_doc(splits=[]))
     assert b2["basis"]["change"] is None and SR.DTC_SPLIT_NOTE.strip() not in b2["title"]
 
@@ -487,8 +494,14 @@ def test_NEGATIVE_extreme_hover_split_note_only_with_a_change_dict():
     b = SR.si_block(whlr_rec(float_shares=900000), TODAY)
     assert SR.DTC_SPLIT_NOTE.strip() not in b["extreme"]["title"]
     bb = copy.deepcopy(b)
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4 B1): a change dict alone is not enough — its split must sit strictly after
+    # the prior settlement (10/30) and on or before this one (11/13)
     bb["basis"] = {"change": {"pct": 1.0}}
+    assert SR.DTC_SPLIT_NOTE.strip() not in SR.extreme_title(bb, bb["pct_of_float"])
+    bb["basis"] = {"change": {"pct": 1.0, "splits": [{"execution_date": "2026-11-02"}]}}
     assert SR.DTC_SPLIT_NOTE.strip() in SR.extreme_title(bb, bb["pct_of_float"])
+    bb["basis"] = {"change": {"pct": 1.0, "splits": [{"execution_date": "2026-10-30"}]}}
+    assert SR.DTC_SPLIT_NOTE.strip() not in SR.extreme_title(bb, bb["pct_of_float"])
     bb["basis"] = {"change": "x"}
     assert SR.DTC_SPLIT_NOTE.strip() not in SR.extreme_title(bb, bb["pct_of_float"])
 
@@ -578,6 +591,9 @@ def test_NEGATIVE_the_float_branch_is_byte_identical_to_before(name):
     # 2026-11-26 sishares §3.2 / §5.5: the new verdict keys and their two rows are dropped before hashing too
     for k in ("issuances", "share_counts", "float_fresh"):
         v.pop(k)
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4): the three new verdict keys are None on these names, then dropped too
+    for k in ("lagged", "split_filings", "date_gap"):
+        assert v.pop(k) is None, (name, k)
     v["rows"] = [r for r in v["rows"] if r["k"] not in (BM.ROW_SHARE_COUNTS, BM.ROW_SHARE_ISSUANCE)]
     got = hashlib.sha256(json.dumps(v, sort_keys=True, default=str, ensure_ascii=False).encode()).hexdigest()
     assert got == FLOAT_BRANCH_GOLDEN[name]
@@ -594,9 +610,13 @@ def test_C8_a_cover_over_twice_the_newer_count_fires_fell_from_the_sec_side():
                          "to_shares": 1200000, "to_asof": "2026-11-25", "to_source": "yahoo", "to_form": None}
     f = _flag(v, BM.FLAG_COUNT_FELL)
     assert f["short"] == "❔ shares fell 2.5×"
-    assert f["text"] == ("❔ share count fell 2.5× with no split on file: 1,200,000 (Yahoo, 11/25) vs 3,000,000 (11/3) — "
-                         "a split the splits read does not list is possible, and the % shown is not adjusted for one "
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4 B4): WHLR's 1-for-6 on 10/30 is on file before the older count and
+    # explains the fall, but no SEC cover dated before it corroborates → the flag stays and its text names the split
+    assert f["text"] == ("❔ share count fell 2.5×: 1,200,000 (Yahoo, 11/25) vs 3,000,000 (11/3) — a 1-for-6 reverse "
+                         "split on 10/30 is on file: the older count may already be adjusted for it, or a split the "
+                         "splits read does not list is possible; the % shown is not adjusted for one "
                          "· charter filing 8-K Item 3.03/5.03 11/24")
+    assert "no split on file" not in f["text"]
     assert v["status"] == "partial"
 
 
@@ -609,5 +629,8 @@ def test_C8_NEGATIVE_record_only_baseline_fell_exactly_as_before():
     yahoo = {"float_shares": 1667144, "shares_outstanding": 400000, "as_of": "2026-11-25"}
     v = BM.verdict(whlr_rec(), whlr_doc(covers=[], yahoo=yahoo), TODAY)
     assert v["fell"]["from_source"] == "record" and v["fell"]["from_shares"] == 978675
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4 B4): the on-file 10/30 split predates the record's 11/7 count and no
+    # cover corroborates → the flag stays, its text names the split (never "no split on file")
     assert _flag(v, BM.FLAG_COUNT_FELL)["text"].startswith(
-        "❔ share count fell 2.4× with no split on file: 400,000 (Yahoo, 11/25) vs 978,675 (11/7) — ")
+        "❔ share count fell 2.4×: 400,000 (Yahoo, 11/25) vs 978,675 (11/7) — a 1-for-6 reverse split on 10/30 is on "
+        "file: the older count may already be adjusted for it")

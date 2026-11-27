@@ -143,13 +143,42 @@ SHARE_COUNT_WORDS = {"record": "short-interest record", "yahoo": "Yahoo", "massi
                      "massive_weighted": "Massive, all classes"}
 TEXT_NO_AS_OF = " — the provider gives no as-of"
 TEXT_NO_COVER = "SEC cover: none on file"
+# 🩳 2026-11-27 (spec sicheck rev 2 §3.4, A2 / A3) — the 6-K split-word read (`sec.fts_split`, frozen K-1, written by
+# short_interest.share_basis) and the dates of the three counts. Words only: no state, no comparison and no existing
+# flag is switched off by either.
+KEY_FTS_SPLIT = "fts_split"
+FLAG_SPLIT_FILING = "split_filing"
+SHORT_SPLIT_FILING = EMOJI_SPLIT + " split filing %s"
+TEXT_SPLIT_FILING = ("%s %s %s matches split / share-consolidation words (SEC full-text search; a proposal, a vote "
+                     "notice and an executed split all match) — no split dated on or after %s is on the splits read; if "
+                     "one took effect the %% shown is not adjusted for it")      # EMOJI_SPLIT, form, M/D, M/D
+TEXT_SPLIT_FILING_ISSUANCE = " — it also matches issuance words"
+FLAG_DATE_GAP = "date_gap"
+SHORT_DATE_GAP = EMOJI_WARN + " dates apart"
+TEXT_DATES = ("Dates: short interest counted %s; the float is read %s; shares outstanding %s (%s, %s) → %s (%s, %s) "
+              "in between.")
+# 🩳 2026-11-27 (spec sicheck rev 2 §3.4, B4) — a NEW count that only looks like a fall because the OLDER count predates
+# its own adjustment for a split on file.
+TEXT_LAGGED = ("Share counts: %s's %s (%s) predates its own adjustment for the %s on %s (on file) — split-adjusted %s "
+               "vs %s.")
+TEXT_FELL_SPLIT = ("%s share count fell %s×: %s (%s, %s) vs %s (%s) — a %s on %s is on file: the older count may "
+                   "already be adjusted for it, or a split the splits read does not list is possible; the %% shown is "
+                   "not adjusted for one")
 FLAG_ROW_LABEL = {FLAG_FLOAT_STALE: "Float stale", FLAG_COUNT_STALE: "Shares up", FLAG_SPLIT: "Split",
                   FLAG_FILING: "Dilution filing", FLAG_COUNT_FELL: "Shares fell", FLAG_UNCHECKED: "Check",
-                  FLAG_FLOAT_UPDATED: "Float updated"}
+                  FLAG_FLOAT_UPDATED: "Float updated", FLAG_SPLIT_FILING: "Split filing", FLAG_DATE_GAP: "Dates"}
 FLOAT_STALE_MODE_WORDS = {
     "any_increase": "any newer, larger share count than the one read with the float",
     "added_exceeds_float": "more shares added since the float was read than the float itself held",
     "tier_moves": "a newer share count that would move the tier word",
+}
+# ⚠️ 2026-11-27 (sicheck refix) — the `⚠️ dates apart` words, one per FLOAT_STALE_MODES key: the growth sits BETWEEN the
+# short-interest count and the float read (before the float), so FLOAT_STALE_MODE_WORDS ("since the float was read")
+# would contradict the line it ends. Same cut (stale_trigger), its own words.
+DATE_GAP_MODE_WORDS = {
+    "any_increase": "any growth in shares outstanding between the count and the float read",
+    "added_exceeds_float": "more shares added between the count and the float read than the float holds",
+    "tier_moves": "the shares added between the count and the float read would move the tier word",
 }
 SOURCE_NAME = {"ref": "the Massive ticker read", "sec": "the SEC", "splits": "the splits read"}
 ET_ZONE = "America/New_York"
@@ -610,6 +639,96 @@ def change_across_split(si, s_iso, prev_si, prev_iso, executed) -> Optional[dict
                         format(int(round(adj)), ","))}
 
 
+def split_in_window(change, prev_iso, s_iso) -> bool:
+    """🩳 2026-11-27 (spec sicheck §3.4, B1) — True when a row of `change["splits"]` executed STRICTLY after the prior
+    settlement and on or before this one (`prevS < execution_date <= S`): only then does the provider's volume window
+    straddle a split. `change_across_split` keeps its inclusive rule for the change %. PURE, never raises on junk."""
+    prevS, S = _iso(prev_iso), _iso(s_iso)
+    if not isinstance(change, dict) or prevS is None or S is None:
+        return False
+    for r in change.get("splits") if isinstance(change.get("splits"), list) else []:
+        e = _iso(r.get("execution_date")) if isinstance(r, dict) else None
+        if e is not None and prevS < e <= S:
+            return True
+    return False
+
+
+def fts_split_of(sec) -> dict:
+    """The 6-K split-word read `sec.fts_split` (frozen K-1) when it is a dict, else {}."""
+    v = sec.get(KEY_FTS_SPLIT) if isinstance(sec, dict) else None
+    return v if isinstance(v, dict) else {}
+
+
+def split_filings(doc) -> list:
+    """🩳 2026-11-27 (spec sicheck §3.4, A2) — the 6-Ks the SEC full-text search matched for split words, when the read's
+    status is `ok` (a held read stands after a failed try): [{form, filed, accn, doc, ex}], filed DESC. PURE."""
+    fs = fts_split_of(_sub(doc, "sec"))
+    raw = fs.get("rows")
+    if _status(fs) != "ok" or not isinstance(raw, list):
+        return []
+    out = []
+    for r in raw:
+        if not isinstance(r, dict):
+            continue
+        form, filed = _opt_str(r.get("form")), _iso(r.get("filed"))
+        if filed is None or _form_base(form) != FILING_6K_FORM:
+            continue
+        ex = [{"type": e["type"].strip(), "desc": _opt_str(e.get("desc"))}
+              for e in (r.get("ex") if isinstance(r.get("ex"), list) else [])
+              if isinstance(e, dict) and _opt_str(e.get("type"))]
+        out.append({"form": form, "filed": filed, "accn": _opt_str(r.get("accn")), "doc": _opt_str(r.get("doc")),
+                    "ex": ex})
+    out.sort(key=lambda r: r["filed"], reverse=True)
+    return out
+
+
+def unlisted_split_filings(doc) -> list:
+    """The split filings with NO held splits row (any date, future included) dated on or after the filing date — only
+    when the splits read is held (`splits.status == "ok"`); else []. PURE."""
+    sp = _sub(doc, "splits")
+    if _status(sp) != "ok":
+        return []
+    rows = _rows(sp.get("rows"))
+    return [f for f in split_filings(doc) if not any(r["execution_date"] >= f["filed"] for r in rows)]
+
+
+def _lagged(c, paired, base, covers, executed, basis_date, frac) -> Optional[dict]:
+    """🩳 2026-11-27 (spec sicheck §3.4, B4) — whether the executed splits on file dated on or before the OLDER count's
+    date (newest first, factors cumulative) explain a fall to `c` (the NEW count, (shares, as_of, source, form) on
+    `basis_date`): `c > paired * f * frac` after applying them. None when no such split explains it. Else {splits,
+    adj, corroborated, cover}: corroborated = a same-unit SEC cover dated before the oldest applied split with BOTH
+    `cov*frac < paired < cov/frac` and `_rb(cov)*frac < c < _rb(cov)/frac` (each side multiplied out — no division)."""
+    prior = [r for r in reversed(executed) if r["execution_date"] <= base[1]]
+    f = 1.0
+    for k, r in enumerate(prior, start=1):
+        f *= _factor(r)
+        if not c[0] > paired * f * frac:
+            continue
+        applied = prior[:k]
+        oldest = applied[-1]["execution_date"]
+        hit = None
+        for cv in reversed(covers):
+            if cv["as_of"] >= oldest:
+                continue
+            rb = _rb(cv["shares"], cv["as_of"], basis_date, executed)
+            if rb is None:
+                continue
+            if (cv["shares"] * frac < paired and paired * frac < cv["shares"]
+                    and rb * frac < c[0] and c[0] * frac < rb):
+                hit = (cv, rb)
+                break
+        return {"splits": [dict(x, words=split_words(x["split_from"], x["split_to"])) for x in applied],
+                "adj": int(round(paired * f)), "corroborated": hit is not None,
+                "cover": ({"as_of": hit[0]["as_of"], "shares": hit[0]["shares"], "form": hit[0]["form"],
+                           "adjusted": hit[1]} if hit else None)}
+    return None
+
+
+def _splits_named(rows) -> tuple:
+    """("1-for-30 reverse split[ and …]", "8/3[ and …]") for the split rows a lagged count is adjusted for."""
+    return (" and ".join(r["words"] for r in rows), " and ".join(_md(r["execution_date"]) for r in rows))
+
+
 # ───────────────────────────────────────────── 🩳 2026-11-26 (spec sishares §3.2 / §3.4) — fresh floats, 6-Ks, counts
 _ACCN_RE = re.compile(r"[0-9]{10}-[0-9]{2}-[0-9]{6}")
 _DOC_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
@@ -975,6 +1094,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
 
     # ── step 2: share-count evidence
     growth = fell = fresh = None
+    lagged = fell_split = None                    # B4 (2026-11-27)
     count_flag = False
     sec_ev = y_ev = None
     newest_after = next((c for c in reversed(covers) if anchor and c["as_of"] > anchor), None)
@@ -1007,8 +1127,19 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             else:
                 count_flag = stale_trigger(si, paired, paired, newer[0])
         falls = [c for c in (sec_ev, y_ev) if c and c[0] <= paired * frac]
-        if falls:
-            c = min(falls, key=lambda x: x[0])
+        # 🩳 2026-11-27 (spec sicheck §3.4, B4) — a fall the on-file splits explain AND a same-unit SEC cover
+        # corroborates is a lagged older count, never a fall; any other fall keeps its ❔ flag.
+        kept = []
+        for c in sorted(falls, key=lambda x: x[0]):
+            lg = _lagged(c, paired, base, covers, executed, basis_date, frac)
+            if lg is not None and lg["corroborated"]:
+                if lagged is None:
+                    lagged = dict(lg, from_shares=paired, from_asof=base[1], from_source=base[2], from_form=base[3],
+                                  to_shares=c[0], to_asof=c[1], to_source=c[2], to_form=c[3])
+            else:
+                kept.append((c, lg))
+        if kept:
+            c, fell_split = kept[0]
             fell = {"ratio": round(paired / c[0], 3), "from_shares": paired, "from_asof": base[1],
                     "from_source": base[2], "to_shares": c[0], "to_asof": c[1], "to_source": c[2], "to_form": c[3]}
     refused_reasons = [k for k in REFUSAL_ORDER if k in reasons]
@@ -1141,6 +1272,46 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
     for r in upcoming:
         flags.append(_flag(FLAG_SPLIT, EMOJI_SPLIT, SHORT_SPLIT_DUE % _md(r["execution_date"]), _split_text(r, True)))
         split_list.append(dict(r, words=split_words(r["split_from"], r["split_to"]), when="upcoming"))
+    # ✂️ 2026-11-27 (spec sicheck §3.4, A2) — a 6-K matching split words with no split on file dated on or after it,
+    # filed on or after the floor: ONE flag after the split flags. Words only; the 📄 kind and count are not changed.
+    iss = issuances(doc, growth, anchor)
+    iss_accns = {i["accn"] for i in iss if i["accn"]}
+    unl_all = unlisted_split_filings(doc)
+    unl = [f for f in unl_all if f["filed"] >= floor]
+    dup_accns = {f["accn"] for f in unl if f["accn"] and f["accn"] in iss_accns}
+    if unl:
+        short = SHORT_SPLIT_FILING % _md(unl[0]["filed"])
+        if len(unl) > 1:
+            short += " +%d" % (len(unl) - 1)
+        texts = [TEXT_SPLIT_FILING % (EMOJI_SPLIT, f["form"], _md(f["filed"]), _md(f["filed"]))
+                 + (TEXT_SPLIT_FILING_ISSUANCE if f["accn"] in dup_accns else "") for f in unl]
+        flags.append(_flag(FLAG_SPLIT_FILING, EMOJI_SPLIT, short, " · ".join(texts)))
+    split_filings_out = ([{"form": f["form"], "filed": f["filed"], "accn": f["accn"], "on_chip": f in unl}
+                          for f in unl_all] or None)
+    # ⚠️ 2026-11-27 (spec sicheck §3.4, A3) — short interest counted before the float was read, shares outstanding grown
+    # in between: the three dates in one line; the chip flag ONLY at the existing FLOAT_STALE_WHEN cut.
+    date_gap = None
+    d_f = (upd["as_of"] if upd else Fa) if (div_float and not float_refused and Fd) else None
+    proof_by_s = bool(fresh and fresh.get("proof") and fresh["proof"].get("filed") and fresh["proof"]["filed"] <= S)
+    if (d_f and growth and d_f > S and same_side(S, d_f, executed)
+            and growth["from_asof"] <= S < growth["to_asof"] <= d_f and not proof_by_s):
+        line = TEXT_DATES % (_md(S), _md(d_f), format(growth["from_shares"], ","),
+                             _src_words(growth["from_source"], base[3] if base else None), _md(growth["from_asof"]),
+                             format(growth["to_shares"], ","), _src_words(growth["to_source"], growth["to_form"]),
+                             _md(growth["to_asof"]))
+        si_b = rebase(si, S, basis_date, executed) if basis_date else None
+        fd_b = _rb(Fd, d_f, basis_date, executed) if basis_date else None
+        gap = bool(si_b is not None and fd_b is not None
+                   and stale_trigger(si_b, fd_b, growth["from_shares"], growth["to_shares"]))
+        if gap:
+            flags.append(_flag(FLAG_DATE_GAP, EMOJI_WARN, SHORT_DATE_GAP,
+                               "%s — %s; %s" % (SHORT_DATE_GAP, line[len("Dates: "):].rstrip("."),
+                                                DATE_GAP_MODE_WORDS.get(FLOAT_STALE_WHEN, ""))))
+        else:
+            title_lines.append(line)
+        date_gap = {"settlement_date": S, "float_asof": d_f, "from_shares": growth["from_shares"],
+                    "from_asof": growth["from_asof"], "to_shares": growth["to_shares"], "to_asof": growth["to_asof"],
+                    "flag": gap}
     after_s = [r for r in executed if S < r["execution_date"] <= T]
     if after_s:
         f = 1.0
@@ -1198,12 +1369,23 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
         title_lines.append("Charter filing (a reverse split is filed under this item; so are other charter "
                            "changes): %s%s." % ("; ".join(_charter_words(f) for f in charter),
                                                _same_day_tail(charter, _charter_words)))
+    if lagged:                                         # B4 (2026-11-27) — a lagged older count, not a fall
+        sw, sd = _splits_named(lagged["splits"])
+        title_lines.append(TEXT_LAGGED % (_src_words(lagged["from_source"], lagged["from_form"]),
+                                          format(lagged["from_shares"], ","), _md(lagged["from_asof"]), sw, sd,
+                                          format(lagged["adj"], ","), format(lagged["to_shares"], ",")))
     if fell:
         r = ratio_words(fell["ratio"])
-        text = ("%s share count fell %s× with no split on file: %s (%s, %s) vs %s (%s) — a split the splits read "
-                "does not list is possible, and the %% shown is not adjusted for one"
-                % (EMOJI_CHECK, r, format(fell["to_shares"], ","), _src_words(fell["to_source"], fell["to_form"]),
-                   _md(fell["to_asof"]), format(fell["from_shares"], ","), _md(fell["from_asof"])))
+        if fell_split:                                 # B4 — an on-file split explains it, no cover corroborates
+            sw, sd = _splits_named(fell_split["splits"])
+            text = TEXT_FELL_SPLIT % (EMOJI_CHECK, r, format(fell["to_shares"], ","),
+                                      _src_words(fell["to_source"], fell["to_form"]), _md(fell["to_asof"]),
+                                      format(fell["from_shares"], ","), _md(fell["from_asof"]), sw, sd)
+        else:
+            text = ("%s share count fell %s× with no split on file: %s (%s, %s) vs %s (%s) — a split the splits read "
+                    "does not list is possible, and the %% shown is not adjusted for one"
+                    % (EMOJI_CHECK, r, format(fell["to_shares"], ","), _src_words(fell["to_source"], fell["to_form"]),
+                       _md(fell["to_asof"]), format(fell["from_shares"], ","), _md(fell["from_asof"])))
         if charter:
             text += " · charter filing " + _charter_words(charter[0])
         flags.append(_flag(FLAG_COUNT_FELL, EMOJI_CHECK, SHORT_COUNT_FELL % r, text))
@@ -1246,12 +1428,12 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                "splits": _status(sp) or "not_read",
                "yahoo": "ok" if Y else "not_read"}
     check = _check_text(ref, sec, sp, sec_units, rtype, Y, Ya)
-    iss = issuances(doc, growth, anchor)
     counts = share_counts(rec, doc, growth)
     rows_out = ([{"k": "Note", "v": l} for l in title_lines]
                 + [{"k": FLAG_ROW_LABEL.get(f["key"], "Flag"), "v": f["text"]} for f in flags]
                 + ([{"k": ROW_SHARE_COUNTS, "v": share_counts_text(counts, doc)}] if counts else [])
-                + [{"k": ROW_SHARE_ISSUANCE, "v": i["text"]} for i in iss]
+                + [{"k": ROW_SHARE_ISSUANCE, "v": i["text"]} for i in iss
+                   if not (i["accn"] and i["accn"] in dup_accns)]               # A2: a 6-K in both lists, once
                 + [{"k": "Share-count check", "v": check}])
     tier_text = None
     if float_refused == REFUSE_DILUTED:
@@ -1273,7 +1455,8 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             "title_lines": title_lines, "rows": rows_out, "check_text": check, "float_line": float_line,
             "track": track, "float_update": float_update, "issuances": iss, "share_counts": counts,
             "float_fresh": ({"mode": fresh["mode"], "accn": (fresh["proof"] or {}).get("accn"),
-                             "filed": (fresh["proof"] or {}).get("filed")} if fresh else None)}
+                             "filed": (fresh["proof"] or {}).get("filed")} if fresh else None),
+            "lagged": lagged, "split_filings": split_filings_out, "date_gap": date_gap}
 
 
 def _when(sub) -> str:
@@ -1340,6 +1523,20 @@ def _check_text(ref, sec, sp, sec_units, rtype, Y, Ya) -> str:
     return "SEC cover count: %s · splits (Massive): %s · Yahoo shares outstanding: %s%s." % (s, p, y, f)
 
 
+def _rules_2026_11_27() -> str:
+    """🩳 2026-11-27 (spec sicheck §3.4) — the split-word filing, the dates of the three counts and a count that only
+    looks fallen, folded INTO the basis sentence (the 🩳 section is at its 8-pick cap). Built from the constants."""
+    gap = DATE_GAP_MODE_WORDS.get(FLOAT_STALE_WHEN)
+    return ("A %s the SEC full-text search matches for split or share-consolidation words, with no split dated on or "
+            "after it on the splits read, adds '%s' — words only: a proposal, a vote notice and an executed split all "
+            "match. When short interest was counted before the float was read and shares outstanding grew in between, "
+            "the hover dates all three; the chip adds '%s' only %s. A count that only looks fallen because the older "
+            "count predates its own adjustment for a split on file, with an SEC cover before the split agreeing, is a "
+            "note, not '%s'."
+            % (FILING_6K_FORM, SHORT_SPLIT_FILING % "M/D", SHORT_DATE_GAP,
+               ("when %s" % gap) if gap else "never (the cut is switched off)", SHORT_COUNT_FELL % "N"))
+
+
 def rules_sentence() -> str:
     """The one sentence folded onto the END of the 🩳 rules pick that starts '% of float = ' (the section is at its
     8-pick cap). Built from FLOAT_STALE_WHEN and the flag words by name. 🩳 2026-11-26 (spec floatguard §3.5) — ends
@@ -1354,13 +1551,13 @@ def rules_sentence() -> str:
             "across a split is split-adjusted. A Yahoo float dated later than the one on the short-interest record "
             "and different from it is the one divided by once the splits are on file, with '%s' naming both and their "
             "dates; filings and share growth are still looked for from the older float's date. A newer float read "
-            "with or after the larger share count is used, not called stale, %s, with '%s'. A %s the SEC full-text "
-            "search matches for issuance words is a '%s' filing too, never a second one on a day an offering is "
-            "already counted."
+            "with or after the larger share count is used, not called stale, %s, with '%s'. %s A %s the SEC "
+            "full-text search matches for issuance words is a '%s' filing too, never a second one on a day an offering "
+            "is already counted."
             % (stale, SHORT_FLOAT_STALE, SHORT_SPLIT % "M/D", EMOJI_FILING, FILING_8K_DILUTION_ITEMS[0],
                SHORT_COUNT_FELL % "N", SHORT_UNCHECKED, SHORT_FLOAT_UPDATED,
                FLOAT_FRESH_MODE_WORDS.get(FLOAT_FRESH_WHEN, FLOAT_FRESH_MODE_WORDS["off"]), SHORT_COUNT_STALE % "N",
-               FILING_6K_FORM, EMOJI_FILING))
+               _rules_2026_11_27(), FILING_6K_FORM, EMOJI_FILING))
     try:
         from short_interest import source_check as SCK
         s += " " + SCK.rules_sentence()

@@ -393,6 +393,10 @@ def test_S10_no_rule_gate_or_alert_reads_short_interest():
 # Rule 201 restriction for the ⛔ tag (display only; never a rule, gate or alert). Exactly ONE line may name the
 # package: the fenced import inside _cron_deps. A second mention anywhere still trips S10.
 SSR_IMPORT_LINE = "        from short_interest import ssr as SSR"
+# WIDENED 2026-11-27 (Ajay: "Anytime something is in our Gajjalas we need to initiate a flow checking these values") —
+# the on-entry check ENQUEUE only; entry_check feeds no rule, gate, rung, sort or push trigger. Exactly ONE more line
+# may name the package: the lazy import inside run.py's _si_entry. Nothing else may join (a second mention still trips).
+EC_IMPORT_LINE = "    from short_interest import entry_check as EC"
 
 
 def _run_py_minus_ssr_import(src: str) -> str:
@@ -402,7 +406,12 @@ def _run_py_minus_ssr_import(src: str) -> str:
     assert lines[i - 1].strip().startswith("try:"), "the SSR import must sit inside its own try"
     fn = max(k for k in range(i) if lines[k].startswith("def "))
     assert lines[fn].startswith("def _cron_deps("), "the SSR import must live inside _cron_deps"
-    return "\n".join(lines[:i] + lines[i + 1:])
+    lines = lines[:i] + lines[i + 1:]
+    assert lines.count(EC_IMPORT_LINE) == 1, "run.py must import the entry check exactly once"
+    e = lines.index(EC_IMPORT_LINE)
+    fn = max(k for k in range(e) if lines[k].startswith("def "))
+    assert lines[fn].startswith("def _si_entry("), "the entry-check import must live inside _si_entry"
+    return "\n".join(lines[:e] + lines[e + 1:])
 
 
 def test_S10_NEGATIVE_a_second_short_interest_mention_in_run_py_still_trips():
@@ -412,6 +421,51 @@ def test_S10_NEGATIVE_a_second_short_interest_mention_in_run_py_still_trips():
     assert [w for w in SI_WORDS if w in _run_py_minus_ssr_import(planted)]
     with pytest.raises(AssertionError):
         _run_py_minus_ssr_import(src.replace(SSR_IMPORT_LINE, SSR_IMPORT_LINE + "\n" + SSR_IMPORT_LINE))
+
+
+def test_S10_NEGATIVE_the_entry_check_widening_admits_that_one_line_only():
+    # WIDENED 2026-11-27 (Ajay: "Anytime something is in our Gajjalas we need to initiate a flow checking these values")
+    # — the on-entry check ENQUEUE only; entry_check feeds no rule, gate, rung, sort or push trigger.
+    src = _src("chart_maps/gajjala/run.py")
+    assert src.split("\n").count(EC_IMPORT_LINE) == 1
+    # a second short_interest import in run.py (here: read, inside the same hook) still trips
+    planted = src.replace(EC_IMPORT_LINE, EC_IMPORT_LINE + "\n    from short_interest import read as SR")
+    assert [w for w in SI_WORDS if w in _run_py_minus_ssr_import(planted)]
+    # the entry-check line twice, or moved out of _si_entry, is refused
+    with pytest.raises(AssertionError):
+        _run_py_minus_ssr_import(src.replace(EC_IMPORT_LINE, EC_IMPORT_LINE + "\n" + EC_IMPORT_LINE))
+    with pytest.raises(AssertionError):
+        _run_py_minus_ssr_import(src.replace(EC_IMPORT_LINE, "") + "\ndef _other():\n" + EC_IMPORT_LINE + "\n")
+    # it does not admit any other entry_check spelling either
+    other = src.replace(EC_IMPORT_LINE, "    from short_interest import entry_check as EC2")
+    with pytest.raises(AssertionError):
+        _run_py_minus_ssr_import(other)
+
+
+def test_S10_entry_check_reaches_no_push_alert_trading_or_gate_and_nothing_gating_imports_it():
+    # WIDENED 2026-11-27 — the guard's other half: entry_check imports no push / alert / trading / gate module, and no
+    # rule / gate / rung / sort / push module imports entry_check (only run.py's hook, the 👀 Watch loop's enqueue and
+    # short_interest's own read seam / audit may name it).
+    ec = ast.parse(_src("short_interest/entry_check.py"))
+    mods = set()
+    for n in ast.walk(ec):
+        if isinstance(n, ast.ImportFrom):
+            mods.add(("." * n.level) + (n.module or ""))
+            mods.update(f"{n.module or ''}.{a.name}" for a in n.names)
+        elif isinstance(n, ast.Import):
+            mods.update(a.name for a in n.names)
+    banned = ("push", "alerts", "alert_gates", "trading", "gajjala_entry", "potential", "ledger", "bar_close",
+              "si_track", "supply_demand", "high_si_cross", "vol_dried")
+    assert mods and not [m for m in mods for b in banned if b in m.split(".")], mods
+    allowed = {"chart_maps/gajjala/run.py", "chart_maps/gajjala_watch/loop.py", "short_interest/read.py",
+               "short_interest/source_audit.py", "short_interest/entry_check.py"}
+    hits = sorted(str(p.relative_to(BACKEND)) for p in BACKEND.rglob("*.py")
+                  if ".venv" not in p.parts and "tests" not in p.parts and "entry_check" in p.read_text("utf-8"))
+    assert hits and set(hits) <= allowed, set(hits) - allowed
+    for rel in ("chart_maps/gajjala/alerts.py", "chart_maps/gajjala/potential.py", "chart_maps/gajjala/tab.py",
+                "chart_maps/gajjala/all_table.py", "push/hooks.py", "trading/gajjala_entry.py"):
+        assert "entry_check" not in _src(rel), rel
+    assert [m for m in ("push.x",) for b in banned if b in m.split(".")]        # the matcher can fail
 
 
 def test_S10_high_si_modules_read_short_interest_only_through_the_one_reader():

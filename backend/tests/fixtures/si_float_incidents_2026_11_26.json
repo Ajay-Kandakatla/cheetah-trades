@@ -150,7 +150,18 @@
      "read_at": "2026-11-24T19:30:00Z",
      "error": null,
      "error_at": null,
-     "strikes": 0
+     "strikes": 0,
+     "fts_split": {
+      "status": "none_6k",
+      "since": "2026-10-15",
+      "top_6k": null,
+      "top_6k_filed": null,
+      "rows": [],
+      "read_at": "2026-11-24T19:30:00Z",
+      "error": null,
+      "error_at": null,
+      "strikes": 0
+     }
     },
     "splits": {
      "status": "ok",
@@ -1736,7 +1747,18 @@
      "read_at": "2026-11-24T19:30:00Z",
      "error": null,
      "error_at": null,
-     "strikes": 0
+     "strikes": 0,
+     "fts_split": {
+      "status": "none_6k",
+      "since": "2026-10-15",
+      "top_6k": null,
+      "top_6k_filed": null,
+      "rows": [],
+      "read_at": "2026-11-24T19:30:00Z",
+      "error": null,
+      "error_at": null,
+      "strikes": 0
+     }
     },
     "splits": {
      "status": "ok",

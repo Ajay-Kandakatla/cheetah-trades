@@ -36,6 +36,7 @@ EXTREME_CONTEST_BY = "any_dated"             # HIS CALL #3 — unknown value beh
 EXTREME_CONTEST_BY_MODES = ("any_dated", "not_older")
 COMPARE_TYPES = BM.SEC_COVER_SAME_UNIT_TYPES # by name: any other listing type is not compared
 STATES = ("no_float", "unread", "none", "units", "no_splits", "window", "split_day", "compared", "contested")
+SC_EXTRA_KEYS = ("rung", "second", "split_filing")   # 2026-11-27 — `sources_compared` keys present only when set
 SOURCE_KEYS = ("float_sources", "sources_compared", "extreme_contest")
 EXAMPLE_CUTS = (0.10, 0.25, 0.50)            # the doc / CLI table only — no behaviour reads it
 STATE_NO_SI = "no_si"                        # audit rows only: a name with no chip
@@ -59,6 +60,19 @@ TAIL_FLAG = " — the word is not changed."
 TAIL_HOLD = " %s is held at %s: %s's float puts it under %g%%."
 TAIL_SUPPORTED = " The word shown is the one %s's float gives."
 HOVER_HEAD = ROW_FLOAT_SOURCES + " — "
+# 🩳 2026-11-27 (spec sicheck rev 2 §3.4, A1 + B5) — the both-way rung rule and the split-word caveat. Ajay 2026-11-27:
+# "Can you double check short interest for these two please?" · "Anytime something is in our Gajjalas we need to
+# initiate a flow checking these values". Display only; UNMEASURED; nothing gates, sorts or pushes on it.
+RUNG_FLAG = "on"                             # HIS CALL #6 — a MODE word, not a number; any other word behaves as "off"
+RUNG_FLAG_MODES = ("off", "on")
+TEXT_SMALLER = " — smaller than the %s shares sold short"
+TEXT_NOT_USABLE = " The second float fails the house float check — it is not used to flag the chip."
+TEXT_RUNG = " %s's float puts it at %s of the float, %s's at %s."
+TAIL_BOTH = " The %% and the word are not changed."
+TEXT_SPLIT_FILING = (" A 6-K filed %s matches split words and no split dated on or after it is on file — if one took "
+                     "effect between the two dates the counts are in different units.")
+TEXT_SPLIT_FILING_REBASED = (" A 6-K filed %s matches split words and no split dated on or after it is on file — if one "
+                             "took effect, the split-adjusted count above is missing it.")
 
 
 # ───────────────────────────────────────────── the modes, read at CALL time
@@ -68,6 +82,11 @@ def contest_mode() -> str:
 
 def contest_by() -> str:
     return EXTREME_CONTEST_BY if EXTREME_CONTEST_BY in EXTREME_CONTEST_BY_MODES else "any_dated"
+
+
+def rung_on() -> bool:
+    """The both-way rung flag (A1), read at CALL time: True only for RUNG_FLAG == "on"; any other word is "off"."""
+    return RUNG_FLAG in RUNG_FLAG_MODES and RUNG_FLAG == "on"
 
 
 def _is_number(v) -> bool:
@@ -139,7 +158,8 @@ def _other_plain(m_sh, m_as) -> str:
     return "%s %s (as of %s)" % (SOURCE_WORDS[SRC_MASSIVE], format(m_sh, ","), BM._md(m_as))
 
 
-def _other_words(m_sh, m_as, rebased, pct_m, so) -> str:
+def _other_words(m_sh, m_as, rebased, pct_m, so, smaller=None) -> str:
+    """`smaller` = the short count when the second float is smaller than it (A1, not-contested rows only), else None."""
     s = "%s %s (as of %s" % (SOURCE_WORDS[SRC_MASSIVE], format(rebased, ","), BM._md(m_as))
     if rebased != m_sh:
         s += "; %s as published, split-adjusted" % format(m_sh, ",")
@@ -148,6 +168,8 @@ def _other_words(m_sh, m_as, rebased, pct_m, so) -> str:
         s += " = " + _pct(pct_m)
     if so and rebased > so:
         s += TEXT_LARGER % format(so, ",")
+    elif smaller is not None:
+        s += TEXT_SMALLER % format(smaller, ",")
     return s
 
 
@@ -212,7 +234,8 @@ def compare(block, basis_doc) -> Optional[dict]:
     m_sh, m_as = _count(mf.get("shares")), BM._iso(mf.get("as_of"))
     usable = st == "ok" and m_sh is not None and m_as is not None
     other = _row(SRC_MASSIVE, None, m_sh if usable else None, m_as if usable else None, "as_of", None, None, False)
-    out = {"state": None, "sources": [other], "rel": None, "contest": None, "text": None, "row": None}
+    out = {"state": None, "sources": [other], "rel": None, "contest": None, "text": None, "row": None,
+           "rung_flag": False}
 
     fu = _float_used(block)
     # 1. no % of float shown: the second float is listed, nothing is compared
@@ -273,14 +296,46 @@ def compare(block, basis_doc) -> Optional[dict]:
     out["rel"] = rel
     so = _count(block.get("shares_outstanding"))
     spread = spread_words(rel)
-    base = ("float: %s · %s%s.%s" % (_used_words(fl, fa, pf), _other_words(m_sh, m_as, rebased, pct_m, so),
-                                     (" · " + spread) if spread else "", TEXT_USES % SOURCE_WORDS[SRC_YAHOO])
-            + _filing_clause(block, fa, m_as))
-    # 10. contested: an EXTREME name the second float puts under the EXTREME cut
+    # 9b. [B5, 2026-11-27] an unlisted split filing BETWEEN the two float dates: always compared, ONE caveat sentence;
+    # a rebase applied → only the A1 chip flag is held back. With no such filing `base` is byte-identical to before.
+    lo, hi = min(m_as, fa), max(m_as, fa)
+    unl = [f for f in BM.unlisted_split_filings(basis_doc) if lo < f["filed"] <= hi]
+    held_back = bool(unl) and rebased != m_sh
+    caveat = ""
+    if unl:
+        caveat = (TEXT_SPLIT_FILING_REBASED if held_back else TEXT_SPLIT_FILING) % BM._md(unl[0]["filed"])
+        out["split_filing"] = unl[0]["filed"]
+
+    def _base(smaller=None):
+        return ("float: %s · %s%s.%s" % (_used_words(fl, fa, pf), _other_words(m_sh, m_as, rebased, pct_m, so, smaller),
+                                         (" · " + spread) if spread else "", TEXT_USES % SOURCE_WORDS[SRC_YAHOO])
+                + _filing_clause(block, fa, m_as) + caveat)
+    base = _base()
+    # 10. contested: an EXTREME name the second float puts under the EXTREME cut — NOT changed (2026-11-27)
     contested = (block.get("tier") == SR.TIER_EXTREME and differs and rank(tier_m) < rank(SR.TIER_EXTREME)
                  and (by != "not_older" or m_as >= fa))
     if not contested:
-        out.update(state="compared", row=base)
+        # A1 [2026-11-27] — both ways, any tier: the two % on different ladder rungs (tier_of, before the shares-out cap)
+        # AND the second float passes the house float check; a second float that fails it is named, never flags.
+        si_sh = block.get("si_shares")
+        sus = SR._float_suspect(si_sh, rebased, so)
+        t_used, t_other = SR.tier_of(pf), SR.tier_of(pct_m)
+        rung = SR._ladder_ok() and t_used is not None and t_other is not None and t_used != t_other
+        says = differs and rung and sus is None and not held_back
+        flag = says and rung_on() and mode != "off" and (by != "not_older" or m_as >= fa)
+        row = _base(si_sh if sus == SR.SHORT_EXCEEDS_FLOAT and _count(si_sh) else None)
+        if sus is not None:
+            out["second"] = sus
+            row += TEXT_NOT_USABLE
+        elif says:
+            out["rung"] = True
+            row += TEXT_RUNG % (SOURCE_WORDS[SRC_YAHOO], SR._range(t_used), SOURCE_WORDS[SRC_MASSIVE],
+                                SR._range(t_other))
+        if flag:
+            text = SHORT_SOURCES + " — " + row + TAIL_BOTH % ()
+            out.update(state="compared", text=text, row=text, rung_flag=True)
+            return out
+        out.update(state="compared", row=row)
         return out
     if mode == "hold":
         to = SR.TIER_HIGH
@@ -316,12 +371,16 @@ def apply(block, cmp) -> None:
         return
     rows = [dict(r) for r in (cmp.get("sources") or []) if isinstance(r, dict)]
     sc = {"state": cmp["state"], "rel": cmp.get("rel"), "text": cmp.get("row")}
+    for k in SC_EXTRA_KEYS:                                     # 2026-11-27 — ONLY when set: a row with none is as before
+        if cmp.get(k) is not None:
+            sc[k] = cmp[k]
     ec = dict(cmp["contest"]) if isinstance(cmp.get("contest"), dict) else None
     flags = tier = None
-    if ec is not None and ec.get("mode") in ("flag", "hold", "supported") and isinstance(cmp.get("text"), str):
+    contest_flag = ec is not None and ec.get("mode") in ("flag", "hold", "supported")
+    if isinstance(cmp.get("text"), str) and (contest_flag or cmp.get("rung_flag") is True):
         held = bb.get("flags") if isinstance(bb.get("flags"), list) else []
         flags = list(held) + [BM._flag(FLAG_SOURCES, BM.EMOJI_WARN, SHORT_SOURCES, cmp["text"])]
-        if ec["mode"] in ("hold", "supported"):
+        if ec is not None and ec["mode"] in ("hold", "supported"):
             tier = ec.get("to")
     bb["float_sources"] = rows
     bb["sources_compared"] = sc
@@ -333,8 +392,12 @@ def apply(block, cmp) -> None:
 
 
 # ───────────────────────────────────────────── the served sentences
-def _flagged(block) -> bool:
+def flagged(block) -> bool:
+    """True when the block carries the '⚠️ sources disagree' flag (either rule)."""
     return any(isinstance(f, dict) and f.get("key") == FLAG_SOURCES for f in (_basis(block).get("flags") or []))
+
+
+_flagged = flagged                                              # the old name stays
 
 
 def _text(block) -> Optional[str]:
@@ -373,10 +436,16 @@ def rules_sentence() -> str:
         return s + "."
     s += "; when it puts an %s name under the cut the chip adds '%s'" % (SR.TIER_WORDS[SR.TIER_EXTREME], SHORT_SOURCES)
     if mode == "hold":
-        return s + " and the word stops at %s." % SR.TIER_WORDS[SR.TIER_HIGH]
-    if mode == "supported":
-        return s + " and the word is the second float's."
-    return s + " and the word stays."
+        s += " and the word stops at %s" % SR.TIER_WORDS[SR.TIER_HIGH]
+    elif mode == "supported":
+        s += " and the word is the second float's"
+    else:
+        s += " and the word stays"
+    if rung_on():                                                # 2026-11-27 (A1) — folded, never a new pick
+        s += ("; when the two floats put the %% on different rungs of the ladder the chip adds the same words and the "
+              "word stays; a second float larger than shares outstanding or smaller than the short count is named as "
+              "not usable and never adds it" % ())
+    return s + "."
 
 
 # ───────────────────────────────────────────── the audit row + the cut table (short_interest.source_audit)

@@ -134,8 +134,10 @@ def _yf_read(vals: Optional[dict], status: str, now: datetime) -> Optional[dict]
 
 
 def _row_as_of(vals: dict, now: datetime) -> str:
-    """The DATA's age — the `shares_cache` row's `as_of` (epoch s, served by volume_movers.shares_status), not the
-    pass time (2026-10-13 review: a week-old "stale_served" row read as fresh). No stamp on the row → `now`."""
+    """The READ time of the `shares_cache` row — its `as_of` (epoch s, served by volume_movers.shares_status): when
+    Yahoo was last read for this name, NOT the age of the float value itself (B3 2026-11-27; the filing behind it can
+    be older). Never the pass time (2026-10-13 review: a week-old "stale_served" row read as fresh). No stamp on the
+    row → `now`."""
     ts = _num((vals or {}).get("as_of"))
     if ts is None or ts <= 0:
         return _utc(now).isoformat()
@@ -145,7 +147,7 @@ def _row_as_of(vals: dict, now: datetime) -> str:
 def _staled(r: dict) -> dict:
     """A "stale_served" read says so on the chip: the expired row Yahoo could not refresh (a 429 marker stands)."""
     if r.get("status") == "stale_served":
-        r["text"] = f"{r['text']} (stale, as of {r['as_of'][:10]})"
+        r["text"] = f"{r['text']} (stale, read {r['as_of'][:10]})"     # B3 2026-11-27 — "read", same date string
     return r
 
 

@@ -317,20 +317,58 @@ def test_every_case_names_its_capture_and_a_known_before():
 
 
 def test_every_case_is_its_named_capture():
-    """No typed share count: the frozen inputs equal a fresh extraction from the named captures."""
+    """No typed share count: the frozen inputs equal a fresh extraction from the named captures.
+
+    PIN MOVED 2026-11-27 (spec sicheck §2 K-1): the real `SB.refresh_symbol` now also writes `sec.fts_split` (the
+    split-word read, si-io), so SMTK's and CLRO's harness basis docs gain it (`none_6k`, no rows); the inputs file was
+    regenerated and every golden block is unchanged by it (only WHLR moves, by §3.4 B1 + A3)."""
     fresh = build_cases()
     assert [c["case"] for c in fresh] == list(CASE_IDS)
     for got, want in zip(fresh, FIX["cases"]):
         assert got == want, got["case"]
 
 
+def _moved_2026_11_27(cid, old, new):
+    """PIN MOVED 2026-11-27 (spec sicheck §3.4 B1 + A3) — ONLY case 5_WHLR_11_26 moves: the days-to-cover split
+    sentence goes (its 10/30 split is the prior settlement day) and the `Dates` line + `basis.date_gap` are added (no
+    chip flag). Used ONLY against the 11-26 captures' served blocks (main 047acbb4), which stay as captured; the golden
+    file IS regenerated (2026-11-27, frozen cases unchanged) and is pinned below as moved(captured WHLR block)."""
+    if cid != "5_WHLR_11_26":
+        return old
+    from tests.test_si_source_check_2026_11_26 import _moved_2026_11_27 as moved
+    return moved("WHLR", old, new)
+
+
 def test_the_goldens_are_the_served_blocks_of_the_frozen_inputs():
     assert SCK.EXTREME_CONTEST == "flag"                     # the built default the golden was generated under
     gold, hold = build_goldens(FIX["cases"])
     for cid in CASE_IDS:
-        assert gold[cid] == GOLD[cid], cid
+        assert gold[cid] == GOLD[cid], cid                # PIN MOVED 2026-11-27 (spec sicheck §3.4): golden regenerated
     for cid in HOLD_IDS:
         assert hold[cid] == HOLD[cid], cid
+
+
+def test_the_regenerated_golden_moves_ONLY_WHLR_and_only_as_predicted_2026_11_27():
+    """PIN MOVED 2026-11-27 (spec sicheck §3.4 B1 + A3): the regenerated golden's WHLR block is the 11-26 golden's
+    block with exactly the two predicted moves — no days-to-cover split sentence (its 10/30 split is the prior
+    settlement day), the `Dates` Note row + `basis.date_gap` (flag False), and the chip unchanged."""
+    w = GOLD["5_WHLR_11_26"]
+    assert SR.DTC_SPLIT_NOTE not in json.dumps(w, ensure_ascii=False)
+    dates = [r["v"] for r in w["rows"] if r["k"] == "Note" and r["v"].startswith("Dates: ")]
+    assert dates == ["Dates: short interest counted 11/13; the float is read 11/25; shares outstanding 1,788,532 "
+                     "(SEC 10-Q cover, 11/3) → 2,220,906 (Yahoo, 11/25) in between."]
+    assert w["basis"]["date_gap"]["flag"] is False and BM.SHORT_DATE_GAP not in w["chip"]
+    assert w["basis"]["date_gap"]["settlement_date"] == "2026-11-13" and w["basis"]["date_gap"]["float_asof"] == "2026-11-25"
+
+
+def test_NEGATIVE_no_other_golden_case_carries_the_new_dates_line_or_lost_the_dtc_split_sentence_2026_11_27():
+    """NEG: every case but WHLR serves no `Dates` row and no `date_gap` (the regen moved nothing else)."""
+    for cid in CASE_IDS:
+        if cid == "5_WHLR_11_26":
+            continue
+        g = GOLD[cid]
+        assert not [r for r in g["rows"] if r["k"] == "Note" and r["v"].startswith("Dates: ")], cid
+        assert "date_gap" not in (g.get("basis") or {}), cid
 
 
 def test_the_capture_based_cases_serve_the_captured_block_without_the_second_float():
@@ -339,7 +377,8 @@ def test_the_capture_based_cases_serve_the_captured_block_without_the_second_flo
     for cid in ("4_AKAN_11_26", "5_WHLR_11_26", "7_NCPL_11_26", "8_CHWY_11_26", "9_GMEX_11_26", "10_DKI_11_26",
                 "C2_INLF", "C3_JZ", "C4_BETR"):
         c = CASES[cid]
-        assert serve(_no_mfloat(c)) == _j(CAP["names"][c["symbol"]]["block"]), cid
+        got = serve(_no_mfloat(c))
+        assert got == _moved_2026_11_27(cid, _j(CAP["names"][c["symbol"]]["block"]), got), cid
 
 
 def test_cross_checks_against_the_sec_submissions_captures(monkeypatch):
@@ -586,7 +625,7 @@ def test_NEGATIVE_hold_moves_nothing_outside_the_three_contested_cases(monkeypat
     monkeypatch.setattr(SCK, "EXTREME_CONTEST", "hold")
     for cid in CASE_IDS:
         if cid not in HOLD_IDS:
-            assert serve(CASES[cid]) == GOLD[cid], cid
+            assert serve(CASES[cid]) == GOLD[cid], cid    # PIN MOVED 2026-11-27 (spec sicheck §3.4): golden regenerated
 
 
 def test_NEGATIVE_off_or_an_unknown_mode_serves_the_no_second_float_chip(monkeypatch):

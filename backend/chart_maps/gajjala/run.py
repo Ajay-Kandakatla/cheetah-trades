@@ -295,6 +295,12 @@ class Deps:
     # (si_ssr_names.default_reader). None = the step does not run, the pass doc gains NO key and every read doc is byte-
     # identical (tests, replays, dry runs); the cron path passes it. An ADDED name is read but handed to NO push engine (C1).
     si_ssr_names: Optional[Callable] = None
+    # 🩳 2026-11-27 (Ajay "Anytime something is in our Gajjalas we need to initiate a flow checking these values"; SPEC
+    # sicheck §3.5): the on-entry SI source check queue,
+    # `(names, session_iso) -> dict` (_si_entry → the entry check's enqueue, imported lazily). None = the step
+    # does not run (tests, replays, dry runs, the on-open pass); the cron path passes _si_entry. Never a key of out, never
+    # out["errors"], never a gate.
+    si_entry: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -822,6 +828,12 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 log.info("gajjala pass: ⛔ ssr %s", sr)
             except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
                 log.exception("gajjala pass: the ⛔ SSR read failed")
+        if deps.si_entry is not None and not push_dry:         # 🩳 2026-11-27 — the on-entry SI check queue, its OWN try
+            try:
+                se = deps.si_entry(list(names), session_iso)
+                log.info("gajjala pass: 🩳 si entry %s", {k: (se or {}).get(k) for k in ("queued", "spawned", "reason")})
+            except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
+                log.exception("gajjala pass: the 🩳 si entry queue failed")
         if deps.day_read is not None and not dry:              # 🌫️ 2026-11-15 — ONE read per pass; information only
             try:
                 if on_demand:
@@ -1010,7 +1022,8 @@ def dry_deps() -> Deps:
 
 def _cron_deps() -> Deps:
     """The cron path's Deps — the 📌 in-pass re-read, the 🎪 tags, the 🌫️ day read, the 🔀 fade cross (2026-11-15), the 🧨
-    divergence record (2026-11-18), the ⛔ SSR read (2026-11-23, fenced import) and the 💧 vol dried push (2026-11-24) on, everything else the
+    divergence record (2026-11-18), the ⛔ SSR read (2026-11-23, fenced import), the 💧 vol dried push (2026-11-24) and the 🩳
+    on-entry SI check queue (2026-11-27) on, everything else the
     defaults. ONE definition (GG LIVE spec §3.4, 2026-11-09): run.main's cron path and the ⏱ bar-close child in `on`
     mode (bar_close.wait_and_run) both call run_pass with it."""
     from . import trader_names as TN
@@ -1033,7 +1046,17 @@ def _cron_deps() -> Deps:
         d.ssr = SSR.record_pass
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala pass: the ⛔ SSR step is not wired: %s", type(exc).__name__)
+    d.si_entry = _si_entry                                      # 🩳 2026-11-27 — the on-entry SI check (lazy import inside)
     return d
+
+
+def _si_entry(names, session_iso) -> dict:
+    """🩳 2026-11-27 (SPEC sicheck §3.5) — the cron pass's hook: every listed name → the entry check's enqueue under the
+    🚩 source (the row's `_id` dedupes per session). entry_check is imported HERE, lazily, by the ONE plain import line
+    below (the second line of this module that names the SI package, beside the ⛔ SSR import in _cron_deps), so a
+    failed import is run_pass's fenced exception, never an import error of this module."""
+    from short_interest import entry_check as EC
+    return EC.enqueue(list(names), session_iso, EC.SRC_GAJJALA)
 
 
 def _spawn_bar_close() -> None:

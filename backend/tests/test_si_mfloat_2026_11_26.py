@@ -360,7 +360,11 @@ def test_refresh_carries_a_held_mfloat_and_widens_only_since2():
     assert set(doc_b) - set(doc_a) == {"mfloat"}
     assert sp_a.calls == [("SMTK", "2026-08-12")] and sp_b.calls == [("SMTK", "2026-03-18")]
     assert doc_a["splits"]["since"] == "2026-08-12" and doc_b["splits"]["since"] == "2026-03-18"
-    assert doc_a["sec"] == doc_b["sec"] and doc_b["sec"]["since"] == doc_a["sec"]["since"] == "2026-10-15"
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3, K-1): `sec.fts_split`'s window reaches back to the held second float's
+    # date (min(sec.since, mfloat.as_of)); every other key of `sec` is unchanged
+    nosplit = lambda sec: {k: v for k, v in sec.items() if k != "fts_split"}
+    assert nosplit(doc_a["sec"]) == nosplit(doc_b["sec"]) and doc_b["sec"]["since"] == doc_a["sec"]["since"] == "2026-10-15"
+    assert doc_a["sec"]["fts_split"]["since"] == "2026-10-15" and doc_b["sec"]["fts_split"]["since"] == "2026-03-18"
     assert [(c["url"], c["params"]) for c in http_a.calls] == [(c["url"], c["params"]) for c in http_b.calls]
     assert http_b.hits(SB.MASSIVE_FLOAT_PATH) == []
     assert db_b["si_share_basis"].docs["SMTK"]["mfloat"] == mf

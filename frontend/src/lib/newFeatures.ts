@@ -1089,6 +1089,23 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-27, verbatim (all five messages in the label). Spec sicheck rev 2 (scratchpad sicheck/spec.md §3, §4.6
+  // main-session). BE short_interest/entry_check.py (the on-entry check: enqueue from chart_maps/gajjala/run.py and
+  // gajjala_watch/loop.py, one detached child, EC_WHEN), sec_fts.read_split (FTS_SPLIT_WHEN / FTS_SPLIT_PHRASES),
+  // source_check.compare A1 (RUNG_FLAG, TEXT_RUNG, TEXT_NOT_USABLE), basis_math A2 / A3 / B4 (SHORT_SPLIT_FILING,
+  // SHORT_DATE_GAP, DATE_GAP_MODE_WORDS), read.si_block(entry=) (ROW_ENTRY_CHECK), source_audit's 🚩 group;
+  // chart_maps/gajjala/tab.py ROW_ASOF_TEXT (chips.row_asof); FE lib/chartMaps.ts tfBarMin / barRange + PatternChart barMin.
+  // Display only — no alert, gate, rung, count, sort, push trigger or lane changed; the % and the tier word unchanged.
+  // UNMEASURED. Pinned by scripts/contracts.mjs ("🩳 on-entry SI check (2026-11-27)") +
+  // src/lib/newFeatures.si_entry_check.test.ts. PLACED past index 100 right above the 👀 5-min grid entry (the tape → 👀
+  // pair is not pinned adjacent): no NEW_FEATURES[n] pin moves. Docs docs/short_interest/entry_check_flags_2026_11_27.md,
+  // entry_check_flow_2026_11_27.md, docs/gajjala/chart_display_fixes_2026_11_27.md, chart_display_fixes_frontend_2026_11_27.md.
+  {
+    id: 'gajjala-si-entry-check-2026-11-27',
+    label: "🩳 A source check the moment a name lists — you said: “Can you double check short interest for these two please?” · “Anytime something is in our Gajjalas we need to initiate a flow checking these values” · “WHLR is too much” · “Can you check out volume for NXAT and POM … I think this is wrong..” · “Look like its already 29 mullion traded today”. Once a session, when a name first lists on 🚩 Gajjala's or 👀 Watch, a background check re-reads its SEC share counts, filings and splits, the second float, and a new SEC search for 6-Ks with split or share-consolidation words, then rebuilds its 🩳 chip; an Entry check row on the 🩳 panel says when it ran and what was re-read, held or failed. Yahoo's float is not re-read by this check. ⚠️ sources disagree now joins the chip on any tier whenever the two dated floats put the % on different rungs of the ladder — 52 of 569 names on the 11-26 probe rows; a second float larger than shares outstanding or smaller than the short count is named not usable and never adds it. Two new tokens: ✂️ split filing M/D (a 6-K matching split words with no split on file dated on or after it — a proposal, a vote notice and an executed split all match) and ⚠️ dates apart (more shares added between the count and the float read than the float holds). NXAT no longer reads ❔ shares fell 21× — Yahoo's older count predates its own adjustment for the 1-for-30 split. Volume: a 🚩 card whose row is from an earlier pass now says as of HH:MM beside its volume — the number itself is not refreshed (your call) — and hovering a 5-minute bar shows its span (08:05–08:10), a 1-minute bar on 👀 Watch 08:09–08:10. Nothing was built for WHLR's room (your call). Display only — no alert, gate, sort or list changed; the % and the tier word are unchanged. The 🧠 potential push title of a 🩳-listed name now carries the same new words (✂️ split filing, ⚠️ sources disagree); no trigger, dedupe or count moved. UNMEASURED. Not advice.",
+    addedAt: '2026-11-27',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-27, verbatim (four messages, all in the label). Spec watch5m rev 2 (scratchpad watch5m/spec.md §3, §4
   // main-session). FE only: lib/ggwFrames.ts (GGW_FRAME_DEFAULT '5m', GGW_DENSE_ORDER / GGW_DENSE_DEFAULT, the density
   // rule on GGW_DENSE_MIN_COL_PX + GGW_FIT_ROW_MIN_PX), hooks/useGgwFrames.tsx, components/GgwFramesMenu.tsx,

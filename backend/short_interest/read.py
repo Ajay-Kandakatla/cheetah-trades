@@ -327,7 +327,9 @@ def _dtc_notes(b: dict, calc: Optional[float]) -> str:
     out = ""
     if dtc == DTC_FINRA_FLOOR and (calc is None or calc < DTC_FINRA_FLOOR):
         out += DTC_FLOOR_NOTE
-    if isinstance(_basis(b).get("change"), dict):
+    # 🩳 2026-11-27 (spec sicheck §3.4, B1) — only a split STRICTLY after the prior settlement and on or before this
+    # one sits inside the provider's window (WHLR's 10/30 split IS the prior settlement day: no sentence).
+    if BM.split_in_window(_basis(b).get("change"), b.get("prev_settlement_date"), b.get("settlement_date")):
         out += DTC_SPLIT_NOTE
     return out
 
@@ -627,8 +629,13 @@ def extreme_title(b: dict, pf: float) -> str:
     return " ".join(seg)
 
 
-def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[dict] = None) -> Optional[dict]:
+def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[dict] = None,
+             entry: Optional[str] = None) -> Optional[dict]:
     """The served block for one cached doc. PURE — no I/O, never fetches.
+
+    🩳 2026-11-27 (spec sicheck §3.4) `entry` = the on-entry source check's sentence (short_interest.entry_check.words)
+    or None: a sentence adds ONE row (ROW_ENTRY_CHECK, last) and ONE title sentence before the "not a forecast" one;
+    None → byte-identical.
 
     🩳 2026-11-24 `basis` = the name's share-basis doc (short_interest.share_basis, spec sidilute §3.1) or None.
     None → the block is byte-identical to before and carries NO `basis` key. A doc → `basis_math.verdict` may refuse
@@ -738,8 +745,11 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
         except Exception as exc:                               # noqa: BLE001 — the source check never costs the chip
             log.warning("short_interest.read: source check %s failed: %s", b.get("symbol"), type(exc).__name__)
     b["chip"] = chip_text(b)
-    b["title"] = title_text(b, v)
+    ent = entry if isinstance(entry, str) and entry.strip() else None
+    b["title"] = title_text(b, v, entry=ent)
     b["rows"] = rows_for(b, v)
+    if ent is not None:
+        b["rows"].append({"k": ROW_ENTRY_CHECK, "v": ent})
     try:
         b["extreme"] = extreme_block(b)
     except Exception as exc:                                   # noqa: BLE001 — the note never costs the chip
@@ -756,6 +766,10 @@ BASIS_KEYS = ("status", "checked_at", "float_refused", "refused_reasons", "float
 # 🩳 2026-11-26 (spec floatguard §3.5) — three more `basis` keys, present exactly when the basis doc holds a dict
 # `mfloat` (a second dated float). BASIS_KEYS itself is NOT changed.
 SOURCE_KEYS = SCK.SOURCE_KEYS
+# 🩳 2026-11-27 (spec sicheck §3.4) — three more `basis` keys, each served ONLY when the verdict sets it (the split-word
+# filings, the dates of the three counts, a lagged older count). BASIS_KEYS itself is NOT changed.
+ENTRY_KEYS = ("split_filings", "date_gap", "lagged")
+ROW_ENTRY_CHECK = "Entry check"
 
 
 def _apply_verdict(b: dict, v: dict) -> None:
@@ -790,6 +804,9 @@ def _apply_verdict(b: dict, v: dict) -> None:
     for k in ("share_counts", "issuances"):
         if not isinstance(b["basis"].get(k), list):
             b["basis"][k] = []
+    for k in ENTRY_KEYS:                                        # 2026-11-27 — absent unless set
+        if v.get(k):
+            b["basis"][k] = v[k]
 
 
 def _basis(b) -> dict:
@@ -938,7 +955,7 @@ def _change_phrase(b: dict, *, with_prev_count: bool) -> str:
     return head
 
 
-def title_text(b: dict, v: Optional[dict] = None) -> str:
+def title_text(b: dict, v: Optional[dict] = None, entry: Optional[str] = None) -> str:
     if not b or b.get("status") == "no_record" or b.get("si_shares") is None:
         return (b or {}).get("title") or "Short interest: not read."
     seg = ["%s Short interest — FINRA settlement %s (published ~%s)."
@@ -981,6 +998,8 @@ def title_text(b: dict, v: Optional[dict] = None) -> str:
     if _conflict(b):
         seg.append(_conflict_sentence(b))
     seg.extend(_basis_sentences(b, v))               # 🩳 2026-11-24 — notes, flag texts, the share-count check
+    if isinstance(entry, str) and entry.strip():     # 🩳 2026-11-27 — the on-entry source check, one sentence
+        seg.append("%s: %s" % (ROW_ENTRY_CHECK, entry if entry.endswith(".") else entry + "."))
     seg.append(_NOT_A_FORECAST)
     seg.append("Source: %s. Not advice." % b["source"])
     return " ".join(seg)
@@ -1110,6 +1129,8 @@ def si_map(symbols, db=None, today=None, basis_over=None) -> dict:
     docs = SIC.short_interest_map(syms, db=db) or {}
     # 🩳 2026-11-24 — the share-basis docs (ONE `$in` read through share_basis.load; {} on any failure).
     bdocs = _basis_docs([s for s in syms if s in docs], db) if docs else {}
+    # 🩳 2026-11-27 — the on-entry source check's sentences (ONE `$in` read through entry_check.load; {} on any failure)
+    ents = _entry_words([s for s in syms if s in docs], today, db) if docs else {}
     if isinstance(basis_over, dict) and basis_over:
         over = {str(k).strip().upper(): o for k, o in basis_over.items() if isinstance(o, dict) and o}
         bdocs = {k: ({**d, **over[k]} if k in over else d) for k, d in bdocs.items()}
@@ -1121,7 +1142,8 @@ def si_map(symbols, db=None, today=None, basis_over=None) -> dict:
         d = dict(doc)
         d.setdefault("symbol", sym)
         try:
-            blk = si_block(d, today, basis=bdocs.get(sym))
+            blk = (si_block(d, today, basis=bdocs.get(sym), entry=ents[sym]) if sym in ents
+                   else si_block(d, today, basis=bdocs.get(sym)))
         except Exception as exc:                               # noqa: BLE001
             log.warning("short_interest.read: block %s failed: %s", sym, type(exc).__name__)
             blk = None
@@ -1143,6 +1165,27 @@ def _basis_docs(syms, db=None) -> dict:
     if not isinstance(got, dict):
         return {}
     return {str(k).upper(): v for k, v in got.items() if isinstance(v, dict)}
+
+
+def _entry_words(syms, today=None, db=None) -> dict:
+    """{SYM: sentence} — the seam to short_interest.entry_check (lazy): `load` for today's session + `words` per row.
+    Never fetches; {} on ANY failure (an ImportError included) — the block is then exactly as before."""
+    if not syms:
+        return {}
+    try:
+        from short_interest import entry_check as EC
+        got = EC.load(list(syms), _today(today).isoformat(), db=db)
+        if not isinstance(got, dict):
+            return {}
+        out = {}
+        for k, row in got.items():
+            w = EC.words(row)
+            if isinstance(w, str) and w.strip():
+                out[str(k).strip().upper()] = w
+        return out
+    except Exception as exc:                                   # noqa: BLE001 — no entry sentence, never a lost chip
+        log.warning("short_interest.read: entry check read failed: %s", type(exc).__name__)
+        return {}
 
 
 # ───────────────────────────────────────────── ℹ️ rules section

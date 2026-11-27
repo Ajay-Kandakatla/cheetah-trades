@@ -147,14 +147,37 @@ def test_fixtures_are_the_real_captures():
         assert "mfloat" not in (_n(s)["basis_doc"] or {})
 
 
+def _moved_2026_11_27(sym, old, new):
+    """PIN MOVED 2026-11-27 (spec sicheck §3.4 B1 + A3) — main's captured block with exactly the two predicted moves:
+    WHLR's 10/30 split IS its prior settlement day, so the days-to-cover split sentence goes (B1); its float is read
+    after the settlement with shares outstanding grown in between, so the `Dates` line is added after the first Note
+    and `basis.date_gap` is served (A3, no chip flag). Every other name: main's block unchanged."""
+    if sym != "WHLR":
+        return old
+    w = copy.deepcopy(old)
+    dates = next(r["v"] for r in new["rows"] if r["k"] == "Note" and r["v"].startswith("Dates: "))
+    head = next(r["v"] for r in w["rows"] if r["k"] == "Note")
+    w["title"] = w["title"].replace(SR.DTC_SPLIT_NOTE, "").replace(head, head + " " + dates)
+    w["extreme"]["title"] = w["extreme"]["title"].replace(SR.DTC_SPLIT_NOTE, "")
+    for r in w["rows"]:
+        r["v"] = r["v"].replace(SR.DTC_SPLIT_NOTE, "")
+    at = next(i for i, r in enumerate(w["rows"]) if r["k"] == "Note")
+    w["rows"].insert(at + 1, {"k": "Note", "v": dates})
+    w["basis"]["date_gap"] = new["basis"]["date_gap"]
+    assert w["basis"]["date_gap"]["flag"] is False and BM.SHORT_DATE_GAP not in new["chip"]
+    assert dates == ("Dates: short interest counted 11/13; the float is read 11/25; shares outstanding 1,788,532 "
+                     "(SEC 10-Q cover, 11/3) → 2,220,906 (Yahoo, 11/25) in between.")
+    return w
+
+
 @pytest.mark.parametrize("sym", NAMES)
 def test_NEGATIVE_no_mfloat_reproduces_the_block_main_served_byte_for_byte(sym):
     """The capture's block was served by main 047acbb4: with no `mfloat` the block is today's, key for key, and the
     SOURCE_KEYS are absent (this also proves the five pct_of sites read the same numbers as before)."""
     b = _blk(sym, _doc(sym))
-    assert b == _n(sym)["block"]
-    assert json.dumps(b, ensure_ascii=False, sort_keys=True) == json.dumps(_n(sym)["block"], ensure_ascii=False,
-                                                                          sort_keys=True)
+    want = _moved_2026_11_27(sym, _n(sym)["block"], b)
+    assert b == want
+    assert json.dumps(b, ensure_ascii=False, sort_keys=True) == json.dumps(want, ensure_ascii=False, sort_keys=True)
     assert not set(SR.SOURCE_KEYS) & set(b.get("basis") or {})
     assert SCK.FLAG_SOURCES not in _keys(b)
 
@@ -806,20 +829,30 @@ def test_source_check_holds_one_division_and_no_io():
 def test_rules_sentence_ends_with_the_source_sentence_and_names_the_warning():
     s = BM.rules_sentence()
     assert s.endswith(" " + SCK.rules_sentence())
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4 A1): the both-way rung rule folded into the same sentence
     assert SCK.rules_sentence() == ("A second dated float (Massive's free float) is read beside Yahoo's and both are "
                                     "in the hover with their dates; when it puts an EXTREME name under the cut the "
-                                    "chip adds '⚠️ sources disagree' and the word stays.")
+                                    "chip adds '⚠️ sources disagree' and the word stays; when the two floats put the % "
+                                    "on different rungs of the ladder the chip adds the same words and the word stays; "
+                                    "a second float larger than shares outstanding or smaller than the short count is "
+                                    "named as not usable and never adds it.")
     assert SCK.SHORT_SOURCES in s
     sec = SR.rules_section()
     assert len(sec["picks"]) == 8 and sec["picks"][1].endswith(BM.rules_sentence())
     assert not [p for p in sec["picks"] if FORBIDDEN.search(p)]
 
 
-def test_rules_sentence_follows_the_mode(mode):
+def test_rules_sentence_follows_the_mode(mode, monkeypatch):
+    # PIN MOVED 2026-11-27 (spec sicheck §3.4 A1): the mode tails are read with the rung rule off (RUNG_FLAG "off");
+    # with it on the rung clause follows the mode's tail
+    monkeypatch.setattr(SCK, "RUNG_FLAG", "off")
     mode("hold")
     assert SCK.rules_sentence().endswith(" and the word stops at High.")
     mode("supported")
     assert SCK.rules_sentence().endswith(" and the word is the second float's.")
+    monkeypatch.setattr(SCK, "RUNG_FLAG", "on")
+    assert " and the word is the second float's; when the two floats put the % on different rungs" in \
+        SCK.rules_sentence()
     mode("off")
     assert SCK.rules_sentence().endswith("both are in the hover with their dates.")
     assert SCK.SHORT_SOURCES not in SCK.rules_sentence()

@@ -500,12 +500,19 @@ def test_the_cron_path_keeps_its_deps(monkeypatch):
     # WIDENED 2026-11-24 (⛔🔒🩳 SPEC sissr §3.4, WP be-pass — Ajay "Days past little bit like AKAN is what I am mainly
     # looking for many were so confident on SSR.."): and the SI / SSR / Reg SHO name source's stored reader
     from chart_maps.gajjala import si_ssr_names as SSN
+    # PIN MOVED 2026-11-27 (spec sicheck §3.5 / §4.3 — "cron deps wire si_entry"): and the 🩳 on-entry SI check queue
     assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross,
                                               divergence=DV.run_step, high_si_cross=HSX.run_step,
                                               record_high_si_status=RUN._record_high_si_status,
                                               ssr=SSR.record_pass, vol_dried=VD.run_step,
-                                              si_ssr_names=SSN.default_reader)
+                                              si_ssr_names=SSN.default_reader, si_entry=RUN._si_entry)
+    assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
+                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross,
+                                              divergence=DV.run_step, high_si_cross=HSX.run_step,
+                                              record_high_si_status=RUN._record_high_si_status,
+                                              ssr=SSR.record_pass, vol_dried=VD.run_step,
+                                              si_ssr_names=SSN.default_reader)    # NEGATIVE — the 🩳 on-entry check dropped
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross,
                                               divergence=DV.run_step, high_si_cross=HSX.run_step,

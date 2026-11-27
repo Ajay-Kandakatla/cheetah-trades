@@ -228,7 +228,7 @@ import { outerChipsFor } from '../lib/outerChips';
 import { VIDEO_LOOK_H } from '../lib/videoLook';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import { trackFeature } from '../lib/usageTracker';
-import { shortVol } from '../lib/chartMaps';
+import { shortVol, tfBarMin } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
   GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_HIGH_SI_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
@@ -1151,6 +1151,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     /* 📺 his call #2: the served clock axis on every card, 📺 on or off; the 🎾 card (the 🎾 sub and a 🧠 card
                        of a 🎾 read, both .gg-wide) keeps the 190 default height under 📺. */
                     <PatternChart tile={t} onOpenView={openView} axis={t.axis ?? null}
+                                  barMin={tfBarMin(t.tf) ?? undefined}
                                   look={lookOn ? 'video' : undefined}
                                   height={lookOn && t.gajjala?.setup !== 'reversal_squeeze' ? VIDEO_LOOK_H : undefined}
                                   outerChips={outerChipsFor(GG_OUTER_CHIPS, t, {
@@ -1395,7 +1396,9 @@ function CardExtras({ read, board, sub, sym, live, like = null }: {
   const chipRow: (string | null)[] = [
     chipText(chips.float), chipText(chips.float_suspect), chipText(chips.rotation), chipText(chips.halts),
     ...(chips.psych || []).map(chipText),
-    changeText(chips.change_pct), vol, listed,
+    /* 🕐 2026-11-27 (spec sicheck §3.6 D4): the SERVED "as of HH:MM" right after the volume chip — how old that volume
+       is when the row did not qualify on the shown pass. Absent / junk → nothing (the row as before). */
+    changeText(chips.change_pct), vol, chipText(chips.row_asof), listed,
     sub === 'reversal_squeeze' ? chipText(chips.squeeze_history) : null,
     chipText(chips.red_closes), chipText(chips.stopped_earlier), chipText(chips.read_at), chipText(chips.flag_k),
     chipText(chips.instrument), chipText(chips.session_badge), chipText(chips.outside_rth), first15,

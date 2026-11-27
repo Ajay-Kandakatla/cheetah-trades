@@ -29,6 +29,12 @@ as the `mfloat` sub-doc, behind `SB_MFLOAT_WHEN`. It is read in bulk by the nigh
 `store_mfloats`) and by ONE worker step (`mfloat_step`) — never by `refresh_symbol`, which makes no new outside call:
 it only carries a held `mfloat` and reaches its splits window (`since2`, never the SEC `since`) back to its date.
 `widen_splits` does the same with one splits read. A doc with no `mfloat` key is built exactly as before.
+
+✂️ 2026-11-27 (spec sicheck §3.3, K-1): the 6-K SPLIT-WORD read (`sec_fts.read_split`) is stored as `sec.fts_split`, a
+SIBLING of `sec.fts` (whose shape is untouched). Its window starts at min(sec.since, the held ok second float's date);
+the 6-K listing for it comes from the SAME submissions answer (`fetch_filings(wide_since=)`, no extra SEC call). ONE
+extra efts GET per refresh, only when the held answer does not hold (top 6-K + window + `sec_fts.holds`); the efts stop
+`state|fts` is honoured. `fts_split_step` is the same read for one name outside a refresh (the entry check's phase C).
 """
 from __future__ import annotations
 
@@ -55,6 +61,9 @@ SB_STATE_SEC_ID = "state|sec"                 # {"_id", "blocked_until", "reason
 # 🩳 2026-11-26 (spec sishares §3.1, C12) — the same shape for the SEC full-text search: a 403 / 429 from efts stops ONLY
 # the full-text reads (`sec_fts`) until then, never data.sec.gov.
 SB_STATE_FTS_ID = "state|fts"
+# ⏱ 2026-11-27 (critic finding, MEDIUM) — the SEC pace shared by EVERY process on this host (the api's on-view worker,
+# the cron entry-check child, the nightly): {"_id", "next_at"} = the wall-clock epoch second of the next free slot.
+SB_STATE_SEC_PACE_ID = "state|sec_pace"
 SB_HTTP_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; share-count-reader)", "Accept": "application/json"}
 SEC_CONCEPT_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK%s/dei/EntityCommonStockSharesOutstanding.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK%s.json"
@@ -176,7 +185,8 @@ def _clean(symbols) -> list:
         if not isinstance(s, str):
             continue
         s = s.strip().upper()
-        if s and s not in out and s not in (SB_STATE_SEC_ID.upper(), SB_STATE_FTS_ID.upper()):
+        if s and s not in out and s not in (SB_STATE_SEC_ID.upper(), SB_STATE_FTS_ID.upper(),
+                                            SB_STATE_SEC_PACE_ID.upper()):
             out.append(s)
     return out
 
@@ -228,13 +238,63 @@ def _failed_sub(held, error: str, now_iso: str, empty: dict) -> dict:
 _sec_lock = threading.Lock()
 _sec_last = {"t": None}
 _sec_stop = {"until": None}                                    # the in-process copy of state|sec.blocked_until
+_pace_coll = None            # seam: the collection holding state|sec_pace; None → _default_db()[SB_COLL]
 
 
-def _sec_wait(clock: Optional[Callable] = None, sleep: Optional[Callable] = None) -> None:
-    """Two SEC GETs never start closer than SB_SEC_MIN_INTERVAL_SEC (monotonic, module lock) [C12]."""
+def _pace_collection():
+    if _pace_coll is not None:
+        return _pace_coll
+    d = _default_db()
+    return d[SB_COLL] if d is not None else None
+
+
+def _claim_shared_slot(coll, wall: Callable, sleep: Callable) -> bool:
+    """ONE atomic `find_one_and_update` on state|sec_pace: next_at = max(now, next_at) + SB_SEC_MIN_INTERVAL_SEC; this
+    call's slot = the new next_at − SB_SEC_MIN_INTERVAL_SEC, slept until. Two claims from any processes are therefore
+    never closer than the spacing. A missing / non-number next_at counts as now. Never raises: any fault → False (the
+    caller paces in-process only). A slot further ahead than SB_HTTP_TIMEOUT_SEC (the most one SEC call may already
+    block) is a broken doc, not a queue: it is reset (compare-and-set on the value read) and False is returned, so a
+    bad doc never blocks a call longer than that."""
+    if coll is None:
+        return False
+    try:
+        now = float(wall())
+        nxt = {"$cond": [{"$isNumber": "$next_at"}, "$next_at", now]}
+        doc = coll.find_one_and_update(
+            {"_id": SB_STATE_SEC_PACE_ID},
+            [{"$set": {"next_at": {"$add": [{"$max": [now, nxt]}, SB_SEC_MIN_INTERVAL_SEC]}}}],
+            upsert=True, return_document=True)                 # True = pymongo ReturnDocument.AFTER
+        got = doc.get("next_at") if isinstance(doc, dict) else None
+        if isinstance(got, bool) or not isinstance(got, (int, float)):
+            return False
+        delay = (got - SB_SEC_MIN_INTERVAL_SEC) - float(wall())
+        if delay > SB_HTTP_TIMEOUT_SEC:
+            log.warning("share_basis: shared SEC pace slot %.1f s ahead — reset, in-process pace only", delay)
+            coll.update_one({"_id": SB_STATE_SEC_PACE_ID, "next_at": got},
+                            {"$set": {"next_at": float(wall()) + SB_SEC_MIN_INTERVAL_SEC}})
+            return False
+        if delay > 0:
+            sleep(delay)
+        return True
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: shared SEC pace failed, in-process pace only: %s", type(exc).__name__)
+        return False
+
+
+def _sec_wait(clock: Optional[Callable] = None, sleep: Optional[Callable] = None,
+              coll=None, wall: Optional[Callable] = None) -> None:
+    """Two SEC GETs never start closer than SB_SEC_MIN_INTERVAL_SEC [C12]: across PROCESSES through the state|sec_pace
+    slot (`_claim_shared_slot`, wall clock), and always in-process (monotonic, module lock) — the only pace left
+    when Mongo is down or faults."""
     clock = clock or time.monotonic
     sleep = sleep or time.sleep
+    wall = wall or time.time
     with _sec_lock:
+        try:
+            c = coll if coll is not None else _pace_collection()
+        except Exception:                                      # noqa: BLE001
+            c = None
+        _claim_shared_slot(c, wall, sleep)
         t = clock()
         last = _sec_last["t"]
         if last is not None:
@@ -403,7 +463,8 @@ def _is_6k(form: str) -> bool:
     return base == SB_REPORT_FORMS[1]
 
 
-def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=None) -> dict:
+def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=None,
+                  wide_since: Optional[str] = None) -> dict:
     """{"status": "ok", "filings": [{"form", "filed", "items", "doc", "file", "accn", "with"}] (newest first,
     filed >= since, only kinds `kind_fn(form, items)` names, at most SB_FILINGS_KEPT), "top_accn"[, "cap"]}
     | {"status": "failed", "error", "blocked": bool}.
@@ -416,7 +477,10 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
 
     🩳 2026-11-26 (spec sishares §3.3): `reports` = the 6-K / 6-K/A rows (base SB_REPORT_FORMS[1]) filed >= since,
     [{"form", "filed", "accn", "doc"}] newest first, listing order on a tie — whatever `kind_fn` says (a 6-K is never
-    in `filings` by itself; the full-text step marks the issuance ones)."""
+    in `filings` by itself; the full-text step marks the issuance ones).
+
+    ✂️ 2026-11-27 (spec sicheck §3.3): `wide_since` given → also `reports_wide` = the same 6-K rows filed >= wide_since
+    (the split-word window, from the SAME answer — no extra call); not given → the answer is exactly as before."""
     try:
         kf = kind_fn or _default_kind_fn()
         r = _sec_get(SEC_SUBMISSIONS_URL % cik10, http)
@@ -437,6 +501,8 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
         items = items if isinstance(items, list) else []
         accns = accns if isinstance(accns, list) else []
         since = _day(since_iso)
+        wide = _day(wide_since) if wide_since is not None else None
+        wide_rows: list = []
         n = min(len(forms), len(dates))
         report_on: dict = {}                                   # filed day → the first report's form, listing order
         for i in range(n):
@@ -454,6 +520,8 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
             accn = accns[i] if i < len(accns) and isinstance(accns[i], str) and accns[i].strip() else None
             if accn and form.upper().startswith(SEC_PERIODIC_PREFIXES) and (top is None or filed > top[0]):
                 top = (filed, accn.strip())
+            if wide and accn and _is_6k(form) and filed >= wide:
+                wide_rows.append({"form": form, "filed": filed, "accn": accn.strip(), "doc": _str_at(docs, i)})
             if since and filed < since:
                 continue
             if accn and _is_6k(form):
@@ -469,6 +537,9 @@ def fetch_filings(cik10: str, since_iso: Optional[str], *, http=None, kind_fn=No
                "reports": reports}
         if len(rows) > SB_FILINGS_KEPT:
             out["cap"] = SB_FILINGS_KEPT
+        if wide_since is not None:
+            wide_rows.sort(key=lambda x: x["filed"], reverse=True)
+            out["reports_wide"] = wide_rows
         return out
     except Exception as exc:                                   # noqa: BLE001
         return {"status": "failed", "error": _err(exc), "blocked": False}
@@ -999,6 +1070,152 @@ def _number_step(db, rec, doc, held_fts, reports, cik, now, now_iso, http, growt
     fts.update({"error": got.get("error") or "error", "error_at": now_iso, "strikes": _strikes(fts) + 1})
 
 
+# ───────────────────────────────────────────── ✂️ the 6-K split-word step (spec sicheck §3.3, K-1)
+def _split_empty(since) -> dict:
+    return {"since": since, "top_6k": None, "top_6k_filed": None, "rows": []}
+
+
+def _split_good(sub) -> bool:
+    return isinstance(sub, dict) and sub.get("status") in SF.FTS_GOOD
+
+
+def _failed_split(held, error: str, now_iso: str, since) -> dict:
+    """The status rule on `sec.fts_split`: a held good read stands + error; nothing good held → `failed`."""
+    if _split_good(held):
+        out = dict(held)
+        out.update({"error": error, "error_at": now_iso, "strikes": _strikes(held) + 1})
+        return out
+    out = dict({"status": "failed"}, **_split_empty(since))
+    out.update({"read_at": None, "error": error, "error_at": now_iso, "strikes": _strikes(held) + 1})
+    return out
+
+
+def _split_reask(held: dict, top: dict, since) -> bool:
+    """The `_fts_reask` rule on the split-word answer: asked again when the newest 6-K moved, the window moved, the
+    last try failed, or `sec_fts.holds` says a no-hit read was made too soon after the newest 6-K was filed."""
+    if held.get("top_6k") != top["accn"] or _day(held.get("since")) != since or held.get("error"):
+        return True
+    return not SF.holds(held.get("top_6k_filed"), held.get("read_at"), top["accn"] in _accns(held.get("rows")))
+
+
+def _fts_split_step(db, cik, held, reports, since, now, now_iso, http, store) -> dict:
+    """`sec.fts_split` (K-1): FTS_SPLIT_WHEN off → "off", no call · no 6-K in the window → "none_6k", no call · a held
+    `ok` answer that still holds → kept as is, no call · the efts stop on → the held answer stands (flagged `blocked`
+    when it no longer covers) or status `blocked` · else ONE split-word query (`sec_fts.read_split`); a 403 / 429
+    sets the efts stop (`state|fts`, never data.sec.gov's)."""
+    held = held if isinstance(held, dict) else None
+    if not SF.split_on():
+        out = dict({"status": "off"}, **_split_empty(since))
+        out.update({"read_at": None, "error": None, "error_at": None, "strikes": 0})
+        return out
+    if not reports:
+        return _ok_sub(dict({"status": "none_6k"}, **_split_empty(since)), now_iso)
+    top = reports[0]
+    good = _split_good(held)
+    if good and held.get("status") == "ok" and not _split_reask(held, top, since):
+        return dict(held)
+    if _fts_blocked(db, now):
+        if good:
+            out = dict(held)
+            if held.get("status") == "none_6k" or held.get("top_6k") != top["accn"] \
+                    or _day(held.get("since")) != since:
+                out.update({"error": "blocked", "error_at": now_iso})
+            return out
+        out = dict({"status": "blocked"}, **_split_empty(since))
+        out.update({"read_at": None, "error": None, "error_at": now_iso, "strikes": _strikes(held)})
+        return out
+    got = SF.read_split(cik, since, SF.et_day(now), reports, get=_fts_get(http))
+    if got.get("status") != "ok":
+        if got.get("code") in SEC_BLOCK_HTTP:
+            _block_fts(db, now, got.get("error") or "blocked", store)
+        return _failed_split(held, got.get("error") or "error", now_iso, since)
+    out = {"status": "ok", "since": since, "top_6k": top["accn"], "top_6k_filed": top["filed"],
+           "rows": got.get("rows") or []}
+    if got.get("cap"):
+        out["cap"] = got["cap"]
+    return _ok_sub(out, now_iso)
+
+
+def split_since(doc) -> Optional[str]:
+    """K-1 `since`: min(sec.since, the held ok second float's date), else whichever is dated, else None."""
+    if not isinstance(doc, dict):
+        return None
+    sec = doc.get("sec") if isinstance(doc.get("sec"), dict) else {}
+    ds = [x for x in (_day(sec.get("since")), _mfloat_asof(doc)) if x]
+    return min(ds) if ds else None
+
+
+def _split_still(held, sec, wide) -> bool:
+    """A held split-word answer needs no new listing read: good, no error, the same window, read no earlier than the
+    6-K listing on file (`sec.read_at`), and (none_6k, or `sec_fts.holds`)."""
+    if not _split_good(held) or held.get("error") or _day(held.get("since")) != wide:
+        return False
+    hr = _parse_ts(held.get("read_at"))
+    sr = _parse_ts(sec.get("read_at")) if isinstance(sec, dict) else None
+    if hr is None or sr is None or hr < sr:
+        return False
+    if held.get("status") == "none_6k":
+        return True
+    return SF.holds(held.get("top_6k_filed"), held.get("read_at"), held.get("top_6k") in _accns(held.get("rows")))
+
+
+def _no_kind(form, items):
+    return None
+
+
+def fts_split_step(sym, db=None, now=None, *, http=None) -> str:
+    """✂️ THE split-word read for one name outside a refresh (the entry check's phase C; the `mfloat_step` shape).
+    First match: "off" (FTS_SPLIT_WHEN) · "test" (`http` None under pytest — before any read) · "no_doc" (no checked
+    doc, no `sec`, no CIK, no window) · "held" (the held answer still holds — no call) · "failed" (the SEC stop, the
+    listing read or the write failed, or the efts read failed: the held answer stands) · "stored". A needed read is
+    ONE data.sec.gov listing GET (`fetch_filings`, the 6-K rows of its window) + at most ONE efts GET; the write is
+    `update_one({"_id", "checked_at": {"$exists": True}}, {"$set": {"sec.fts_split": sub}})`, never an upsert.
+    Never raises."""
+    try:
+        if not SF.split_on():
+            return "off"
+        if _under_test(http):
+            return "test"
+        c = _clean([sym])
+        d = db if db is not None else _default_db()
+        if not c or d is None:
+            return "no_doc"
+        s = c[0]
+        doc = _find_one(d[SB_COLL], s)
+        if not isinstance(doc, dict) or doc.get("checked_at") is None or not isinstance(doc.get("sec"), dict):
+            return "no_doc"
+        ref = doc.get("ref") if isinstance(doc.get("ref"), dict) else {}
+        cik = ref.get("cik") if ref.get("status") == "ok" else None
+        wide = split_since(doc)
+        if not cik or wide is None:
+            return "no_doc"
+        sec = doc["sec"]
+        held = sec.get("fts_split") if isinstance(sec.get("fts_split"), dict) else None
+        if _split_still(held, sec, wide):
+            return "held"
+        now = _now(now)
+        now_iso = _ts(now)
+        if _sec_blocked(d, now):
+            return "failed"
+        got = fetch_filings(cik, wide, http=http, kind_fn=_no_kind)
+        if got.get("status") != "ok":
+            if got.get("blocked"):
+                _block_sec(d, now, got.get("error") or "blocked", True)
+            return "failed"
+        sub = _fts_split_step(d, cik, held, got.get("reports") or [], wide, now, now_iso, http, True)
+        if held is not None and sub == held:
+            return "held"
+        try:
+            d[SB_COLL].update_one({"_id": s, "checked_at": {"$exists": True}}, {"$set": {"sec.fts_split": sub}})
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("share_basis: %s split-word write failed: %s", s, type(exc).__name__)
+            return "failed"
+        return "stored" if _split_good(sub) and not sub.get("error") else "failed"
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: split-word step failed: %s", type(exc).__name__)
+        return "failed"
+
+
 # ───────────────────────────────────────────── one name
 def _splits_sub(sym, held_splits, since_iso, now_iso, splits_fetch=None) -> dict:
     """Step 7 of `refresh_symbol` (moved verbatim, spec floatguard §3.3): ONE splits read from `since_iso` -> the
@@ -1042,7 +1259,7 @@ def widen_splits(sym, db=None, now=None, *, splits_fetch=None, store=True) -> di
         return {"status": "failed", "splits": None}
 
 
-def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store, sink=None) -> dict:
+def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store, sink=None, wide=None) -> dict:
     empty = {"since": since, "top_accn": None, "covers": [], "filings": []}
     if not cik:
         if isinstance(ref, dict) and ref.get("status") in ("ok", "absent"):
@@ -1056,7 +1273,10 @@ def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store, sin
         out = dict({"status": "blocked"}, **empty)
         out.update({"read_at": None, "error": None, "error_at": now_iso, "strikes": _strikes(held)})
         return out
-    got = fetch_filings(cik, since, http=http, kind_fn=kind_fn)
+    if wide is not None:                                       # ✂️ the split-word window rides the SAME answer
+        got = fetch_filings(cik, since, http=http, kind_fn=kind_fn, wide_since=wide)
+    else:
+        got = fetch_filings(cik, since, http=http, kind_fn=kind_fn)
     if got.get("status") != "ok":
         if got.get("blocked"):
             _block_sec(db, now, got.get("error") or "blocked", store)
@@ -1077,6 +1297,8 @@ def _sec_step(db, cik, ref, held, since, now, now_iso, http, kind_fn, store, sin
     reports = got.get("reports") or []
     if isinstance(sink, dict):
         sink["reports"] = reports
+        if wide is not None:
+            sink["reports_split"] = got.get("reports_wide") or []
     fts = _fts_step(db, cik, held.get("fts") if isinstance(held, dict) else None, reports, since, now, now_iso,
                     http, store, sink)
     filings, cut = _with_marked(got.get("filings") or [], _marked(fts, since))
@@ -1135,7 +1357,15 @@ def refresh_symbol(sym: str, db=None, now=None, *, http=None, splits_fetch=None,
     held_sec = held.get("sec") if isinstance(held.get("sec"), dict) else None
     held_fts = held_sec.get("fts") if held_sec and isinstance(held_sec.get("fts"), dict) else None
     sink: dict = {}
-    sec = _sec_step(d, cik, ref, held.get("sec"), since, now, now_iso, http, kind_fn, store, sink=sink)
+    mf_day = _day(mf.get("as_of")) if mf is not None and mf.get("status") == "ok" else None
+    wide = min(since, mf_day) if mf_day else since             # ✂️ K-1 `since`
+    sec = _sec_step(d, cik, ref, held.get("sec"), since, now, now_iso, http, kind_fn, store, sink=sink, wide=wide)
+    # 5b. ✂️ 2026-11-27 (spec sicheck §3.3) — the split-word read, a SIBLING of sec.fts; no listing read → carried
+    held_split = held_sec.get("fts_split") if held_sec and isinstance(held_sec.get("fts_split"), dict) else None
+    if "reports_split" in sink:
+        sec["fts_split"] = _fts_split_step(d, cik, held_split, sink["reports_split"], wide, now, now_iso, http, store)
+    elif held_split is not None and isinstance(sec, dict) and "fts_split" not in sec:
+        sec["fts_split"] = dict(held_split)
     # 6. reach back to the cover in force when the float was first seen
     tsince = _day((track_held or {}).get("since")) or _day(rec.get("float_asof"))
     since2 = since
@@ -1370,6 +1600,10 @@ def _summary(sym: str, doc: dict) -> str:
         tail = " | fts %s%s, %d issuance 6-K, number %s" % (
             fts.get("status"), (" (last try %s)" % fts["error"]) if fts.get("error") else "",
             len(fts.get("issuance") or []), ("%d hit" % len(num.get("hits") or [])) if num else "not asked")
+    spl = (doc.get("sec") or {}).get("fts_split") if isinstance((doc.get("sec") or {}).get("fts_split"), dict) else None
+    if spl is not None:                                        # ✂️ 2026-11-27 — the 6-K split-word read
+        tail += " | split words %s%s, %d 6-K" % (spl.get("status"), (" (last try %s)" % spl["error"])
+                                                 if spl.get("error") else "", len(spl.get("rows") or []))
     if isinstance(doc.get("mfloat"), dict):                    # 🧮 2026-11-26 — the second dated float
         tail += " | mfloat %s" % doc["mfloat"].get("status")
     return "%s | ref %s | sec %s, %d covers, %d filings | splits %s, %d rows | track %s%s" % (

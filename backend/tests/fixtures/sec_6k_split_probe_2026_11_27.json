@@ -1,0 +1,2243 @@
+{
+ "answers": [
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 4,
+        "key": "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 4,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 4,
+        "key": "3841"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001104659-26-128404:tm2629308d1_ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 7.4467096,
+       "_source": {
+        "adsh": "0001104659-26-128404",
+        "biz_locations": [
+         "Sheung Wan"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001982444"
+        ],
+        "display_names": [
+         "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+        ],
+        "file_date": "2026-11-16",
+        "file_description": "EXHIBIT 99.1",
+        "file_num": [
+         "001-42300"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261561757"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-11-16",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "3841"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001104659-26-128404:tm2629308d1_ex99-2.htm",
+       "_index": "edgar_file",
+       "_score": 7.3951893,
+       "_source": {
+        "adsh": "0001104659-26-128404",
+        "biz_locations": [
+         "Sheung Wan"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001982444"
+        ],
+        "display_names": [
+         "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+        ],
+        "file_date": "2026-11-16",
+        "file_description": "EXHIBIT 99.2",
+        "file_num": [
+         "001-42300"
+        ],
+        "file_type": "EX-99.2",
+        "film_num": [
+         "261561757"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-11-16",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "3841"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001104659-26-112324:tm2626149d1_ex10-1.htm",
+       "_index": "edgar_file",
+       "_score": 2.615202,
+       "_source": {
+        "adsh": "0001104659-26-112324",
+        "biz_locations": [
+         "Sheung Wan"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001982444"
+        ],
+        "display_names": [
+         "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+        ],
+        "file_date": "2026-09-30",
+        "file_description": "EXHIBIT 10.1",
+        "file_num": [
+         "001-42300"
+        ],
+        "file_type": "EX-10.1",
+        "film_num": [
+         "261427182"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-09-30",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "3841"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001104659-26-112324:tm2626149d1_ex10-2.htm",
+       "_index": "edgar_file",
+       "_score": 1.9865756,
+       "_source": {
+        "adsh": "0001104659-26-112324",
+        "biz_locations": [
+         "Sheung Wan"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001982444"
+        ],
+        "display_names": [
+         "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+        ],
+        "file_date": "2026-09-30",
+        "file_description": "EXHIBIT 10.2",
+        "file_num": [
+         "001-42300"
+        ],
+        "file_type": "EX-10.2",
+        "film_num": [
+         "261427182"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-09-30",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "4",
+        "sics": [
+         "3841"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 7.4467096,
+     "total": {
+      "relation": "eq",
+      "value": 4
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0001982444"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2025-12-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "share consolidation"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 292
+   },
+   "cik10": "0001982444",
+   "phrase": "share consolidation",
+   "q": "\"share consolidation\"",
+   "since": "2025-12-31",
+   "status": 200,
+   "symbol": "BDMD",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22share+consolidation%22&forms=6-K&ciks=0001982444&dateRange=custom&startdt=2025-12-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 5,
+        "key": "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 5,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 5,
+        "key": "5900"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001213900-26-097663:ea030426901ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 7.788004,
+       "_source": {
+        "adsh": "0001213900-26-097663",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-09-04",
+        "file_description": "NOTICE OF EXTRAORDINARY GENERAL MEETING OF SHAREHOLDERS",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261362100"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-09-04",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001213900-26-110501:ea0308609-6k_pomdoctor.htm",
+       "_index": "edgar_file",
+       "_score": 7.4545345,
+       "_source": {
+        "adsh": "0001213900-26-110501",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-10-19",
+        "file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "6-K",
+        "film_num": [
+         "261467654"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-10-19",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": 1,
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001213900-26-106373:ea0307400-6k_pomdoc.htm",
+       "_index": "edgar_file",
+       "_score": 7.371859,
+       "_source": {
+        "adsh": "0001213900-26-106373",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-10-02",
+        "file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "6-K",
+        "film_num": [
+         "261436339"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-10-02",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": 1,
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001213900-26-097663:ea030426901ex99-2.htm",
+       "_index": "edgar_file",
+       "_score": 7.2941456,
+       "_source": {
+        "adsh": "0001213900-26-097663",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-09-04",
+        "file_description": "PROXY CARD FOR EXTRAORDINARY GENERAL MEETING OF SHAREHOLDERS",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "EX-99.2",
+        "film_num": [
+         "261362100"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-09-04",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001213900-26-097663:ea030426901ex99-3.htm",
+       "_index": "edgar_file",
+       "_score": 6.8545814,
+       "_source": {
+        "adsh": "0001213900-26-097663",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-09-04",
+        "file_description": "VOTING CARD FOR ADS HOLDERS",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "EX-99.3",
+        "film_num": [
+         "261362100"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-09-04",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "4",
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 7.788004,
+     "total": {
+      "relation": "eq",
+      "value": 5
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0001877971"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2026-03-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "share consolidation"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 444
+   },
+   "cik10": "0001877971",
+   "phrase": "share consolidation",
+   "q": "\"share consolidation\"",
+   "since": "2026-03-31",
+   "status": 200,
+   "symbol": "POM",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22share+consolidation%22&forms=6-K&ciks=0001877971&dateRange=custom&startdt=2026-03-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 3,
+        "key": "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+       },
+       {
+        "doc_count": 3,
+        "key": "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 6,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 6,
+        "key": "7819"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001829126-26-007508:kwavemedia_6k.htm",
+       "_index": "edgar_file",
+       "_score": 7.756108,
+       "_source": {
+        "adsh": "0001829126-26-007508",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-07-10",
+        "file_description": "6-K",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "6-K",
+        "film_num": [
+         "261168772"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-07-10",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": 1,
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-005715:kwavemedia_ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 7.722738,
+       "_source": {
+        "adsh": "0001829126-26-005715",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-05-27",
+        "file_description": "EXHIBIT 99.1",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261026105"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-05-27",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-012418:nexusadvanced_ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 7.6858244,
+       "_source": {
+        "adsh": "0001829126-26-012418",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-11-13",
+        "file_description": "EXHIBIT 99.1",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261554155"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-11-13",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-012749:nexusadvanced_ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 7.606253,
+       "_source": {
+        "adsh": "0001829126-26-012749",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-11-23",
+        "file_description": "EXHIBIT 99.1",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261584956"
+        ],
+        "form": "6-K/A",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-11-23",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-005715:kwavemedia_ex99-2.htm",
+       "_index": "edgar_file",
+       "_score": 7.6014967,
+       "_source": {
+        "adsh": "0001829126-26-005715",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-05-27",
+        "file_description": "EXHIBIT 99.2",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.2",
+        "film_num": [
+         "261026105"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-05-27",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "4",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-012418:nexusadvanced_6k.htm",
+       "_index": "edgar_file",
+       "_score": 7.267771,
+       "_source": {
+        "adsh": "0001829126-26-012418",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-11-13",
+        "file_description": "6-K",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "6-K",
+        "film_num": [
+         "261554155"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-11-13",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": 1,
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 7.756108,
+     "total": {
+      "relation": "eq",
+      "value": 6
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0002000756"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2025-12-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "share consolidation"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 583
+   },
+   "cik10": "0002000756",
+   "phrase": "share consolidation",
+   "q": "\"share consolidation\"",
+   "since": "2025-12-31",
+   "status": 200,
+   "symbol": "NXAT",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22share+consolidation%22&forms=6-K&ciks=0002000756&dateRange=custom&startdt=2025-12-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "3841"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001104659-26-112324:tm2626149d1_ex10-2.htm",
+       "_index": "edgar_file",
+       "_score": 5.586341,
+       "_source": {
+        "adsh": "0001104659-26-112324",
+        "biz_locations": [
+         "Sheung Wan"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001982444"
+        ],
+        "display_names": [
+         "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+        ],
+        "file_date": "2026-09-30",
+        "file_description": "EXHIBIT 10.2",
+        "file_num": [
+         "001-42300"
+        ],
+        "file_type": "EX-10.2",
+        "film_num": [
+         "261427182"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-09-30",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "4",
+        "sics": [
+         "3841"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 5.586341,
+     "total": {
+      "relation": "eq",
+      "value": 1
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0001982444"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2025-12-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "reverse stock split"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 318
+   },
+   "cik10": "0001982444",
+   "phrase": "reverse stock split",
+   "q": "\"reverse stock split\"",
+   "since": "2025-12-31",
+   "status": 200,
+   "symbol": "BDMD",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22reverse+stock+split%22&forms=6-K&ciks=0001982444&dateRange=custom&startdt=2025-12-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 2,
+        "key": "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 2,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 2,
+        "key": "5900"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001213900-26-108499:ea0308146-6k_pomdoctor.htm",
+       "_index": "edgar_file",
+       "_score": 11.765609,
+       "_source": {
+        "adsh": "0001213900-26-108499",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-10-09",
+        "file_description": "REPORT OF FOREIGN PRIVATE ISSUER",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "6-K",
+        "film_num": [
+         "261453221"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-10-09",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": 1,
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001213900-26-108499:ea030814601ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 11.728214,
+       "_source": {
+        "adsh": "0001213900-26-108499",
+        "biz_locations": [
+         "Guangzhou"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001877971"
+        ],
+        "display_names": [
+         "POMDOCTOR Ltd  (POM)  (CIK 0001877971)"
+        ],
+        "file_date": "2026-10-09",
+        "file_description": "PRESS RELEASE, DATED OCTOBER 9, 2026",
+        "file_num": [
+         "001-42749"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261453221"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-10-09",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "5900"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 11.765609,
+     "total": {
+      "relation": "eq",
+      "value": 2
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0001877971"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2026-03-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "reverse stock split"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 532
+   },
+   "cik10": "0001877971",
+   "phrase": "reverse stock split",
+   "q": "\"reverse stock split\"",
+   "since": "2026-03-31",
+   "status": 200,
+   "symbol": "POM",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22reverse+stock+split%22&forms=6-K&ciks=0001877971&dateRange=custom&startdt=2026-03-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 2,
+        "key": "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+       },
+       {
+        "doc_count": 1,
+        "key": "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 3,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 3,
+        "key": "7819"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001829126-26-012552:nexusadvanced_ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 11.534128,
+       "_source": {
+        "adsh": "0001829126-26-012552",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-11-17",
+        "file_description": "EXHIBIT 99.1",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "261565941"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-11-17",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-000180:kwavemedia_6-k.htm",
+       "_index": "edgar_file",
+       "_score": 10.274737,
+       "_source": {
+        "adsh": "0001829126-26-000180",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-01-09",
+        "file_description": "6-K",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "6-K",
+        "film_num": [
+         "26523785"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-01-09",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": 1,
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-000180:kwavemedia_ex99-1.htm",
+       "_index": "edgar_file",
+       "_score": 9.841218,
+       "_source": {
+        "adsh": "0001829126-26-000180",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-01-09",
+        "file_description": "EXHIBIT 99.1",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.1",
+        "film_num": [
+         "26523785"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-01-09",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "2",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 11.534128,
+     "total": {
+      "relation": "eq",
+      "value": 3
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0002000756"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2025-12-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "reverse stock split"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 284
+   },
+   "cik10": "0002000756",
+   "phrase": "reverse stock split",
+   "q": "\"reverse stock split\"",
+   "since": "2025-12-31",
+   "status": 200,
+   "symbol": "NXAT",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22reverse+stock+split%22&forms=6-K&ciks=0002000756&dateRange=custom&startdt=2025-12-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "3841"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001104659-26-112324:tm2626149d1_ex10-1.htm",
+       "_index": "edgar_file",
+       "_score": 4.9500427,
+       "_source": {
+        "adsh": "0001104659-26-112324",
+        "biz_locations": [
+         "Sheung Wan"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0001982444"
+        ],
+        "display_names": [
+         "Baird Medical Investment Holdings Ltd  (BDMD, BDMDW)  (CIK 0001982444)"
+        ],
+        "file_date": "2026-09-30",
+        "file_description": "EXHIBIT 10.1",
+        "file_num": [
+         "001-42300"
+        ],
+        "file_type": "EX-10.1",
+        "film_num": [
+         "261427182"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-09-30",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "3841"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 4.9500427,
+     "total": {
+      "relation": "eq",
+      "value": 1
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0001982444"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2025-12-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "reverse share split"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 393
+   },
+   "cik10": "0001982444",
+   "phrase": "reverse share split",
+   "q": "\"reverse share split\"",
+   "since": "2025-12-31",
+   "status": 200,
+   "symbol": "BDMD",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22reverse+share+split%22&forms=6-K&ciks=0001982444&dateRange=custom&startdt=2025-12-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [],
+     "max_score": null,
+     "total": {
+      "relation": "eq",
+      "value": 0
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0001877971"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2026-03-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "reverse share split"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 275
+   },
+   "cik10": "0001877971",
+   "phrase": "reverse share split",
+   "q": "\"reverse share split\"",
+   "since": "2026-03-31",
+   "status": 200,
+   "symbol": "POM",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22reverse+share+split%22&forms=6-K&ciks=0001877971&dateRange=custom&startdt=2026-03-31&enddt=2026-11-27"
+  },
+  {
+   "body": {
+    "_shards": {
+     "failed": 0,
+     "skipped": 0,
+     "successful": 50,
+     "total": 50
+    },
+    "aggregations": {
+     "biz_states_filter": {
+      "buckets": [],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "entity_filter": {
+      "buckets": [
+       {
+        "doc_count": 1,
+        "key": "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+       },
+       {
+        "doc_count": 1,
+        "key": "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "form_filter": {
+      "buckets": [
+       {
+        "doc_count": 2,
+        "key": "6-K"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     },
+     "sic_filter": {
+      "buckets": [
+       {
+        "doc_count": 2,
+        "key": "7819"
+       }
+      ],
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0
+     }
+    },
+    "hits": {
+     "hits": [
+      {
+       "_id": "0001829126-26-010775:nexusadvanced_ex99-2.htm",
+       "_index": "edgar_file",
+       "_score": 11.831288,
+       "_source": {
+        "adsh": "0001829126-26-010775",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "Nexus Advanced Technologies Inc.  (NXAT, NXATW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-10-05",
+        "file_description": "EXHIBIT 99.2",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.2",
+        "film_num": [
+         "261440221"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "ma_i_individual": null,
+        "period_ending": "2026-10-05",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      },
+      {
+       "_id": "0001829126-26-002393:kwavemedia_ex99-2.htm",
+       "_index": "edgar_file",
+       "_score": 5.6306353,
+       "_source": {
+        "adsh": "0001829126-26-002393",
+        "biz_locations": [
+         "Grand Cayman"
+        ],
+        "biz_states": [],
+        "ciks": [
+         "0002000756"
+        ],
+        "display_names": [
+         "K Wave Media Ltd.  (KWM, KWMWW)  (CIK 0002000756)"
+        ],
+        "file_date": "2026-03-17",
+        "file_description": "EXHIBIT 99.2",
+        "file_num": [
+         "001-42648"
+        ],
+        "file_type": "EX-99.2",
+        "film_num": [
+         "26761733"
+        ],
+        "form": "6-K",
+        "inc_states": [
+         "E9"
+        ],
+        "items": [],
+        "period_ending": "2026-03-17",
+        "root_forms": [
+         "6-K"
+        ],
+        "sequence": "3",
+        "sics": [
+         "7819"
+        ],
+        "xsl": null
+       }
+      }
+     ],
+     "max_score": 11.831288,
+     "total": {
+      "relation": "eq",
+      "value": 2
+     }
+    },
+    "query": {
+     "_source": {
+      "exclude": [
+       "doc_text"
+      ]
+     },
+     "aggregations": {
+      "biz_states_filter": {
+       "terms": {
+        "field": "biz_states",
+        "size": 30
+       }
+      },
+      "entity_filter": {
+       "terms": {
+        "field": "display_names.raw",
+        "size": 30
+       }
+      },
+      "form_filter": {
+       "terms": {
+        "field": "root_forms",
+        "size": 30
+       }
+      },
+      "sic_filter": {
+       "terms": {
+        "field": "sics",
+        "size": 30
+       }
+      }
+     },
+     "from": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "terms": {
+          "root_forms": [
+           "6-K"
+          ]
+         }
+        },
+        {
+         "terms": {
+          "ciks": [
+           "0002000756"
+          ]
+         }
+        },
+        {
+         "range": {
+          "file_date": {
+           "gte": "2025-12-31",
+           "lte": "2026-11-27"
+          }
+         }
+        }
+       ],
+       "must": [
+        {
+         "match_phrase": {
+          "doc_text": "reverse share split"
+         }
+        }
+       ],
+       "must_not": [],
+       "should": []
+      }
+     },
+     "size": 100
+    },
+    "timed_out": false,
+    "took": 459
+   },
+   "cik10": "0002000756",
+   "phrase": "reverse share split",
+   "q": "\"reverse share split\"",
+   "since": "2025-12-31",
+   "status": 200,
+   "symbol": "NXAT",
+   "today": "2026-11-27",
+   "url": "https://efts.sec.gov/LATEST/search-index?q=%22reverse+share+split%22&forms=6-K&ciks=0002000756&dateRange=custom&startdt=2025-12-31&enddt=2026-11-27"
+  }
+ ],
+ "asked": "2026-11-27",
+ "user_agent": "Mozilla/5.0 (compatible; share-count-reader)"
+}

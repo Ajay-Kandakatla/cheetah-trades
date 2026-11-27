@@ -92,6 +92,7 @@ import { openTvChart, tvLinkTestId, tvTitle, TV_LABEL } from '../lib/tvChart';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
 import { EmaBlinkDot } from './EmaBlink';
 import { emaBlinkLine } from '../lib/emaBlink';
+import { tfBarMin } from '../lib/chartMaps';
 import '../styles/gajjalaWatch.css';
 
 /** ▶ 2026-11-24 (spec ggrun): the run slot a Tile / GgwStretch draws — the board builds it (GgwRunRules). */
@@ -167,6 +168,7 @@ export function Frame({ f, phone, fit, style, live, seed, volAvg }: {
         ) : (
           <PatternChart tile={shown.tile} chartOnly emaStyle="bold" axis={shown.axis}
                         candleLook={f.tf === '1m' ? '1m' : undefined}
+                        barMin={tfBarMin(f.tf) ?? undefined}
                         viewW={fit && fitH ? fitH.w : undefined}
                         height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)}
                         {...(volAvg === undefined ? {} : { volAvg })} />

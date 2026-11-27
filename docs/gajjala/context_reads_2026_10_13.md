@@ -120,7 +120,8 @@ which a 429 produces — the same tombstone class on the weekly cap warm.
 - **The float's `as_of` is the data's age.** `volume_movers.shares_status` serves the row's `as_of` (epoch s; the fetch time
   on "fetched") inside `vals`; `shares_for` strips it, so `/sepa/shares`, russell_watch and promo_circuit are unchanged.
   `FloatRead.as_of` (and the stored `gajjala_daily.float.as_of`) come from it; a "stale_served" read says
-  `Float 3.1M (stale, as of 2026-10-04)`.
+  `Float 3.1M (stale, read 2026-10-04)` (2026-11-27: was "as of"; the date is when the cache row was read, not the
+  value's age — `chart_display_fixes_2026_11_27.md` B3).
 - **A raising Massive lookup is asked once a pass.** The failure is kept in `gajjala_daily.float_massive` as `{failed_at}`
   and honoured for `PASS_CADENCE_SEC` (run.py's two `floats_for` calls share `now`); the next pass asks again, and a
   landed answer is kept for the session as before.

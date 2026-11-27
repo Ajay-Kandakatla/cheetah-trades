@@ -1698,10 +1698,11 @@ def test_C38_the_exempt_argv_are_the_backends_own_spawn_constants():
     from chart_maps.gajjala import bar_close, run_1m
     from chart_maps.gajjala_watch import constants as WC
     from chart_maps.luk import run as luk_run
+    from short_interest import entry_check as EC
     spawned = {tuple(run_1m.ARGV_LOOP[1:]), tuple(luk_run.ARGV_CHILD[1:]),
-               tuple(bar_close.ARGV_CHILD[1:]), tuple(WC.ARGV_LOOP[1:])}
+               tuple(bar_close.ARGV_CHILD[1:]), tuple(WC.ARGV_LOOP[1:]), tuple(EC.ARGV_CHILD[1:])}
     assert spawned == set(wd.CRON_DETACHED_CHILD_ARGS), "a renamed child must be re-pinned here"
-    assert len(wd.CRON_DETACHED_CHILD_ARGS) == 4                    # RE-PINNED 2026-11-15: + 👀 the watch loop (C2.1)
+    assert len(wd.CRON_DETACHED_CHILD_ARGS) == 5                    # RE-PINNED 2026-11-27: + 🩳 the on-entry SI check
     assert tuple(run_1m.ARGV_ON_DEMAND[1:]) not in wd.CRON_DETACHED_CHILD_ARGS, \
         "an on-open run is a pass, not a detached child"
     assert tuple(WC.ARGV_BUILD[1:]) not in wd.CRON_DETACHED_CHILD_ARGS, \

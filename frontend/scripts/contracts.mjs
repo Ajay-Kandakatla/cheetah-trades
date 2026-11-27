@@ -18370,7 +18370,9 @@ const CONTRACTS = [
       if (!/SBAS\._http = _refuse_sec/.test(cf) || !/SBAS\._http = prior_sb_http/.test(cf)) errs.push('tests/conftest.py must ASSIGN short_interest.share_basis._http to a refuser and restore it on teardown');
       // 4. the read: one optional key, joined through the seam; _BLOCK_KEYS untouched (shared BE/FE fixture).
       const rd = strip(read('../backend/short_interest/read.py'));
-      if (!/def si_block\(doc: Optional\[dict\], today: Optional\[date\] = None, basis: Optional\[dict\] = None\)/.test(rd)) errs.push('read.si_block must take basis=None (None → byte-identical block)');
+      // PIN MOVED 2026-11-27 (spec sicheck §3.4 Entry line): si_block gained ONE more optional `entry: Optional[str] = None`
+      // after `basis` (None → byte-identical block); `basis=None` stays pinned exactly, nothing else may join.
+      if (!/def si_block\(doc: Optional\[dict\], today: Optional\[date\] = None, basis: Optional\[dict\] = None(?:,\s*entry: Optional\[str\] = None)?\)/.test(rd)) errs.push('read.si_block must take basis=None (None → byte-identical block)');
       if (!/from short_interest import basis_math as BM/.test(rd)) errs.push('read.py must read the ONE verdict (basis_math as BM)');
       if (!/def _basis_docs\(/.test(rd)) errs.push('read.py must join basis docs through the _basis_docs seam');
       const bk = /_BLOCK_KEYS = \(([\s\S]*?)\n\)/.exec(rd);
@@ -20307,6 +20309,92 @@ const CONTRACTS = [
       // 7. the doc and the new files
       for (const f of ['../docs/gajjala/watch_5m_grid_2026_11_27.md', 'src/hooks/useGgwFrames.tsx', 'src/components/GgwFramesMenu.tsx',
         'src/styles/ggwFrames.css', SEAM, 'src/lib/newFeatures.watch_5m_grid.test.ts']) if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
+  {
+    name: '🩳 on-entry SI check (2026-11-27)',
+    file: '../backend/short_interest/entry_check.py',
+    // Ajay 2026-11-27, verbatim: "Can you double check short interest for these two please?" · "Anytime something is in
+    // our Gajjalas we need to initiate a flow checking these values" · "WHLR is too much" · "Can you check out volume for
+    // NXAT and POM … I think this is wrong.." · "Look like its already 29 mullion traded today". Spec sicheck rev 2 §3.2,
+    // §3.5, §4.6. Display / data quality only: the check never imports si_track or a push / alert / lane module, holds no
+    // http client of its own, spawns ONE fixed argv the watchdog knows, and both hooks import it lazily inside their try.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const imports = (s) => s.split('\n').filter((l) => /^\s*(from\s+\S+\s+import\b|import\s+\S)/.test(l));
+      const modeOk = (s, when, modes, file) => {
+        const w = new RegExp(`^${when} = "([^"]*)"`, 'm').exec(s);
+        const m = new RegExp(`^${modes} = \\(([^)]*)\\)`, 'm').exec(s);
+        if (!w || !m) { errs.push(`${file} must declare ${when} and ${modes}`); return; }
+        const list = [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]);
+        if (list.join(',') !== 'off,on') errs.push(`${file}: ${modes} must be ("off", "on") (found ${list.join(', ')})`);
+        if (!list.includes(w[1])) errs.push(`${file}: ${when} "${w[1]}" must be one of ${modes}`);
+      };
+
+      // 1. the check — no si_track, no push / alert / lane module, no http client; the fixed argv; the switch
+      const imp = imports(src);
+      for (const l of imp) {
+        if (/\bsi_track\b/.test(l)) errs.push(`entry_check.py must not import si_track (found: ${l.trim()})`);
+        if (/\b(push\w*|\w*_push|alert\w*|\w*alerts?|lane\w*|notif\w*|autopilot\w*)\b/.test(l.replace(/^\s*from\s+(\S+).*$/, '$1').replace(/^\s*import\s+/, ''))) errs.push(`entry_check.py must not import a push / alert / lane module (found: ${l.trim()})`);
+        if (/\b(requests|httpx|aiohttp|urllib3|urllib\.request|http\.client)\b/.test(l)) errs.push(`entry_check.py must hold no http client (found: ${l.trim()})`);
+      }
+      if (/\b(requests|httpx)\.(get|post|Session)\b|urlopen\(/.test(src)) errs.push('entry_check.py must make no http call of its own — every outside read goes through share_basis');
+      if (!/^ARGV_CHILD = \[sys\.executable, "-m", "short_interest\.entry_check", "--child"\]/m.test(src)) errs.push('entry_check.ARGV_CHILD must be [sys.executable, "-m", "short_interest.entry_check", "--child"] — a FIXED argv');
+      modeOk(src, 'EC_WHEN', 'EC_MODES', 'entry_check.py');
+      if (!/^TEXT_YAHOO = " Yahoo's float is not re-read by this check\."/m.test(src)) errs.push('entry_check.TEXT_YAHOO must say the Yahoo float is not re-read');
+
+      // 2. the watchdog knows the child (a detached child, never a job)
+      const wd = quiet('../ops/docker_watchdog.py');
+      const kids = /^CRON_DETACHED_CHILD_ARGS = frozenset\(\{([\s\S]*?)\n\}\)/m.exec(wd);
+      if (!kids) errs.push('ops/docker_watchdog.py must declare CRON_DETACHED_CHILD_ARGS = frozenset({ … })');
+      else if (!kids[1].includes('("-m", "short_interest.entry_check", "--child")')) errs.push('ops/docker_watchdog.CRON_DETACHED_CHILD_ARGS must list ("-m", "short_interest.entry_check", "--child")');
+
+      // 3. both hooks import the check lazily (indented — inside a function / try), never at module top
+      for (const f of ['../backend/chart_maps/gajjala/run.py', '../backend/chart_maps/gajjala_watch/loop.py', '../backend/short_interest/read.py', '../backend/short_interest/source_audit.py']) {
+        const s = quiet(f);
+        if (/^(from short_interest import entry_check|import short_interest\.entry_check)/m.test(s)) errs.push(`${f} must import short_interest.entry_check lazily, never at module top`);
+        if (!/^\s+from short_interest import entry_check as EC\b/m.test(s)) errs.push(`${f} must reach the check through \`from short_interest import entry_check as EC\` (lazy)`);
+      }
+
+      // 4. the switches the ✨ leans on: one of their two mode words
+      modeOk(quiet('../backend/short_interest/sec_fts.py'), 'FTS_SPLIT_WHEN', 'FTS_SPLIT_MODES', 'sec_fts.py');
+      modeOk(quiet('../backend/short_interest/source_check.py'), 'RUNG_FLAG', 'RUNG_FLAG_MODES', 'source_check.py');
+      if (!/^ROW_ENTRY_CHECK = "Entry check"/m.test(quiet('../backend/short_interest/read.py'))) errs.push('read.ROW_ENTRY_CHECK must be "Entry check"');
+
+      // 5. the ✨ — his five messages verbatim, past index 100 right above the 👀 5-min grid entry
+      const ID = 'gajjala-si-entry-check-2026-11-27';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-27') errs.push(`the 🩳 entry-check ✨ addedAt must be 2026-11-27 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala') errs.push(`the 🩳 entry-check ✨ route must be /chart-maps?tab=gajjala (found ${lab[3]})`);
+        for (const q of ['Can you double check short interest for these two please?',
+          'Anytime something is in our Gajjalas we need to initiate a flow checking these values', 'WHLR is too much',
+          'Can you check out volume for NXAT and POM … I think this is wrong..', 'Look like its already 29 mullion traded today']) {
+          if (!L.includes(`“${q}”`)) errs.push(`the 🩳 entry-check ✨ must quote him verbatim inside curly quotes: ${q}`);
+        }
+        for (const w of ["Yahoo's float is not re-read by this check.", 'Display only — no alert, gate, sort or list changed', 'UNMEASURED', 'Not advice.']) {
+          if (!L.includes(w)) errs.push(`the 🩳 entry-check ✨ must say: ${w}`);
+        }
+        if (/\bedges?\b/i.test(L) || /bounc/i.test(L) || /\bsignals?\b/i.test(L)) errs.push('the 🩳 entry-check ✨ must never say edge / bounce / signal');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-watch-5m-grid-2026-11-27') errs.push(`the ✨ '${ID}' must sit right above the 👀 5-min grid entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 6. ship together
+      for (const f of ['../backend/tests/test_si_entry_check_2026_11_27.py', '../backend/tests/test_si_split_filings_2026_11_27.py',
+        '../backend/tests/test_si_entry_flags_2026_11_27.py', '../backend/tests/test_gajjala_si_entry_hook_2026_11_27.py',
+        '../backend/tests/test_gajjala_chart_display_2026_11_27.py', '../docs/short_interest/entry_check_flags_2026_11_27.md',
+        '../docs/short_interest/entry_check_flow_2026_11_27.md', '../docs/gajjala/chart_display_fixes_2026_11_27.md',
+        '../docs/gajjala/chart_display_fixes_frontend_2026_11_27.md', 'src/lib/newFeatures.si_entry_check.test.ts',
+        'src/components/ShortInterest.entrycheck.payload.test.tsx']) if (!exists(f)) errs.push(`${f} must exist`);
       return errs;
     },
   },

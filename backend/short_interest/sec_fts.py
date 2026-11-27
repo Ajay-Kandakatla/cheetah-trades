@@ -8,7 +8,10 @@ generic User-Agent, so the 6-K text is never read here. The SEC full-text search
 filer match a query, never their text. Two queries:
 
   * the issuance phrase family (FTS_ISSUANCE_PHRASES, OR) over the filer's 6-Ks in the fetch window;
-  * the exact share count added (format(n, ",")), only when a share-count growth is on file.
+  * the exact share count added (format(n, ",")), only when a share-count growth is on file;
+  * ✂️ 2026-11-27 (spec sicheck §3.3): the split-word family (FTS_SPLIT_PHRASES, OR), a hit kept only on a document
+    type of FTS_SPLIT_DOC_TYPES — stored as `sec.fts_split`, a sibling of `sec.fts`. It finds MENTIONS: a proposal, a
+    vote notice and an executed split all match.
 
 This module holds NO http client: every call goes through the getter it is handed (share_basis passes
 `lambda url: share_basis._sec_get(url, http)` — ONE pacer, the generic headers, the `_http` seam the test session
@@ -33,7 +36,19 @@ FTS_ISSUANCE_PHRASES = ("agreed to issue", "issued an aggregate", "private place
                         "securities purchase agreement", "debt conversion", "at-the-market", "exercise of warrants",
                         "subscription agreement")
 FTS_FORMS = ("6-K",)
-FTS_DESC_MAX = 120                  # MINE — chars of an exhibit description kept (display only)
+# ✂️ 2026-11-27 (spec sicheck §3.3, C1) — the 6-K SPLIT-WORD read, stored as `sec.fts_split` (a SIBLING of `sec.fts`;
+# `sec.fts`, FTS_ISSUANCE_PHRASES and read_issuance are not changed). HIS CALL #11 — "off" (or any other word) = no call.
+FTS_SPLIT_WHEN = "on"
+FTS_SPLIT_MODES = ("off", "on")
+# MINE — the phrases the probe gate ADMITTED on 2026-11-27 (9 efts GETs: 3 candidates × BDMD / POM / NXAT, raw answers in
+# tests/fixtures/sec_6k_split_probe_2026_11_27.json): "share consolidation" and "reverse stock split" hit none of the
+# must-NOT filings once FTS_SPLIT_DOC_TYPES is applied; "reverse share split" is OUT (it hits NXAT 10-05's EX-99.2, a
+# warrant exchange). Together they hit the three must-hits BDMD 11-16, POM 10-19, NXAT 11-13.
+FTS_SPLIT_PHRASES = ("share consolidation", "reverse stock split")
+# MINE — a hit counts only on the report itself or an EX-99 exhibit: a contract or instrument exhibit (EX-10, EX-4)
+# carries adjustment boilerplate (BDMD 09-30 matches only in EX-10.1 / EX-10.2).
+FTS_SPLIT_DOC_TYPES = ("6-K", "EX-99")
+FTS_DESC_MAX = 120                 # MINE — chars of an exhibit description kept (display only)
 FTS_TZ = "America/New_York"         # SEC filing dates are Eastern dates
 ACCN_RE = re.compile(r"^\d{10}-\d{2}-\d{6}$")
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -210,6 +225,35 @@ def read_issuance(cik10, since, today, reports, *, get: Callable) -> dict:
     if bad:
         return bad
     out = {"status": "ok", "issuance": by_accession(p["rows"], reports)}
+    if p["total"] > len(p["rows"]):
+        out["cap"] = len(p["rows"])
+    return out
+
+
+def split_on(mode=None) -> bool:
+    """✂️ The split-word switch: True only for the exact word "on" (FTS_SPLIT_WHEN read at call time)."""
+    m = FTS_SPLIT_WHEN if mode is None else mode
+    return m in FTS_SPLIT_MODES and m == FTS_SPLIT_MODES[1]
+
+
+def split_doc_ok(file_type) -> bool:
+    """✂️ A matching document of an allowed type: upper-cased, equal to or starting with one of FTS_SPLIT_DOC_TYPES
+    ("6-K", "6-K/A", "EX-99.1" → True; "EX-10.1", "EX-4.1", None, "" → False)."""
+    if not isinstance(file_type, str) or not file_type.strip():
+        return False
+    t = file_type.strip().upper()
+    return any(t == k or t.startswith(k) for k in FTS_SPLIT_DOC_TYPES)
+
+
+def read_split(cik10, since, today, reports, *, get: Callable) -> dict:
+    """✂️ ONE phrase query (FTS_SPLIT_PHRASES, OR) → {"status": "ok", "rows": [by_accession rows][, "cap": raw rows
+    returned when the total is larger]} | {"status": "failed", "error", "code"}. The raw hit rows are filtered by
+    `split_doc_ok` BEFORE `by_accession`: a filing kept only by a contract exhibit is dropped."""
+    p, bad = _ask(phrase_query(FTS_SPLIT_PHRASES), cik10, since, today, get)
+    if bad:
+        return bad
+    kept = [r for r in p["rows"] if split_doc_ok(r.get("file_type"))]
+    out = {"status": "ok", "rows": by_accession(kept, reports)}
     if p["total"] > len(p["rows"]):
         out["cap"] = len(p["rows"])
     return out

@@ -217,6 +217,9 @@ export type GgChips = {
   /** 💧 2026-11-11 (entry spec §3.6, proposal #4): the served 💧 marker (tab.VOL_DRIED_TEXT, the k3_vol row met) — present only
    *  when the read's k3_vol row is met on a live state; absent → no pill. An indicator: no order, no gate, no push. */
   vol_dried?: GgChipValue;
+  /** 🕐 2026-11-27 (spec sicheck §3.6 D4, K-3): the served `{"text": "as of HH:MM"}` — the row did not qualify on the
+   *  shown pass, so its volume is that old. ABSENT when the row is the shown pass's own → no chip. */
+  row_asof?: GgChipValue;
 };
 
 export type GgRead = {

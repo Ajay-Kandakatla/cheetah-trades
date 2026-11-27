@@ -16,7 +16,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
   EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, EMA_LINE_W,
-  ONE_MIN_CANDLE_DN, ONE_MIN_CANDLE_UP, ONE_MIN_EXT_OPACITY, ONE_MIN_WICK_PX, oneMinBodyWidth, oneMinDpr, VWAP_LINE_W, boldNowLines, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
+  ONE_MIN_CANDLE_DN, ONE_MIN_CANDLE_UP, ONE_MIN_EXT_OPACITY, ONE_MIN_WICK_PX, oneMinBodyWidth, oneMinDpr, VWAP_LINE_W, boldNowLines, gutterWidth, hoverLines, hoverTipWidth, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmAxis, type CmBadge, type CmBand, type CmCurve, type CmLine, type CmMarker, type CmStat, type CmTile,
@@ -150,7 +150,7 @@ const ctxGutterTone = (kind: string): 'zone_demand' | 'zone_supply' | null =>
     : kind === 'board_supply' || kind === 'supply' ? 'zone_supply' : null;
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look, candleLook, volAvg }: {
+  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look, candleLook, volAvg, barMin }: {
     tile: CmTile; height?: number;
     /** 👀 The viewBox width (default PATTERN_CHART_VIEW_W). Gajjala's Watch passes its box's width / GGW_TEXT_SCALE so a
      *  full-width chart keeps its text and markers at their size (2026-11-16: "All the charts are shrinked too much"). */
@@ -206,6 +206,10 @@ export const PatternChart = memo(function PatternChart(
      *  bar (a served average never lifts it) and titles it `volume · tallest bar …`. Columns, the corner label, the
      *  hairline and the price pane are untouched. Absent / `true` → byte-identical. */
     volAvg?: boolean;
+    /** 🕐 2026-11-27 (spec sicheck §3.6 D1): the bar size in minutes (tfBarMin of the served frame) — passed ONLY by the
+     *  🚩 board and 👀 Watch tiles. The hover's first line prints the bar's clock range (`08:05–08:10`, the stamp is the
+     *  bar's END) and the box widens only when that line is longer. Absent → byte-identical. */
+    barMin?: number;
   },
 ) {
   const location = useLocation();
@@ -416,8 +420,8 @@ export const PatternChart = memo(function PatternChart(
   // A pointer in the volume pane is not on a price — no price chip there.
   const hPrice = hover && (!hasVol || hover.y <= H) ? priceAt(hover.y, domain, H, PAD_Y) : null;
   const hBand = hPrice != null ? bandAt(hPrice, bands) : null;
-  const tipLines = hoverLines(hBar);
-  const TIP_W = 104;
+  const tipLines = hoverLines(hBar, barMin);
+  const TIP_W = hoverTipWidth(hBar, barMin);
   const TIP_H = tipLines.length * 11 + 8;
   const tip = hover
     ? tooltipPos(sx(Math.max(hIdx, 0)), hover.y,

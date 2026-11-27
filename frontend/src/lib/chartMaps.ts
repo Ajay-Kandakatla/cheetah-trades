@@ -3213,8 +3213,51 @@ export function tooltipPos(
   return { x: px, y: py };
 }
 
-/** The lines of the hover readout for one bar. Pure so the text is testable. */
-export function hoverLines(bar: CmBar | null | undefined): string[] {
+/** 🕐 2026-11-27 (spec sicheck §3.6 D1; the volume check: "Our chart stamps each bar with its END time, and every
+ *  other chart … stamps it with its START"): the bar size, in minutes, of a served Gajjala frame — '1m' 1, '5m' 5,
+ *  '15m' 15; any other frame (a daily tile, junk, absent) → null = no range. */
+export function tfBarMin(tf: unknown): number | null {
+  return tf === '1m' ? 1 : tf === '5m' ? 5 : tf === '15m' ? 15 : null;
+}
+
+/** The minute-of-day stamp `YYYY-MM-DD HH:MM` (nothing before or after). A date-only stamp never matches. */
+const BAR_STAMP_RE = /^(\d{4}-\d{2}-\d{2}) ([01]\d|2[0-3]):([0-5]\d)$/;
+const MIN_PER_DAY = 24 * 60;
+const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+/** 🕐 The clock range a bar covers, `HH:MM–HH:MM`: the stored stamp is the bar's END, so the start is the stamp minus
+ *  `barMin` minutes (wrapping past midnight — the date shown stays the stamp's). A stamp that is not
+ *  `YYYY-MM-DD HH:MM`, or a `barMin` that is not a positive whole number → null (no range). Display only: the stored
+ *  stamp, the clock axis, the detectors and the ledgers are untouched. */
+export function barRange(t: unknown, barMin: unknown): string | null {
+  if (typeof t !== 'string' || typeof barMin !== 'number' || !Number.isInteger(barMin) || barMin <= 0) return null;
+  const m = BAR_STAMP_RE.exec(t);
+  if (!m) return null;
+  const end = Number(m[2]) * 60 + Number(m[3]);
+  const start = (((end - barMin) % MIN_PER_DAY) + MIN_PER_DAY) % MIN_PER_DAY;
+  return `${hhmm(start)}–${hhmm(end)}`;
+}
+
+/** The hover box's width without a range (today's, unchanged), its text size and its left text inset — the values
+ *  PatternChart drew with before 2026-11-27, named here so the widened box is derived from them, never retyped. */
+export const HOVER_TIP_W = 104;
+export const HOVER_FONT_SIZE = 8.6;
+export const HOVER_TEXT_INSET = 6;
+
+/** 🕐 The hover box's width: exactly HOVER_TIP_W unless line 1 is longer than today's line 1 for the same bar (only a
+ *  range makes it so), then wide enough for that line with HOVER_TEXT_INSET on both sides — never narrower. */
+export function hoverTipWidth(bar: CmBar | null | undefined, barMin?: number): number {
+  const lines = hoverLines(bar, barMin);
+  if (!lines.length) return HOVER_TIP_W;
+  const today = hoverLines(bar)[0];
+  if (lines[0].length <= today.length) return HOVER_TIP_W;
+  return Math.max(HOVER_TIP_W, Math.ceil(textWidth(lines[0], HOVER_FONT_SIZE) + 2 * HOVER_TEXT_INSET));
+}
+
+/** The lines of the hover readout for one bar. Pure so the text is testable.
+ *  🕐 `barMin` (2026-11-27, the Gajjala board and Watch only): line 1 prints the bar's clock RANGE
+ *  (`2026-11-27 08:05–08:10`) when barRange gives one; otherwise line 1 is exactly what it was. Lines 2–4 never change. */
+export function hoverLines(bar: CmBar | null | undefined, barMin?: number): string[] {
   if (!bar) return [];
   const f = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '—');
   // The extended-hours bar carries the AH / pre-market print as its close and
@@ -3227,8 +3270,9 @@ export function hoverLines(bar: CmBar | null | undefined): string[] {
     // and three weeks of September under a finished-looking close is
     // exactly the kind of number this app has been burned by twice.
     : bar.s === 'forming' ? ' · forming' : '';
+  const range = barMin === undefined ? null : barRange(bar.t, barMin);
   return [
-    `${bar.t}${tape}`,
+    range ? `${bar.t.slice(0, 10)} ${range}${tape}` : `${bar.t}${tape}`,
     `O ${f(bar.o)}   H ${f(bar.h)}`,
     `L ${f(bar.l)}   C ${f(bar.c)}`,
     `Vol ${shortVol(bar.v)}`,

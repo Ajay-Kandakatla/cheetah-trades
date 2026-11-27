@@ -151,7 +151,8 @@ def test_rows_are_the_union_of_the_three_groups_in_group_order():
     res, sink, _ = _night(names_fn=_groups(listed=["GMEX", "chwy"], followed=["CHWY", "NCPL"], watch=["DKI", "GMEX"]))
     assert [r["symbol"] for r in sink["rows"]] == ["GMEX", "CHWY", "NCPL", "DKI"]
     assert _row(sink, "GMEX")["groups"] == ["listed", "watch"] and _row(sink, "CHWY")["groups"] == ["listed", "followed"]
-    assert res["names"] == {"listed": 2, "followed": 2, "watch": 2}
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3): + the fourth group, 🚩 entered (none given here)
+    assert res["names"] == {"listed": 2, "followed": 2, "watch": 2, "entered": 0}
 
 
 def test_gmex_and_chwy_contested_ncpl_differs_dki_window_before_and_contested_after_the_widen():
@@ -436,7 +437,13 @@ def test_served_block_equals_the_golden():
     got = json.loads(json.dumps(blk, ensure_ascii=False))
     if os.environ.get("SI_AUDIT_REGEN"):
         GOLDEN.write_text(json.dumps(got, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
-    assert got == json.loads(GOLDEN.read_text(encoding="utf-8"))
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3 + §3.4): `rule_text` names the fourth list (RULE_HEAD) and folds the
+    # si-pure rules sentence — pinned against the live builder; every other key stays byte-equal to the golden
+    gold = json.loads(GOLDEN.read_text(encoding="utf-8"))
+    assert {k: v for k, v in got.items() if k != "rule_text"} == {k: v for k, v in gold.items() if k != "rule_text"}
+    assert got["rule_text"] == SA.rule_text()
+    assert got["rule_text"].startswith("Every night at 20:15 ET the names on the 🩳 list, the 🔭 follow-up, the 👀 Watch "
+                                       "and the 🚩 names checked on entry that day are read again: ")
     assert set(blk) == set(SA.BLOCK_KEYS)
 
 

@@ -228,6 +228,8 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
             if not stub:                                        # 📅 2026-11-26 — no frame read: the whole minute budget
                 _seat(cs, now, session, db=db, dry=dry, auto_prior=auto_prior,
                       left_sec=GC.GG1M_MINUTE_BUDGET_SEC if budget_sec is None else budget_sec, out=out)
+                if not dry:                                     # 🩳 2026-11-27 — after the seat, its OWN try
+                    _si_entry(cs, session, syms)
             return out
         tiles = cs["tiles"] if cs else None
         seen = BLD.seen(tiles, syms)
@@ -336,6 +338,8 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         if not stub:                                            # 📅 2026-11-26 — LAST, on what is left of the minute
             _seat(cs, now, session, db=db, dry=dry, auto_prior=auto_prior,
                   left_sec=max(0.0, budget - (RUN._utc(deps.wall()) - w0).total_seconds()), out=out)
+        if not dry and not stub:                                # 🩳 2026-11-27 — LAST, after the seat, its OWN try
+            _si_entry(cs, session, syms)
         if rest_out is not None:
             log.info("gajjala watch: REST — %d failed, %d re-read after %.1f s, %d recovered, %d rang (%s)",
                      int(rest_out.get("failed") or 0), int(rest_out.get("retried") or 0),
@@ -365,6 +369,19 @@ def _seat(cs, now, session, *, db, dry, auto_prior, left_sec, out) -> None:
                                             "wall_s": round(time.monotonic() - t0, 3), **block})
     except Exception as exc:                                    # noqa: BLE001 — the minute keeps its answer
         log.warning("gajjala watch 📅: runners step failed: %s", type(exc).__name__)
+
+
+def _si_entry(cs, session, syms) -> None:
+    """🩳 2026-11-27 (Ajay "Anytime something is in our Gajjalas we need to initiate a flow checking these values"; SPEC
+    sicheck §3.5) — the on-entry SI source check queue, in its OWN try, at the END of the iteration (after `_seat`):
+    his + 🤖 auto + ✅ all-rules names (`syms`) + the 📅 runner seats → short_interest.entry_check.enqueue under the 👀
+    source (imported lazily HERE; the row's `_id` dedupes per session). Never a dry run, never the stub (the caller's
+    rule). No key of `out`, no state doc key; a raise leaves the iteration's answer intact."""
+    try:
+        from short_interest import entry_check as EC         # the plain import, lazily inside the try
+        EC.enqueue(syms + RUNSEAT.current_symbols(cs, session), session.isoformat(), EC.SRC_WATCH)
+    except Exception as exc:                                    # noqa: BLE001 — the minute keeps its answer
+        log.warning("gajjala watch 🩳: si entry queue failed: %s", type(exc).__name__)
 
 
 def _rules_known(cs, session, taken: set) -> list:

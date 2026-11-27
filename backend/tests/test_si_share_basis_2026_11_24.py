@@ -268,9 +268,11 @@ def test_smtk_happy_path_builds_the_frozen_doc(_iso):
                           "weighted_shares": None, "read_at": NOW_ISO, "error": None, "error_at": None, "strikes": 0}
     sec = doc["sec"]
     # 2026-11-26 sishares §3.1: + `fts` (SMTK files no 6-K in the window → "none_6k", nothing asked)
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3, K-1): + `fts_split`, the split-word sibling (no 6-K → "none_6k", no call)
     assert set(sec) == {"status", "read_at", "error", "error_at", "strikes", "since", "top_accn", "covers", "filings",
-                        "fts"}
+                        "fts", "fts_split"}
     assert sec["fts"]["status"] == "none_6k" and http.hits("efts") == []
+    assert sec["fts_split"]["status"] == "none_6k" and sec["fts_split"]["since"] == "2026-10-15"
     assert sec["status"] == "ok" and sec["read_at"] == NOW_ISO and sec["strikes"] == 0 and sec["error"] is None
     assert sec["since"] == "2026-10-15"                       # [C2] reaches back to prev_settlement_date
     assert sec["top_accn"] == "0001104659-26-127038"          # the 11-13 10-Q

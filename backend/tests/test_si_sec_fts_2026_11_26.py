@@ -49,10 +49,20 @@ class Resp:
         return copy.deepcopy(self._body)
 
 
-class HTTP:
-    """requests.get-like; routes by host; efts by the query kind (phrase / number)."""
+EMPTY_HITS = {"hits": {"total": {"value": 0, "relation": "eq"}, "hits": []}}
 
-    def __init__(self, sub=None, phrase=None, number=None, ref=None, efts_code=None, number_code=None):
+
+def _is_split_q(q: str) -> bool:
+    """PIN MOVED 2026-11-27 (spec sicheck §3.3): the ✂️ split-word query is a third efts kind."""
+    return any('"%s"' % p in (q or "") for p in SF.FTS_SPLIT_PHRASES)
+
+
+class HTTP:
+    """requests.get-like; routes by host; efts by the query kind (phrase / number / split).
+    PIN MOVED 2026-11-27 (spec sicheck §3.3): the split-word query answers `split` (default: no hit); `efts("phrase")`
+    is the issuance query only; `efts_code` applies to every non-number query."""
+
+    def __init__(self, sub=None, phrase=None, number=None, ref=None, efts_code=None, number_code=None, split=None):
         self.sub = sub if sub is not None else copy.deepcopy(SUB)
         self.phrase = phrase if phrase is not None else FTS["phrase"]
         self.number = number if number is not None else FTS["number"]
@@ -60,6 +70,7 @@ class HTTP:
                                                             "share_class_shares_outstanding": None,
                                                             "weighted_shares_outstanding": 35966137}}
         self.efts_code, self.number_code = efts_code, number_code
+        self.split = split if split is not None else copy.deepcopy(EMPTY_HITS)
         self.calls = []
 
     def __call__(self, url, params=None, headers=None, timeout=None, **kw):
@@ -77,7 +88,9 @@ class HTTP:
             code = self.number_code if is_num else self.efts_code
             if code is not None:
                 return Resp(code, {"error": "x"})
-            return Resp(200, self.number if is_num else self.phrase)
+            if is_num:
+                return Resp(200, self.number)
+            return Resp(200, self.split if _is_split_q(q.get("q", "")) else self.phrase)
         raise AssertionError("unexpected host " + u.netloc)
 
     def efts(self, kind=None):
@@ -85,7 +98,10 @@ class HTTP:
         if kind == "number":
             return [c for c in out if c["q"]["q"].strip('"').replace(",", "").isdigit()]
         if kind == "phrase":
-            return [c for c in out if not c["q"]["q"].strip('"').replace(",", "").isdigit()]
+            return [c for c in out if not c["q"]["q"].strip('"').replace(",", "").isdigit()
+                    and not _is_split_q(c["q"]["q"])]
+        if kind == "split":
+            return [c for c in out if _is_split_q(c["q"]["q"])]
         return out
 
     def hosts(self):
@@ -198,6 +214,7 @@ def _iso(monkeypatch):
     monkeypatch.setattr(SB, "_sec_wait", lambda *a, **k: waits.append(1))
     monkeypatch.setattr(SC, "_key", lambda: "TESTKEY")
     monkeypatch.setattr(SF, "FTS_WHEN", "on")
+    monkeypatch.setattr(SF, "FTS_SPLIT_WHEN", "on")             # PIN MOVED 2026-11-27 (spec sicheck §3.3)
     return waits
 
 
@@ -378,7 +395,8 @@ def test_every_efts_call_goes_through_the_pacer_with_the_generic_headers(_iso):
     http = HTTP()
     run(http=http)
     sec_like = [c for c in http.calls if c["host"] in ("data.sec.gov", "efts.sec.gov")]
-    assert len(http.efts()) == 2 and len(_iso) == len(sec_like)          # every SEC / efts GET paced
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3): 2 → 3 efts GETs — the ✂️ split-word read is one more
+    assert len(http.efts()) == 3 and len(_iso) == len(sec_like)          # every SEC / efts GET paced
     for c in http.efts():
         assert c["headers"] == SB.SB_HTTP_HEADERS and not c["params"]
     assert "@" not in json.dumps(SB.SB_HTTP_HEADERS)
@@ -412,7 +430,10 @@ def test_NEGATIVE_switched_off_asks_nothing(_iso, monkeypatch, mode):
     doc = run(http=http, growth=g)
     fts = doc["sec"]["fts"]
     assert fts["status"] == "off" and fts["read_at"] is None and fts["issuance"] == [] and fts["number"] is None
-    assert http.efts() == [] and g.calls == 0
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3): FTS_WHEN switches the issuance + number reads only; the ✂️ split-word
+    # read has its own switch (FTS_SPLIT_WHEN) and is still asked once
+    assert http.efts("phrase") == [] and http.efts("number") == [] and g.calls == 0
+    assert len(http.efts("split")) == 1 and doc["sec"]["fts_split"]["status"] == "ok"
     assert not any(f.get("fts") for f in doc["sec"]["filings"])
     assert doc["sec"]["status"] == "none"                                # data.sec.gov still read
 
@@ -460,7 +481,8 @@ def test_a_no_hit_on_a_fresh_6k_is_asked_again_until_two_days_after(_iso):
     run(db, h3, now=datetime(2026, 11, 27, 15, tzinfo=timezone.utc))   # 11-27: two days after → asked again ONCE
     h4 = HTTP(sub=sub, phrase=empty, number=empty)
     run(db, h4, now=datetime(2026, 11, 27, 17, tzinfo=timezone.utc))   # read 11-27 > 11-26 → held
-    assert len(h3.efts()) == 2 and h4.efts() == []
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3): h3 asks the ✂️ split-word read too (its no-hit read is as fresh) → 3
+    assert len(h3.efts()) == 3 and h4.efts() == []
 
 
 def test_efts_403_stops_only_the_full_text_and_is_persisted(_iso):
@@ -483,7 +505,7 @@ def test_efts_403_stops_only_the_full_text_and_is_persisted(_iso):
     # past the stop → asked again
     h3 = HTTP()
     run(db, h3, now=NOW + timedelta(minutes=16))
-    assert len(h3.efts()) == 2
+    assert len(h3.efts()) == 3                                      # PIN MOVED 2026-11-27 (sicheck §3.3): + the split read
 
 
 def test_efts_429_on_the_number_query_stops_too(_iso):
@@ -808,7 +830,8 @@ def test_an_error_left_by_the_number_read_re_asks_the_phrase_next_pass(_iso):
 
 def test_the_cli_summary_says_the_full_text_read(_iso):
     doc = run()
-    assert SB._summary("POM", doc).endswith("| fts ok, 1 issuance 6-K, number 1 hit")
+    # PIN MOVED 2026-11-27 (spec sicheck §3.3): the ✂️ split-word read is printed after it
+    assert SB._summary("POM", doc).endswith("| fts ok, 1 issuance 6-K, number 1 hit | split words ok, 0 6-K")
     off = copy.deepcopy(doc)
     off["sec"].pop("fts")
     assert "fts" not in SB._summary("POM", off)                     # NEGATIVE a doc with no fts keeps the old line

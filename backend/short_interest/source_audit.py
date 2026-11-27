@@ -15,8 +15,11 @@ What this module is (spec floatguard rev 2 §3.6, package be-audit): once a nigh
      source_check.audit_row per name;
   4. writes ONE gajjala_state doc per night (STATE_FMT) + the LATEST_ID pointer, through the store's set_state only.
 The three groups: 🩳 = the names the 🩳 sub listed tonight (the 🏁 session doc), 🔭 = the follow-up names
-(si_follow.tracked, pins included), 👀 = the Watch names (gajjala_watch.run_rules.watch_names). Each group is read in its
-own try: a group that cannot be read is named in `faults` and the others stand.
+(si_follow.tracked, pins included), 👀 = the Watch names (gajjala_watch.run_rules.watch_names), and (2026-11-27, spec
+sicheck §3.3) 🚩 = the names the 🚩 pass checked on entry today (entry_check.entered(session, source=SRC_GAJJALA) — a
+👀-only entry row is never listed under 🚩; LAST, so the night's budget falls on it first). Each group is read in its
+own try: a group that cannot be read is named in `faults` and the others stand. Each row also says `flagged` (its chip
+carries source_check.SHORT_SOURCES); `_word` and `_sort_key` treat it like `contested`.
 
 The dry run (`write=False`, `--dry`) writes NOTHING anywhere: the fetched second floats (and, with `--widen`, the wider
 splits reads) are laid over the stored docs IN MEMORY (read.si_map(basis_over=…)) — the same builder share_basis uses
@@ -51,8 +54,8 @@ ET = ZoneInfo("America/New_York")
 STATE_FMT = "si_source_audit|{date}"      # TRANSPORT — one gajjala_state doc per night (chart_maps.gajjala.store.STATE)
 LATEST_ID = "si_source_audit_latest"      # TRANSPORT — {"date", "at"}
 VERSION = 1
-GROUPS = ("listed", "followed", "watch")
-GROUP_WORDS = {"listed": "🩳", "followed": "🔭", "watch": "👀"}
+GROUPS = ("listed", "followed", "watch", "entered")
+GROUP_WORDS = {"listed": "🩳", "followed": "🔭", "watch": "👀", "entered": "🚩"}
 SCOPES = ("groups", "all")
 BLOCK_KEYS = ("title", "summary_text", "asof_text", "heads", "rows", "shown_text", "rule_label", "rule_text",
               "honesty", "fault_text", "empty_text", "n", "n_differ", "n_contested", "n_window")
@@ -69,7 +72,8 @@ EMPTY_TEXT = "No audit is on file yet — the {at} ET night writes the first one
 ASOF_TEXT = "checked nightly at {at} ET · last {md}"
 SHOWN_TEXT = "Showing the first {lim} rows of {n} — every row is counted above."
 RULE_LABEL = "ⓘ how this is checked"
-RULE_HEAD = ("Every night at {at} ET the names on the 🩳 list, the 🔭 follow-up and the 👀 Watch are read again: the "
+RULE_HEAD = ("Every night at {at} ET the names on the 🩳 list, the 🔭 follow-up, the 👀 Watch and the 🚩 names checked on "
+             "entry that day are read again: the "
              "float the chip divides by ({y}'s, with its read date) beside {m}'s free float (its effective date), "
              "split-adjusted with the splits on file. A second float dated before the splits on file is not compared "
              "until the splits read reaches back to its date. ")
@@ -216,8 +220,8 @@ class _CountStore:
 # ───────────────────────────────────────────── the three groups
 def names(st, db, now) -> dict:
     """{"listed": tonight's 🩳 session-doc symbols, "followed": si_follow.tracked (pins included), "watch":
-    run_rules.watch_names, "faults": [group…]} — each group in its OWN try; a group that cannot be read is empty and
-    named in faults, the others stand."""
+    run_rules.watch_names, "entered": entry_check.entered(session, source=SRC_GAJJALA), "faults": [group…]} — each
+    group in its OWN try; a group that cannot be read is empty and named in faults, the others stand."""
     out = {g: [] for g in GROUPS}
     out["faults"] = []
     try:
@@ -252,6 +256,16 @@ def names(st, db, now) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("si source audit: the watch names failed: %s", type(exc).__name__)
         out["faults"].append("watch")
+    # 🚩 2026-11-27 (spec sicheck §3.3) — the names the 🚩 pass checked on entry; a 👀-only row is not one of them
+    if session is None:
+        out["faults"].append("entered")
+    else:
+        try:
+            from short_interest import entry_check as EC
+            out["entered"] = _up(EC.entered(session.isoformat(), db=db, source=EC.SRC_GAJJALA, strict=True))
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("si source audit: the entered names failed: %s", type(exc).__name__)
+            out["faults"].append("entered")
     return out
 
 
@@ -405,6 +419,7 @@ def audit_night(now, *, store=None, db=None, names_fn=None, fetch=None, refresh=
         for s in row_names:
             r = SCK.audit_row(blocks.get(s), bdocs.get(s), groups_of.get(s, []))
             r["symbol"] = s
+            r["flagged"] = SCK.SHORT_SOURCES in (r.get("chip") or "")      # 🚩 2026-11-27 — the chip carries the flag
             rows.append(r)
             texts[s] = BM.share_counts_text(r["counts"], bdocs.get(s)) if r["counts"] else None
         out["rows"] = len(rows)
@@ -523,7 +538,7 @@ def _word(r) -> str:
     w = SR.TIER_WORDS.get(t) if t in SR.TIER_WORDS else None
     if r.get("held") and w:
         return WORD_HELD % (w, SR.TIER_WORDS[SR.TIER_EXTREME])
-    if r.get("contested") and w:
+    if (r.get("contested") or r.get("flagged")) and w:        # 2026-11-27: a flagged chip reads like a contested one
         return WORD_CONTESTED % w
     return w or DASH
 
@@ -558,7 +573,7 @@ def cells(r, counts_text=None) -> dict:
 
 def _sort_key(r):
     rel = r.get("float_rel")
-    return (0 if r.get("contested") else 1, 0 if _is_pct(rel) else 1, -(rel if _is_pct(rel) else 0),
+    return (0 if (r.get("contested") or r.get("flagged")) else 1, 0 if _is_pct(rel) else 1, -(rel if _is_pct(rel) else 0),
             str(r.get("symbol") or ""))
 
 

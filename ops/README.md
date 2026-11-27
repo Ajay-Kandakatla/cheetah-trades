@@ -53,7 +53,7 @@ watchdog shows a macOS notification on the first failed try and retries every
 | `CRON_BUSY_ALERT_SEC` | 30 min | a job keeps cron busy this long → one `cron_drift_busy` |
 | `CRON_RESYNC_MIN_GAP_SEC` / `CRON_RESYNC_MAX_PER_DAY` | 10 min / 12 | guards on `docker restart cheetah-market-app-cron-1`; the cap holds only under `CRON_RESYNC_CAP_EXEMPT_SEC` of drift |
 | `CRON_RESYNC_CAP_EXEMPT_SEC` | 600 | a drift this large re-syncs past the daily cap (2026-10-21); the gap, the busy wait and the pause file still hold |
-| `CRON_DETACHED_CHILD_ARGS` | 4 argv | the Gajjala pass's detached children (`run_1m --loop`, `luk.run --child`, `run --at-bar-close`, and since 2026-11-15 the 👀 watch loop `gajjala_watch.loop --loop`): not a job in flight, so cron counts as idle while only they run (2026-11-09) |
+| `CRON_DETACHED_CHILD_ARGS` | 5 argv | the Gajjala pass's detached children (`run_1m --loop`, `luk.run --child`, `run --at-bar-close`, since 2026-11-15 the 👀 watch loop `gajjala_watch.loop --loop`, and since 2026-11-27 the 🩳 on-entry SI check `short_interest.entry_check --child`): not a job in flight, so cron counts as idle while only they run (2026-11-09) |
 | `CRON_STOP_GRACE_SEC` / `CRON_RESTART_TIMEOUT_SEC` | 120 s / 150 s | `docker restart -t 120` (SIGTERM, SIGKILL only after 120 s) / the CLI call's timeout |
 | `CRON_EDGE_LEAD_SEC` / `CRON_EDGE_TRAIL_SEC` | 3 / 3 | no restart in second 57–59 or 0–3 of a minute (per-minute jobs start at :00) |
 
@@ -122,12 +122,18 @@ What the watchdog does, each run:
    the watch loop (one minute read per watched name per minute left in the slot;
    the next pass re-spawns it; a cross on a lost minute is never sent late). The
    watch's `--build` child runs in the api container, never the cron one, and is
-   NOT exempt. The pass itself
+   NOT exempt. Since 2026-11-27 the pass and the watch loop also spawn the 🩳
+   on-entry SI source check `python -m short_interest.entry_check --child` (a
+   queue of newly listed / watched names; minutes at 04:01 with about 95 names,
+   seconds after). A restart while it runs costs at most the names of one run:
+   its lease runs out and the next claim re-queues its `running` rows. Until the
+   host tree has this list, that child reads as a job while it runs. The same
+   module with any other flag (`--show`, `--enqueue`) is a job. The pass itself
    (`market_hours.gate chart_maps.gajjala.run`), an `--on-demand` run, a shell
    wrapper, an extra flag, a `docker exec` re-run and any other argv stay busy;
    the pause file, `cron_resync: false`, the gap and the small-drift cap hold as
    before. The `cron_resynced` line lists the children that were running
-   (`detached`). Tests C36–C39c; C38 pins the four argv to the backend's own
+   (`detached`). Tests C36–C39c; C38 pins the five argv to the backend's own
    `ARGV_LOOP` / `ARGV_CHILD` constants, so a renamed child fails the suite.
 4. Idle: `docker restart -t 120 cheetah-market-app-cron-1` (150 s timeout), never
    in second 57–59 or 0–3 of a wall-clock minute (read just before the restart;

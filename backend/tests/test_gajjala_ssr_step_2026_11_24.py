@@ -357,7 +357,10 @@ def test_NEGATIVE_the_pass_never_imports_the_outside_readers():
     assert "ssr_lists" not in src and "ssr_corp" not in src              # an outside call never rides the pass
     tree = ast.parse(src)
     froms = [n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module == "short_interest"]
-    assert [[a.name for a in n.names] for n in froms] == [["ssr"]]
+    # PIN MOVED 2026-11-27 (spec sicheck §3.5) — WIDENED 2026-11-27 (Ajay: "Anytime something is in our Gajjalas we
+    # need to initiate a flow checking these values") — the on-entry check ENQUEUE only; entry_check feeds no rule,
+    # gate, rung, sort or push trigger. Was [["ssr"]].
+    assert [[a.name for a in n.names] for n in froms] == [["entry_check"], ["ssr"]]
     assert "ssr" not in inspect.getsource(RUN.dry_deps)
     assert "ssr" not in inspect.getsource(RUN.main)                      # main's on-demand Deps is not given it
     assert "ssr" not in inspect.getsource(RUN.run_on_demand)
