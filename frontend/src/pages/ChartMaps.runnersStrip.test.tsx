@@ -110,12 +110,6 @@ describe('📅 the continuous-chart host rides showRunners', () => {
     await findByTestId('ggrc-stub');
     expect(getByTestId('cm-hot-wrap').nextElementSibling).toBe(getByTestId('ggr-strip'));
   });
-  it('NEGATIVE: ?tab=gajjala_watch → no host (an open draws nothing)', async () => {
-    owner();
-    const { queryByTestId } = await mount('gajjala_watch');
-    await openChart();
-    expect(queryByTestId('ggrc-stub')).toBeNull();
-  });
   it('NEGATIVE: a loaded co-owner on 🚩 → no host', async () => {
     coOwner();
     const { queryByTestId } = await mount('gajjala');
@@ -128,15 +122,15 @@ describe('📅 the continuous-chart host rides showRunners', () => {
     await openChart();
     expect(queryByTestId('ggrc-stub')).toBeNull();
   });
-  it('NEGATIVE: ChartMaps.tsx mounts <GgRunChartHost exactly once, behind showRunners, after the strip; no new flag', async () => {
+  it('NEGATIVE: ChartMaps.tsx mounts <GgRunChartHost exactly once, behind showRunHost (2026-11-26: 🚩 + 👀 Watch, spec watchrun §3.5), after the strip', async () => {
     const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
     const fs: any = mod?.default || mod;
     const root = (globalThis as any).process?.cwd?.() || '.';
     const src: string = fs.readFileSync(`${root}/src/pages/ChartMaps.tsx`, 'utf8');
     expect(src.split('<GgRunChartHost').length - 1).toBe(1);
-    expect(src).toContain('{showRunners && <GgRunChartHost />}');
+    expect(src).toContain('{showRunHost && <GgRunChartHost />}');
     expect(src.indexOf('{showRunners && <GgRunnersStrip />}')).toBeGreaterThan(-1);
-    expect(src.indexOf('{showRunners && <GgRunChartHost />}')).toBeGreaterThan(src.indexOf('{showRunners && <GgRunnersStrip />}'));
+    expect(src.indexOf('{showRunHost && <GgRunChartHost />}')).toBeGreaterThan(src.indexOf('{showRunners && <GgRunnersStrip />}'));
     expect(src).not.toMatch(/showRunChart/);
     expect(src).not.toMatch(/from '\.\.\/components\/GgRunChart'/);
     expect(src).not.toMatch(/lightweight-charts/);

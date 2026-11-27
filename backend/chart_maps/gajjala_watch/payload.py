@@ -200,6 +200,7 @@ FLOAT_MODULE = "chart_maps.gajjala_watch.float_read"                            
 SECTIONS_MODULE = "chart_maps.gajjala_watch.sections"                                 # 🗂 2026-11-22 (spec watch_org)
 # ✅ all rules met (2026-11-24, spec watchall rev 2 §3.5 — Ajay, verbatim: "Anytime stocks qualify all his rules should be
 # auto added to the Watch list so I can keep tracking them later"). Every word MINE (HIS CALL #11); every number a {} field.
+RUNSEAT_MODULE = C.RUNSEAT_MODULE                                                      # 📅 2026-11-26 — imported LAZILY
 RULES_MODULE = "chart_maps.gajjala_watch.allrules"                                    # imported LAZILY (sys.modules)
 RULES_ROW_TEXT = "{tag} all rules · {sources} · {setup}"
 RULES_ADDED_TEXT = "first met {first} · last met {last}"
@@ -1011,6 +1012,26 @@ def rules_section(cs: dict, symbols: list, siso: str, session, now: datetime, *,
         return {}, None, {}, None
 
 
+# ── 📅 Runners kept two weeks (2026-11-26, spec watchrun §3.3) ─────────────────────────────────────────────────────
+def runners_section(cs, session, now: datetime, names: list) -> tuple:
+    """(the board's `runners` roster block or None, {FOLD: the row's `runner` tag}) — runseat (imported LAZILY,
+    C.RUNSEAT_MODULE) reads its one doc. None roster = no key on the board. Any fault → (None, {}) and ONE log line;
+    the board answers. Display only — nothing gates, rings or adds a tile on any of this."""
+    if not C.RUNNERS_SEAT_ON:
+        return None, {}
+    try:
+        RS = importlib.import_module(RUNSEAT_MODULE)
+        sess = session if isinstance(session, date) else date.fromisoformat(str(session)[:10])
+        if isinstance(sess, datetime):
+            sess = sess.date()
+        roster = RS.roster(cs, sess, now, on_watch=list(names))
+        tag_by = RS.tags_for(cs, sess) if roster is not None and roster.get("state") == "ok" else {}
+        return roster, tag_by
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: runners roster unavailable: %s", type(exc).__name__)
+        return None, {}
+
+
 # ── 🎯 A+ tag (2026-11-17, spec ggwaplus) ───────────────────────────────────────────────────────────────────────────
 # Ajay 2026-11-17 ~12:58 ET, verbatim: "Also add an A+ tag on watch list as they become A+". Every row (his AND 🤖) carries
 # `aplus` when ANY Gajjala board's stored read of that name THIS session has a setup in tab.MARKED_STATES. Display only:
@@ -1271,6 +1292,13 @@ def _build(now: datetime, db, only) -> dict:
         else:
             for r in rows:
                 r["org"] = None
+    runners_roster = None                                    # 📅 2026-11-26 — the full board only (never the `only` poll)
+    if only is None and C.RUNNERS_SEAT_ON:
+        runners_roster, tag_by = runners_section(cs, session, now, names)
+        for r in rows:
+            t = tag_by.get(CO.fold(r["symbol"]))
+            if t is not None:
+                r["runner"] = t                                # the key is ABSENT on every other row
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
     # 🔁 2026-11-18: at the cap ➕ replaces the oldest he added that is not 🎯 A+; only when EVERY one of his names is A+
     # (by THIS board's own tag read — the full board only, never a pending poll) is the add refused → `full_blocked`.
@@ -1289,6 +1317,8 @@ def _build(now: datetime, db, only) -> dict:
     if C.RULES_ON:
         out["rules"] = rules_out                             # ✅ 2026-11-24 — absent while C.RULES_ON is False
     _broker_section(out, state_doc, siso)   # 🚫 2026-11-19
+    if runners_roster is not None:
+        out["runners"] = runners_roster                       # 📅 2026-11-26 — absent when nothing is seated
     if any(r["state"] == "pending" for r in rows):
         out["pending_poll_sec"] = GC.ON_DEMAND_POLL_SEC
         out["pending_wait_max_sec"] = GC.ON_DEMAND_WAIT_MAX_SEC

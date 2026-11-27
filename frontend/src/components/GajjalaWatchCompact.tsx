@@ -17,7 +17,12 @@
  *
  * 📐 2026-11-23 (vwapzones spec §3.9) — Ajay: "can you add vwap and supply demand zone in the daily time frame on the
  * watch list please". GgwLevelsLine = the row's served daily-zones line (text verbatim, hover = the served title); the
- * plain Tile mounts it under the head, GgwDrawer mounts it here on a compact tile (once per tile either way). */
+ * plain Tile mounts it under the head, GgwDrawer mounts it here on a compact tile (once per tile either way).
+ *
+ * 📅 2026-11-26 (spec watchrun §3.5) — Ajay: "Ok then add them to our watch list and track them please.. I know he tracks
+ * them for two weeks sometimes.. before he discards them..". A name seated on 📅 Runners that also has a tile carries the
+ * served `row.runner`: GgwProvLine draws its two served chips (day · seat, hover = the served seat title) after the when
+ * chip; GgwDrawer prints the served seat title (a phone has no hover). A row without `runner` draws nothing new. */
 import type { GgwRow } from '../lib/gajjalaWatch';
 import { GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
 
@@ -55,13 +60,21 @@ export function GgwProvLine({ row }: { row: GgwRow }) {
   const when = o?.when ?? null;
   const ranText = o?.ran?.text ?? null;
   const past = o?.past_winner ?? null;
-  if (!when && !ranText && !past) return null;
+  const run = row.runner ?? null;
+  if (!when && !ranText && !past && !run) return null;
   const sym = row.symbol;
   return (
     <div className="ggw-prov" data-testid={`ggw-prov-${sym}`}>
       {when ? (
         <span className="ggw-chip ggw-when" data-testid={`ggw-when-${sym}`} data-bucket={when.bucket ?? undefined}
               title={when.title ?? undefined}>{when.text}</span>
+      ) : null}
+      {run?.day_text ? (
+        <span className="ggw-chip ggw-runner-day" data-testid={`ggw-runner-day-${sym}`}>{run.day_text}</span>
+      ) : null}
+      {run?.seat_text ? (
+        <span className="ggw-chip ggw-runner-seat" data-testid={`ggw-runner-seat-${sym}`}
+              title={run.seat_title ?? undefined}>{run.seat_text}</span>
       ) : null}
       {ranText ? (
         <span className="ggw-chip ggw-ran" data-testid={`ggw-ran-${sym}`} title={o?.ran?.title ?? undefined}>{ranText}</span>
@@ -92,6 +105,7 @@ export function GgwDrawer({ row, open, tags, domId }: { row: GgwRow; open: boole
       {row.aplus?.title ? <p className="ggw-line" data-testid="ggw-aplus-title">{row.aplus.title}</p> : null}
       {o?.when?.title ? <p className="ggw-line" data-testid="ggw-when-title">{o.when.title}</p> : null}
       {o?.ran?.title ? <p className="ggw-line" data-testid="ggw-ran-title">{o.ran.title}</p> : null}
+      {row.runner?.seat_title ? <p className="ggw-line" data-testid="ggw-runner-title">{row.runner.seat_title}</p> : null}
       {past ? [...(past.items.length ? past.items : [past.text]), ...(past.more ? [past.more] : [])].map((t, i) => (
         <p key={`p${i}`} className="ggw-line" data-testid="ggw-past-line">{t}</p>
       )) : null}

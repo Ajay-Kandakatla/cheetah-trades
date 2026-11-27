@@ -1,0 +1,40 @@
+/* 📅 2026-11-26 (spec watchrun §3.5) — the 📅 Runners roster under the 👀 Watch tiles. Ajay: "Ok then add them to our watch
+ * list and track them please.. I know he tracks them for two weeks sometimes.. before he discards them..". One light line
+ * per seated runner (never a live tile). Phone 430 px: every row wraps and carries min-width 0, every text child wraps,
+ * the record tables scroll sideways inside their OWN box — nothing on this roster has a fixed width. */
+.ggw-rr {
+  margin: 10px 0 4px; padding: 6px 0 0; border-top: 1px solid var(--rule, #262b34); min-width: 0; max-width: 100%;
+  box-sizing: border-box; font-size: 0.8rem; overflow-wrap: anywhere;
+}
+.ggw-rr-headline { display: flex; flex-wrap: wrap; gap: 0.3rem 0.5rem; align-items: baseline; min-width: 0; }
+.ggw-rr-head-text { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.ggw-rr-head-btn {
+  font: inherit; font-weight: 700; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+  text-align: left; min-width: 0; overflow-wrap: anywhere;
+}
+.ggw-rr-info { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.ggw-rr-info > summary { cursor: pointer; list-style: none; display: inline; }
+.ggw-rr-info > summary::-webkit-details-marker { display: none; }
+.ggw-rr-info[open] { flex: 1 1 100%; }
+.ggw-rr-rows { list-style: none; margin: 4px 0 0; padding: 0; min-width: 0; }
+.ggw-rr-row {
+  display: flex; flex-wrap: wrap; gap: 0.25rem 0.4rem; align-items: center; min-width: 0; padding: 2px 0;
+  border-bottom: 1px dashed var(--rule, #262b34); overflow-wrap: anywhere;
+}
+.ggw-rr-row > * { min-width: 0; }
+.ggw-rr-sym {
+  font: inherit; font-weight: 700; color: var(--accent, #c2ef50); background: none; border: 0; padding: 0; cursor: pointer;
+}
+.ggw-rr-day, .ggw-rr-seat, .ggw-rr-broker { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.ggw-rr-onwatch { color: var(--text-muted, #8795a0); overflow-wrap: anywhere; min-width: 0; }
+.ggw-rr-x, .ggw-rr-hist-btn { flex: none; }
+.ggw-rr-x { margin-left: auto; }
+.ggw-rr-hist { flex: 1 1 100%; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.ggw-rr-more {
+  font: inherit; color: var(--accent, #c2ef50); background: none; border: 0; padding: 2px 0; cursor: pointer;
+}
+.ggw-rr .ggw-line { margin: 2px 0; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.ggw-rr-hint, .ggw-rr-not-seated, .ggw-rr-track-note, .ggw-rr-hist-note, .ggw-rr-doc-base { color: var(--text-muted, #8795a0); }
+.ggw-rr-scroll { overflow-x: auto; max-width: 100%; min-width: 0; -webkit-overflow-scrolling: touch; }
+.ggw-rr-table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ggw-rr-table th, .ggw-rr-table td { padding: 1px 6px; text-align: left; border-bottom: 1px solid var(--rule, #262b34); }

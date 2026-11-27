@@ -1,0 +1,298 @@
+{
+ "_source": "hand-copied from spec watchrun rev 2 §3.1 words / §3.2 roster + tag_of shapes / §3.4 payload shapes (WP-1 / WP-2 not built when this was written) — re-copy from a live GET once deployed",
+ "runners": {
+  "state": "ok",
+  "title": "📅 Runners",
+  "text": "📅 Runners · 9",
+  "n": 9,
+  "keep_sessions": 10,
+  "hint": "Every name on Gajjala's scanner that ran. With no 🚩 A+ that session: a 09:30–20:00 ET high of +40% or more vs the prior close, the peak not premarket. With a 🚩 A+: a high of +30% or more above the A+ trigger after it rang, same session to 20:00 ET. Seated the next session, kept 10 sessions from the run day; a new qualifying day restarts the count. 🚫 names last. It leaves after day 10 or on its own ×. Tap a name for its chart, ➕ to watch it live. This list never rings. UNMEASURED. 2 ran but are not seated — tap for why. 1 not checked yet.",
+  "folded_default": true,
+  "fold_at": 8,
+  "more_text": "+{n} more",
+  "less_text": "show less",
+  "track_path": "/chart-maps/gajjala-watch/runners/track",
+  "not_seated": [
+   {
+    "symbol": "HZN",
+    "session": "2026-11-16",
+    "why": "no_prior_bar",
+    "text": "HZN 2026-11-16: no daily bar before that session (a first session under this ticker) — the prior close is not a traded close."
+   },
+   {
+    "symbol": "SRTM",
+    "session": "2026-11-20",
+    "why": "aplus_split",
+    "text": "SRTM: a split on 2026-11-23 sits between its 🚩 A+ (2026-11-20) and the day its 1-minute bars were read — the trigger and the bars are on different share counts. Not measured."
+   }
+  ],
+  "rows": [
+   {
+    "symbol": "BGLC",
+    "day_n": 2,
+    "day_text": "📅 day 2 of 10",
+    "seat_text": "+176% day",
+    "seat_title": "Ran 2026-11-25: 09:30–20:00 ET high +176% vs the prior close, peak 11:20 ET, not premarket. Kept 10 sessions, through 2026-12-09.",
+    "rule": "day",
+    "run_day": "2026-11-25",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove BGLC from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "POM",
+    "day_n": 2,
+    "day_text": "📅 day 2 of 10",
+    "seat_text": "+75% day",
+    "seat_title": "Ran 2026-11-25: 09:30–20:00 ET high +75% vs the prior close, peak 19:45 ET, not premarket. Kept 10 sessions, through 2026-12-09.",
+    "rule": "day",
+    "run_day": "2026-11-25",
+    "broker_text": null,
+    "on_watch": true,
+    "on_watch_text": "on your Watch above",
+    "remove_title": "Remove POM from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "GLXG",
+    "day_n": 2,
+    "day_text": "📅 day 2 of 10",
+    "seat_text": "🎯 +41% from A+",
+    "seat_title": "🎯 A+ rang 2026-11-24 17:01 ET at 1.20: high 1.698 at 10:12 ET on 2026-11-25 = +41.5% above the trigger (09:45–20:00 ET). Kept 10 sessions, through 2026-12-09.",
+    "rule": "aplus",
+    "run_day": "2026-11-25",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove GLXG from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "NCPL",
+    "day_n": 6,
+    "day_text": "📅 day 6 of 10",
+    "seat_text": "+45% day",
+    "seat_title": "Ran 2026-11-19: 09:30–20:00 ET high +45% vs the prior close, peak 10:45 ET, not premarket. Kept 10 sessions, through 2026-12-03.",
+    "rule": "day",
+    "run_day": "2026-11-19",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove NCPL from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "MPU",
+    "day_n": 6,
+    "day_text": "📅 day 6 of 10",
+    "seat_text": "🎯 +74% from A+",
+    "seat_title": "🎯 A+ rang 2026-11-18 16:40 ET at 2.10: high 3.654 at 09:58 ET on 2026-11-19 = +74.0% above the trigger (09:45–20:00 ET). Kept 10 sessions, through 2026-12-03.",
+    "rule": "aplus",
+    "run_day": "2026-11-19",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove MPU from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "RAYA",
+    "day_n": 6,
+    "day_text": "📅 day 6 of 10",
+    "seat_text": "🎯 +47% from A+",
+    "seat_title": "🎯 A+ rang 2026-11-19 10:05 ET at 3.00: high 4.41 at 11:30 ET on 2026-11-19 = +47.0% above the trigger (10:05–20:00 ET). Kept 10 sessions, through 2026-12-03.",
+    "rule": "aplus",
+    "run_day": "2026-11-19",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove RAYA from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "GP",
+    "day_n": 9,
+    "day_text": "📅 day 9 of 10",
+    "seat_text": "🎯 +57% from A+",
+    "seat_title": "🎯 A+ rang 2026-11-13 16:55 ET at 1.00: high 1.574 at 10:01 ET on 2026-11-16 = +57.4% above the trigger (09:45–20:00 ET). Kept 10 sessions, through 2026-11-28.",
+    "rule": "aplus",
+    "run_day": "2026-11-16",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove GP from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "AIMD",
+    "day_n": 10,
+    "day_text": "📅 day 10 of 10",
+    "seat_text": "🎯 +39% from A+",
+    "seat_title": "🎯 A+ rang 2026-11-13 10:20 ET at 2.00: high 2.786 at 14:02 ET on 2026-11-13 = +39.3% above the trigger (10:20–20:00 ET). Kept 10 sessions, through 2026-11-26.",
+    "rule": "aplus",
+    "run_day": "2026-11-13",
+    "broker_text": null,
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove AIMD from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   },
+   {
+    "symbol": "WORX",
+    "day_n": 3,
+    "day_text": "📅 day 3 of 10",
+    "seat_text": "+62% day",
+    "seat_title": "Ran 2026-11-24: 09:30–20:00 ET high +62% vs the prior close, peak 09:41 ET, not premarket. Kept 10 sessions, through 2026-12-08.",
+    "rule": "day",
+    "run_day": "2026-11-24",
+    "broker_text": "🚫 Fidelity",
+    "on_watch": false,
+    "on_watch_text": null,
+    "remove_title": "Remove WORX from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+   }
+  ]
+ },
+ "row_runner": {
+  "day_n": 2,
+  "keep": 10,
+  "day_text": "📅 day 2 of 10",
+  "seat_text": "+75% day",
+  "seat_title": "Ran 2026-11-25: 09:30–20:00 ET high +75% vs the prior close, peak 19:45 ET, not premarket. Kept 10 sessions, through 2026-12-09.",
+  "rule": "day",
+  "run_day": "2026-11-25"
+ },
+ "unreadable": {
+  "state": "unreadable",
+  "text": "📅 the runners list could not be read — showing the rest",
+  "rows": []
+ },
+ "track_all": {
+  "state": "ok",
+  "title": "📅 Runners — the record",
+  "summary_text": "14 being watched · 3 finished · ran with no A+ (2): 1 of 2 ran again · 0 of 2 rang A+ on a later session · 1 of 1 closed day 10 above the run-day close · ran after the 16:00 close: 0 of 1 closed day 10 above the run's high · ran after an A+ (1): 0 of 1 ran again · 0 of 1 rang A+ on a later session · UNMEASURED — every runner that qualified counts, winners and losers, listed or not; it is a record, not a test",
+  "note": "UNMEASURED — every runner that qualified counts, winners and losers, listed or not; it is a record, not a test",
+  "asof_text": "recorded through 2026-11-27 (20:15 ET)",
+  "heads": [
+   [
+    "symbol",
+    "Name"
+   ],
+   [
+    "run_day",
+    "Ran"
+   ],
+   [
+    "rule",
+    "Rule"
+   ],
+   [
+    "base",
+    "Base"
+   ],
+   [
+    "best",
+    "Best high after"
+   ],
+   [
+    "last",
+    "Day 10 close"
+   ]
+  ],
+  "rows": [
+   {
+    "cells": {
+     "symbol": "AIMD",
+     "run_day": "2026-11-13",
+     "rule": "ran after an A+",
+     "base": "run-day close",
+     "best": "+12.0% (2026-11-17)",
+     "last": "−8.1%"
+    }
+   },
+   {
+    "cells": {
+     "symbol": "GIPR",
+     "run_day": "2026-11-13",
+     "rule": "ran with no A+",
+     "base": "run-day close",
+     "best": "+4.4% (2026-11-14)",
+     "last": "+2.0%"
+    }
+   },
+   {
+    "cells": {
+     "symbol": "XLATE",
+     "run_day": "2026-11-13",
+     "rule": "ran with no A+",
+     "base": "the run's high (peak 19:10)",
+     "best": "−3.0% (2026-11-14)",
+     "last": "−20.5%"
+    }
+   }
+  ],
+  "shown_text": "3 of 3 finished runs",
+  "open_n": 14,
+  "closed_n": 3
+ },
+ "track_symbol": {
+  "state": "ok",
+  "symbol": "BGLC",
+  "title": "📅 BGLC — the record",
+  "note": "UNMEASURED — every runner that qualified counts, winners and losers, listed or not; it is a record, not a test",
+  "docs": [
+   {
+    "run_day": "2026-11-25",
+    "seat_text": "+176% day",
+    "state_text": "being watched · day 2 of 10",
+    "base_note": "base: the run-day regular close (peak 11:20 ET)",
+    "heads": [
+     [
+      "date",
+      "Day"
+     ],
+     [
+      "close",
+      "Close"
+     ],
+     [
+      "vs",
+      "vs run close"
+     ],
+     [
+      "reads",
+      "Gajjala reads"
+     ]
+    ],
+    "rows": [
+     {
+      "cells": {
+       "date": "2026-11-25 (day 1)",
+       "close": "3.10",
+       "vs": "0.0%",
+       "reads": "no read"
+      }
+     },
+     {
+      "cells": {
+       "date": "2026-11-26 (day 2)",
+       "close": "2.71",
+       "vs": "−12.6%",
+       "reads": "🧠 potential 10:05 · armed 10:40"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "seat_answers": {
+  "dismissed": {
+   "state": "dismissed",
+   "symbol": "BGLC",
+   "text": "BGLC removed from 📅 Runners"
+  },
+  "absent": {
+   "state": "absent",
+   "symbol": "ZZZ",
+   "text": "ZZZ is not on 📅 Runners"
+  },
+  "error": {
+   "state": "error",
+   "symbol": "BGLC",
+   "text": "📅 Runners could not be changed — try again"
+  }
+ }
+}

@@ -120,7 +120,14 @@
  * clears the filter), ◀ ▶ are greyed and there is no page count; `page` left the state and the link. ← → scroll one
  * screen row group under the pinned tab strip (lib ggwScroll, read at key time); a scroll hold (useGgwHold) keeps the tile
  * he is looking at where it is when the list or the row height changes; the live RENDER gate is "in or near the window"
- * (useGgwNear, fail-open, off behind ⤢). The data path, the GET and the live interest are untouched. */
+ * (useGgwNear, fail-open, off behind ⤢). The data path, the GET and the live interest are untouched.
+ *
+ * 📅 2026-11-26 (spec watchrun §3.5, WP fe-roster) — Ajay: "Ok then add them to our watch list and track them please.. I
+ * know he tracks them for two weeks sometimes.. before he discards them.. Can you do that please" · "Make it 30% please
+ * after A+". When the server serves `runners`, GgwRunRoster draws the light 📅 roster UNDER the tiles. It gets ONLY
+ * `onChanged` (the served text → the head message, then ONE full re-GET — the useGgwBrokerMark precedent); its × is its
+ * own hook on its own route. write('DELETE') below is not edited and is never handed to it [C4]. No `runners` key → this
+ * board is byte-equal to before. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -154,6 +161,7 @@ import { GgwLayoutPick, GgwPager, useGgwFitRows } from './GajjalaWatchLayout';
 import { ggwFold, loadGgwList } from '../lib/ggWatchList';
 import { GgwBrokerButton, GgwBrokerHead, useGgwBrokerMark } from './GgwBrokerMark';   // 🚫 2026-11-19 (spec watchfid)
 import { GgwRunButton, GgwRunPanel, useGgwRun } from './GgwRunRules';   // ▶ 2026-11-24 (spec ggrun)
+import GgwRunRoster from './GgwRunRoster';   // 📅 2026-11-26 (spec watchrun)
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
@@ -593,6 +601,12 @@ export default function GajjalaWatchBoard() {
   const mark = useGgwBrokerMark((text) => { setMsg(text); loadAllRef.current(); });
   /* ▶ 2026-11-24 (spec ggrun): run Gajjala's rules on one name — ONE POST per tap, never the board's load chain. */
   const runRules = useGgwRun();
+  /* 📅 2026-11-26 (spec watchrun [C4]): the roster's × answered → its served text, then ONE full re-GET. */
+  const onRunnersChanged = useCallback((text: string | null) => {
+    if (!alive.current) return;
+    setMsg(text);
+    loadAllRef.current();
+  }, []);
 
   const onAdd = (e: FormEvent) => {
     e.preventDefault();
@@ -796,6 +810,7 @@ export default function GajjalaWatchBoard() {
       ) : (
         p.empty_text ? <p className="ggw-line ggw-empty" data-testid="ggw-empty">{p.empty_text}</p> : null
       )}
+      {p.runners ? <GgwRunRoster block={p.runners} phone={phone} onChanged={onRunnersChanged} /> : null}
       {stretchRow ? (
         <GgwStretch row={lateRow(stretchRow)} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
                  onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote tags={tagsOf(stretchRow)}

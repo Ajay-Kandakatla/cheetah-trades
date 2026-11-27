@@ -1347,6 +1347,20 @@ def _gg_watch_runners_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_watch_runseat_clause() -> str:
+    """📅 2026-11-26 (spec watchrun §3.3 — Ajay "Ok then add them to our watch list and track them please" · "Make it 30%
+    please after A+") — the ONE clause on the 📅 Runners list kept two weeks on the Watch, built by
+    chart_maps.gajjala_watch.runseat.rules_line() (the LIVE reading's sentence, every number a constant read at call
+    time — never typed here): " " + the line, or "" when the module cannot load or the line raises."""
+    try:
+        from chart_maps.gajjala_watch import runseat as GWRS
+        line = GWRS.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch runseat clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_watch_overlays_clause() -> str:
     """📈📐 2026-11-23 (spec vwapzones §3.6b — Ajay "can you add vwap and supply demand zone in the daily time frame on
     the watch list please" / "Add vwap and supply demand too") — the section note's clause on the Watch's VWAP line and
@@ -1737,6 +1751,7 @@ def _gajjala_section() -> dict:
                  + _gg_watch_rules_clause()                # ✅ 2026-11-24 — the watch's all-rules list (kept across sessions)
                  + _gg_si_ssr_clause()                     # ⛔🩳🔒 2026-11-24 — SI / SSR / Reg SHO names + their Watch section
                  + _gg_watch_runners_clause()              # 📅 2026-11-22 — previous-day runners + the Watch sections
+                 + _gg_watch_runseat_clause()              # 📅 2026-11-26 — runners kept two weeks on the Watch
                  + _gg_watch_overlays_clause()             # 📈📐 2026-11-23 — the Watch's VWAP + daily zones (display only)
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
                  + _gg_diverging_clause()                  # 🌱 2026-11-18 — the 🌱 Diverging sub (forming read only)

@@ -53,6 +53,19 @@ def colls(db=None) -> Optional[dict]:
         return None
 
 
+def runtrack_coll(db=None):
+    """📅 2026-11-26 (spec watchrun §3.1) — the `C.COLL_RUNTRACK` handle (the nightly runners record), or None when there
+    is no database / on a fault. Never raises. `colls()` is NOT widened: its key set is pinned."""
+    try:
+        d = db if db is not None else _db()
+        if d is None:
+            return None
+        return d[C.COLL_RUNTRACK]
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: runtrack collection unavailable: %s", exc)
+        return None
+
+
 def fold(sym) -> str:
     """The house equality key — `chart_maps.gajjala.store.broker_fold` (imported, never retyped): BRK.B == BRK-B."""
     from chart_maps.gajjala.store import broker_fold

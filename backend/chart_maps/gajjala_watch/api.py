@@ -56,6 +56,16 @@ add remove tickers from the dashboard."
     `asyncio.to_thread`; HTTP 200 for every served state. An import / unexpected fault → state `error` with the string
     title and note (C.RUN_TITLE_TEXT, C.RUN_ERROR_TEXT, C.RUN_NOTE_TEXT). Rings nothing, records nothing.
 
+  * `DELETE /chart-maps/gajjala-watch/runners/seat/{symbol}` (📅 2026-11-26, spec watchrun §3.3 [C4] — Ajay: "Ok then
+    add them to our watch list and track them please") — the 📅 roster's OWN ×: `require_primary_admin` (404 for anyone
+    else, before any read); ONE `asyncio.to_thread` calling ONLY `runseat.dismiss` (imported LAZILY through
+    C.RUNSEAT_MODULE). It never calls `store.remove`, `auto.dismiss` or `allrules.dismiss`; the plain DELETE above never
+    calls it. An import / runtime fault or C.RUNNERS_SEAT_ON False → `{state: "error", symbol, text}`.
+  * `GET    /chart-maps/gajjala-watch/runners/track[?symbol=SYM]` (📅 2026-11-26) — the nightly runners record: PRIMARY
+    OWNER ONLY through `_is_owner` (anyone else gets exactly `owner_only_payload()`, nothing read); `runtrack.payload`
+    (imported LAZILY through C.RUNTRACK_MODULE) built and scrubbed inside ONE `asyncio.to_thread`; a fault → state
+    `error`.
+
 The admin email never appears in an answer. UNMEASURED — a cross is information, not an entry.
 """
 from __future__ import annotations
@@ -332,6 +342,60 @@ async def gajjala_watch_remove(symbol: str, email: str = Depends(require_primary
     if st == "absent" and isinstance(r, dict) and r.get("state") == "dismissed":
         return r
     return out
+
+
+# ── 📅 the roster's own × and the runners record (2026-11-26, spec watchrun §3.3) ────────────────────────────────────
+RUNTRACK_ERROR_TEXT = "📅 the runners record could not be read — try again"     # api.py's import-fault fallback only
+
+
+def _runseat_x(symbol: str, email) -> dict:
+    """The roster's × — called ONLY inside asyncio.to_thread. ONLY runseat.dismiss. Never raises."""
+    sym = ST.normalize(symbol) or (symbol if isinstance(symbol, str) else None)
+    err = {"state": "error", "symbol": sym, "text": C.RUNNERS_SEAT_X_TEXT["error"].format(sym=sym or "")}
+    if not C.RUNNERS_SEAT_ON:
+        return err
+    try:
+        out = importlib.import_module(C.RUNSEAT_MODULE).dismiss(symbol, by=email)
+        return out if isinstance(out, dict) else err
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: runners × failed: %s", type(exc).__name__)
+        return err
+
+
+def _runtrack_body(now: datetime, symbol: Optional[str]) -> bytes:
+    """The runners record as JSON bytes — called ONLY inside asyncio.to_thread. Never raises."""
+    from growth.api import _scrub
+    fallback = {"state": "error", "text": RUNTRACK_ERROR_TEXT}
+    try:
+        out = importlib.import_module(C.RUNTRACK_MODULE).payload(now, symbol=symbol)
+        if not isinstance(out, dict):
+            raise TypeError("not an answer")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: runners record failed: %s", type(exc).__name__)
+        out = fallback
+    try:
+        return JSONResponse(_scrub(out)).body
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: runners record not encoded: %s", type(exc).__name__)
+        return JSONResponse(fallback).body
+
+
+@router.delete(C.API_RUNSEAT_PATH)
+async def gajjala_watch_runseat_remove(symbol: str, email: str = Depends(require_primary_admin)):
+    """📅 the roster's own ×: ONLY runseat.dismiss — never the owner list, the 🤖 or the ✅ doc."""
+    return await asyncio.to_thread(_runseat_x, symbol, email)
+
+
+@router.get(C.API_RUNTRACK_PATH)
+async def gajjala_watch_runtrack(email: Optional[str] = Depends(maybe_current_user),
+                                 symbol: Optional[str] = Query(None)):
+    """📅 the owner's runners record. A direct call (container smoke test) receives the Depends OBJECT and is served as
+    a non-owner — nothing read."""
+    if not _is_owner(email):
+        return PL.owner_only_payload()
+    sym = ST.normalize(symbol) if isinstance(symbol, str) else None
+    body = await asyncio.to_thread(_runtrack_body, datetime.now(ET), sym)
+    return Response(content=body, media_type="application/json")
 
 
 def _feed_pair() -> tuple:

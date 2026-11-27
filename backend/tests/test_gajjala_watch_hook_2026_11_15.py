@@ -83,8 +83,11 @@ def test_only_gajjala_run_py_names_the_watch():
     # 🏁 2026-11-26 (spec sitrack WP5, main-session suite gate): si_track.py (the 🩳 SI track record, display only)
     # reads gajjala_watch.constants, runners (ran_of — the ONE winner engine) and vwap (minute_vwap). Pinned by
     # test_gajjala_si_track_guards_2026_11_26. Widened; nothing else may join.
+    # 📅 2026-11-26 (spec watchrun WP-2 be-track, refix): nightly.py runs gajjala_watch.runtrack.nightly after 🩳, in its
+    # own fence, the import inside the fence. runtrack ONLY — pinned by the NEGATIVE
+    # test_NEGATIVE_nightly_names_the_watch_only_for_runtrack_inside_the_fence. Widened; nothing else may join.
     assert hits == ["accountability_api.py", "alerts.py", "card_frames.py", "high_si.py", "high_si_cross.py",
-                    "live_events.py", "run.py", "si_track.py", "tab.py"]
+                    "live_events.py", "nightly.py", "run.py", "si_track.py", "tab.py"]
 
 
 def test_NEGATIVE_accountability_api_names_the_watch_only_for_owner_only_payload_and_normalize():

@@ -173,9 +173,11 @@ def test_paths_are_the_constants_and_registered_once():
     # WIDENED 2026-11-22: + GET C.API_RUNNERS_PATH (📅 previous-day runners, test_gajjala_watch_runners_api_2026_11_22.py).
     # WIDENED 2026-11-24: + POST C.API_RUN_PATH (▶ run Gajjala's rules, test_gajjala_watch_run_rules_2026_11_24.py).
     # WIDENED 2026-11-26: + GET C.API_RUNCHART_PATH (📅 continuous runner chart, test_gajjala_watch_runchart_api_2026_11_26.py).
+    # WIDENED 2026-11-26: + DELETE C.API_RUNSEAT_PATH, + GET C.API_RUNTRACK_PATH
     assert got == sorted([(C.API_PATH, "GET"), (C.API_SYMBOL_PATH, "POST"), (C.API_SYMBOL_PATH, "DELETE"),
                           (C.API_LIST_PATH, "GET"), (C.API_LIVE_PATH, "POST"), (C.API_RUNNERS_PATH, "GET"),
-                          (C.API_RUN_PATH, "POST"), (C.API_RUNCHART_PATH, "GET")])
+                          (C.API_RUN_PATH, "POST"), (C.API_RUNCHART_PATH, "GET"),
+                          (C.API_RUNSEAT_PATH, "DELETE"), (C.API_RUNTRACK_PATH, "GET")])
     src = (Path(__file__).resolve().parents[1] / "main.py").read_text()
     assert src.count("from chart_maps.gajjala_watch.api import router as gajjala_watch_router") == 1
     assert src.count("app.include_router(gajjala_watch_router)") == 1

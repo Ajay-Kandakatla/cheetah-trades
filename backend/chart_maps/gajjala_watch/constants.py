@@ -300,3 +300,71 @@ RUNCHART_HINT = ("Every closed {frame} bar of the last {n} sessions, {open}–{e
                  "the START of its bar; the cards and the 👀 Watch stamp a bar when it CLOSES, one bar later. Drag to move "
                  "across days, scroll or pinch to zoom, ← → to step. Closed bars only; while the market is open the "
                  "chart is re-read every {memo} s. Display only — nothing here rings, gates, sorts or adds a name. UNMEASURED.")
+# ── 📅 Runners kept on the 👀 Watch for two weeks + tracked (2026-11-26, spec watchrun rev 2 §3.1) ── Ajay 2026-11-26
+# ~21:40 ET, verbatim: "Ok then add them to our watch list and track them please.. I know he tracks them for two weeks
+# sometimes.. before he discards them.. Can you do that please" · ~21:50 ET (asked whether A+ names belong in the section
+# too): "Make it 30% please after A+". runseat.py is the ONE seating engine (a FOURTH doc of COLL_LIST), runtrack.py the
+# nightly record. Uncapped, never rings, display / tracking only. The only new numbers are his 10 and his 30;
+# RUNNERS_SEAT_PROVIDER_MAX is transport. UNMEASURED.
+RUNNERS_SEAT_ON = True                              # MINE — kill switch: False → no step, no roster, no chip
+RUNNERS_DOC_ID = "runners"                          # the FOURTH doc of COLL_LIST
+RUNNERS_STATE_ID = "runners"                        # COLL_STATE doc: the step's last result (the `latest` doc gains no key)
+RUNNERS_KEEP_SESSIONS = 10                          # HIS number 2026-11-26 — "two weeks" = 10 market sessions, the run day included; not GG's number
+RUNNERS_SEAT_DAY_PCT = RAN_MIN_PCT                  # +40% vs prior close, peak not premarket — his 11-22 answer (a name with no A+)
+RUNNERS_SEAT_APLUS_PCT = 30                         # Ajay 2026-11-26 "Make it 30% please after A+" == replay_win30.WIN_MIN_RUN_FROM_TRIGGER_PCT (a test pins it)
+RUNNERS_SEAT_READINGS = ("after_aplus", "seat_cut", "either")   # APPEND only [fixed: C3]
+RUNNERS_SEAT_READING = RUNNERS_SEAT_READINGS[0]     # HIS CALL #1 — THE one line
+#   "after_aplus": no A+ that session → the day rule; a name with an A+ → ONLY +RUNNERS_SEAT_APLUS_PCT above its trigger
+#   "seat_cut":    every name at +RUNNERS_SEAT_APLUS_PCT vs prior close, A+ or not; the A+ rule is off
+#   "either":      the day rule for EVERY name, AND an A+ name also seats at +RUNNERS_SEAT_APLUS_PCT above its trigger
+RUNNERS_SEAT_RULES = ("day", "aplus")
+RUNNERS_SEAT_PAGES = ("gajjala", "gajjala_1m")      # == replay_gif.PAGES keys == (V.GG5.key, V.GG1.key) — tests pin both
+RUNNERS_SEAT_RESTART = True                         # HIS CALL #4 — a new qualifying day restarts the 10-session count
+RUNNERS_PUSH_MODE = AUTO_PUSH_MODES[0]              # "off" — its own switch; nothing reads frames for these names
+RUNNERS_SEAT_PROVIDER_MAX = GC.DAILY_MAX_NEW_PER_PASS   # MINE — TRANSPORT only, not GG's, not his, not a rule [fixed: C9]: provider reads (1-minute day loads + split checks) STARTED per minute step. Borrowed BY NAME from the 5-minute pass's daily-bar cap (8): a different read on a different clock
+RUNNERS_SEAT_REASONS = ("aged", "dismissed", "blocked")   # stored removal reasons — APPEND only; "blocked" = never listed, his × that day [fixed: C5]
+RUNNERS_SEAT_STEP_REASONS = ("off", "closed", "list_unreadable", "boards_unreadable", "ledger_unreadable", "dismissed_unreadable", "write_failed")
+RUNNERS_SEAT_SKIPS = ("dismissed", "under_day", "premarket_peak", "no_bars", "aplus_under", "aplus_pending", "aplus_no_trigger", "aplus_no_time", "aplus_no_bars",
+                      "aplus_split", "aplus_split_unchecked", "split_day", "split_unchecked", "no_prior_bar", "prior_unknown")   # APPEND only [fixed: C1, C2]
+RUNNERS_SEAT_PENDING_WHYS = ("aplus_pending", "aplus_split_unchecked", "split_unchecked")   # the session stays open; the item is asked again
+RUNNERS_SEAT_OUT_KEYS = ("n", "added", "removed", "restarted", "processed", "partial", "pending", "skipped", "not_seated", "blocked", "provider", "reason")
+RUNNERS_SEAT_VIA = "runners"
+API_RUNSEAT_PATH = API_RUNNERS_PATH + "/seat/{symbol}"  # DELETE only — the roster's own × [fixed: C4] == FE GGW_RUNSEAT_PATH + "/{symbol}" (contract — main session)
+API_RUNTRACK_PATH = API_RUNNERS_PATH + "/track"     # == FE GGW_RUNTRACK_PATH (contract — main session)
+RUNSEAT_MODULE = "chart_maps.gajjala_watch.runseat"     # imported LAZILY by api.py and payload.py
+RUNTRACK_MODULE = "chart_maps.gajjala_watch.runtrack"   # imported LAZILY by api.py
+COLL_RUNTRACK = "gajjala_watch_runtrack"            # one doc per (run day, symbol); kept, no TTL
+# words — all MINE (HIS CALL #15); every number a `{}` field, clocks from runners.clock_words()
+RUNNERS_SEAT_TITLE = "📅 Runners"
+RUNNERS_SEAT_HEAD = "{title} · {n}"
+RUNNERS_SEAT_DAY_CHIP = "📅 day {n} of {keep}"
+RUNNERS_SEAT_CHIP_DAY = "{pct} day"                  # "+176% day" — pct = runners._run_text (only printed at/over the cut)
+RUNNERS_SEAT_CHIP_APLUS = "🎯 {pct} from A+"         # "🎯 +34% from A+" — pct floored to a whole %
+RUNNERS_SEAT_TITLE_DAY = "Ran {date}: {open}–{end} ET high {pct} vs the prior close, peak {at} ET, not premarket. Kept {keep} sessions, through {last}."
+RUNNERS_SEAT_TITLE_APLUS = "🎯 A+ rang {ring_date} {ring_at} ET at {trigger}: high {high} at {at} ET on {date} = {pct} above the trigger ({frm}–{to} ET). Kept {keep} sessions, through {last}."
+RUNNERS_SEAT_ON_WATCH = "on your Watch above"
+RUNNERS_SEAT_REMOVE_TITLE = "Remove {sym} from 📅 Runners (not added again for this run or this session; a tile above is not touched)"
+RUNNERS_SEAT_X_TEXT = {"dismissed": "{sym} removed from 📅 Runners", "absent": "{sym} is not on 📅 Runners", "error": "📅 Runners could not be changed — try again"}
+RUNNERS_SEAT_UNREADABLE = "📅 the runners list could not be read — showing the rest"
+RUNNERS_SEAT_HINT_RULE = {                           # ONE sentence per reading — the hint always states the rule that is live
+    "after_aplus": "With no 🚩 A+ that session: a {open}–{end} ET high of +{day:g}% or more vs the prior close, the peak not premarket. With a 🚩 A+: a high of +{ap:g}% or more above the A+ trigger after it rang, same session to {end} ET.",
+    "seat_cut": "A {open}–{end} ET high of +{ap:g}% or more vs the prior close, the peak not premarket, A+ or not.",
+    "either": "A {open}–{end} ET high of +{day:g}% or more vs the prior close, the peak not premarket — or, for a 🚩 A+ name, a high of +{ap:g}% or more above the A+ trigger after it rang, same session to {end} ET."}
+RUNNERS_SEAT_HINT = ("Every name on Gajjala's scanner that ran. {rule} Seated the next session, kept {keep} sessions from the run day; a new "
+    "qualifying day restarts the count. 🚫 names last. It leaves after day {keep} or on its own ×. Tap a name for its chart, ➕ to "
+    "watch it live. This list never rings. UNMEASURED.{not_seated}{pending}{partial}")
+RUNNERS_SEAT_NOT_SEATED = " {n} ran but are not seated — tap for why."        # the count of `not_seated`
+RUNNERS_SEAT_PENDING = " {n} not checked yet."
+RUNNERS_SEAT_PARTIAL = " {date}: {n} of {of} scanner names had no stored bars left — that session is partial."   # [fixed: C9]
+RUNNERS_SEAT_WHY = {                                 # one served sentence per skip that names a stock
+    "aplus_under": "{sym} {date}: 🚩 A+ at {trigger}, high after it {pct} — under +{ap:g}% above the trigger.",
+    "aplus_no_trigger": "{sym} {date}: the 🚩 A+ has no trigger price on file — not measured.",
+    "aplus_no_time": "{sym} {date}: the 🚩 A+ has no ring time on file — not measured.",
+    "aplus_no_bars": "{sym} {date}: no 1-minute bars after the 🚩 A+ — not measured.",
+    "aplus_pending": "{sym} {date}: the run after its 🚩 A+ is not measured yet.",
+    "aplus_split": "{sym}: a split on {on} sits between its 🚩 A+ ({date}) and the day its 1-minute bars were read — the trigger and the bars are on different share counts. Not measured.",
+    "aplus_split_unchecked": "{sym} {date}: the split check for its 🚩 A+ did not answer yet.",
+    "split_day": "{sym} {date}: a split executed that day — the jump vs the prior close is the share count, not a run.",
+    "split_unchecked": "{sym} {date}: the split check did not answer yet.",
+    "no_prior_bar": "{sym} {date}: no daily bar before that session (a first session under this ticker) — the prior close is not a traded close.",
+    "prior_unknown": "{sym} {date}: the scanner's daily record of that session is missing — the prior close could not be checked."}

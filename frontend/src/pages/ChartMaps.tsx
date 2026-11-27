@@ -234,6 +234,9 @@ export function ChartMaps() {
   /* 📅 runners strip (2026-11-22): 🔥 hides on 🚩 for the owner (and while /auth/me loads); the strip needs a LOADED owner. */
   const hideHot = tab === 'gajjala' && (meLoading || !!me?.is_primary_admin);
   const showRunners = tab === 'gajjala' && !meLoading && !!me?.is_primary_admin;
+  /* 📅 2026-11-26 (spec watchrun §3.5): the continuous-chart host also rides 👀 Watch for the loaded primary owner (a 📅
+   * Runners roster name opens it there); the strip itself stays 🚩 only. */
+  const showRunHost = showRunners || (tab === 'gajjala_watch' && !meLoading && !!me?.is_primary_admin);
   /* 📌 Pinned tab strip + "lands where he was" (Ajay 2026-09-28: "Pin the tab
    * I am in, as I navigate back and fort lost where I am"). lib/cmPinnedTab.ts
    * owns the rules; docs/chart_maps/pinned_tab_strip_2026_09_28.md. */
@@ -1231,7 +1234,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {showRunners && <GgRunnersStrip />}
       {/* 📅 2026-11-26 — the continuous chart a 📅 name opens ("I wanna able to horizontal scroll tp check continuity like
         * he does"). Draws nothing in place (a portal on <body>), so the strip stays the 🔥 wrapper's next sibling. */}
-      {showRunners && <GgRunChartHost />}
+      {showRunHost && <GgRunChartHost />}
 
       {/* ✨ Names that arrived on 🚀 Explosive Growth (Ajay 2026-10-12: "special
         * emphasis wiht a tag or something in the chart map pages top"). One

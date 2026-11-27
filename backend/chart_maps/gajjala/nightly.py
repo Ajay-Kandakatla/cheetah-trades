@@ -71,6 +71,12 @@ in SI stocks itself"): `main` then runs `si_track.record_night` AFTER 💧, in i
 rows and the next-session columns of the last LEDGER_GRADE_LOOKBACK_SESSIONS market days, then the stats. 1-minute loads
 and outside split checks share LEDGER_BACKFILL_MAX_SYMBOL_DAYS. A failure lands under `gajjala_si_track.error` — never in
 GG5's `errors`, never in the exit code. STEPS unchanged; the crontab line unchanged.
+
+📅 Runners record (2026-11-26 — Ajay "Ok then add them to our watch list and track them please.. I know he tracks them for
+two weeks sometimes.. before he discards them.."): `main` then runs `gajjala_watch.runtrack.nightly` AFTER 🩳, in its OWN
+fence (the import inside it), under `gajjala_watch_runtrack` — one doc per 📅 run (listed, ×'d, aged or blocked), one
+closed-daily-bar read per open name, rows through tonight, closed on the calendar after 10 sessions. A failure lands
+under `gajjala_watch_runtrack.error` — never in GG5's `errors`, never in the exit code. STEPS unchanged.
 """
 from __future__ import annotations
 
@@ -385,6 +391,12 @@ def main(argv=None) -> int:
         except Exception as exc:                                 # noqa: BLE001
             log.exception("gajjala nightly: the SI track record failed")
             out["gajjala_si_track"] = {"error": f"record: {type(exc).__name__}"}
+        try:                                                     # 📅 2026-11-26: after 🩳, fenced — never in errors / the exit code
+            from chart_maps.gajjala_watch import runtrack as RTK  # the import inside the fence too
+            out["gajjala_watch_runtrack"] = RTK.nightly(datetime.now(timezone.utc))
+        except Exception as exc:                                 # noqa: BLE001
+            log.exception("gajjala nightly: the 📅 runners record failed")
+            out["gajjala_watch_runtrack"] = {"error": f"record: {type(exc).__name__}"}
     print(json.dumps(out, default=str))
     return 1 if out.get("errors") else 0
 

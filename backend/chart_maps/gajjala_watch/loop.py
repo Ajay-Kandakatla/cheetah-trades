@@ -101,6 +101,7 @@ from . import colls as CO
 from . import constants as C
 from . import cross_alerts as XA
 from . import rest as REST
+from . import runseat as RUNSEAT
 
 log = logging.getLogger("chart_maps.gajjala_watch.loop")
 
@@ -224,6 +225,9 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
             if not dry:
                 _state(cs, C.STATE_LATEST_ID, {"at": now, "n_names": 0, "reason": NO_TICKERS, "auto": auto_out,
                                                "rules": rules_out})
+            if not stub:                                        # 📅 2026-11-26 — no frame read: the whole minute budget
+                _seat(cs, now, session, db=db, dry=dry, auto_prior=auto_prior,
+                      left_sec=GC.GG1M_MINUTE_BUDGET_SEC if budget_sec is None else budget_sec, out=out)
             return out
         tiles = cs["tiles"] if cs else None
         seen = BLD.seen(tiles, syms)
@@ -329,6 +333,9 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
                                            "wall_s": out["wall_s"], "reason": None, "auto": auto_out,
                                            "rules": rules_out})
             REST.count(cs["state"] if cs else None, session, now, n_names=len(syms), rest=rest_out)
+        if not stub:                                            # 📅 2026-11-26 — LAST, on what is left of the minute
+            _seat(cs, now, session, db=db, dry=dry, auto_prior=auto_prior,
+                  left_sec=max(0.0, budget - (RUN._utc(deps.wall()) - w0).total_seconds()), out=out)
         if rest_out is not None:
             log.info("gajjala watch: REST — %d failed, %d re-read after %.1f s, %d recovered, %d rang (%s)",
                      int(rest_out.get("failed") or 0), int(rest_out.get("retried") or 0),
@@ -341,6 +348,23 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
                 lst.release_lease(now, getattr(claim, "token", None))
             except Exception as exc:                            # noqa: BLE001
                 log.warning("gajjala watch: lease release failed: %s", type(exc).__name__)
+
+
+def _seat(cs, now, session, *, db, dry, auto_prior, left_sec, out) -> None:
+    """📅 2026-11-26 (spec watchrun §3.3 [C8]) — the runners seat step, in its OWN try, at the END of the iteration (after
+    the frames, the cross push, every tile write and the `latest` state write — that doc's keys and `wall_s` are
+    untouched): runseat.step on `left_sec` (what is left of the minute budget, never negative) → out["runners"] and, when
+    not dry, the state doc C.RUNNERS_STATE_ID. A raise leaves the iteration's answer intact."""
+    try:
+        t0 = time.monotonic()
+        res = RUNSEAT.step(now, session, db=db, dry=dry, auto_prior=auto_prior, budget_sec=max(0.0, float(left_sec)))
+        block = {k: res.get(k) for k in C.RUNNERS_SEAT_OUT_KEYS}
+        out["runners"] = dict(block, writes=res["writes"]) if dry and "writes" in res else block
+        if not dry:
+            _state(cs, C.RUNNERS_STATE_ID, {"at": now, "session": session.isoformat(),
+                                            "wall_s": round(time.monotonic() - t0, 3), **block})
+    except Exception as exc:                                    # noqa: BLE001 — the minute keeps its answer
+        log.warning("gajjala watch 📅: runners step failed: %s", type(exc).__name__)
 
 
 def _rules_known(cs, session, taken: set) -> list:

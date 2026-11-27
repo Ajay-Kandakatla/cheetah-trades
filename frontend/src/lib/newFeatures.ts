@@ -1089,6 +1089,23 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-26 ~21:40 ET, verbatim: "Ok then add them to our watch list and track them please.. I know he tracks them
+  // for two weeks sometimes.. before he discards them.. Can you do that please" · ~21:50 ET "Make it 30% please after A+".
+  // Spec watchrun rev 2 (scratchpad watchrun/spec.md §3, §4 main-session). BE chart_maps/gajjala_watch/runseat.py (the ONE
+  // seating engine, the minute step in loop.py, the runners block in payload.py, DELETE C.API_RUNSEAT_PATH) + runtrack.py
+  // (the nightly record, GET C.API_RUNTRACK_PATH, run from gajjala/nightly.py in its own fence) + constants.py
+  // (RUNNERS_SEAT_* / RUNNERS_KEEP_SESSIONS, the reading = RUNNERS_SEAT_READING, HIS CALL #1); FE lib/ggwRunRoster.ts,
+  // components/GgwRunRoster.tsx, styles/ggwRunRoster.css, the two chips in GajjalaWatchCompact.tsx, the mount in
+  // GajjalaWatchBoard.tsx, the chart host on 👀 in pages/ChartMaps.tsx. Never rings (RUNNERS_PUSH_MODE "off"). UNMEASURED.
+  // Docs docs/gajjala/watch_runners_two_weeks_2026_11_26.md, watch_runners_track_record_2026_11_26.md,
+  // watch_runners_frontend_2026_11_26.md. Pinned by scripts/contracts.mjs ("📅 Runners kept two weeks on 👀 Watch
+  // (2026-11-26)"). PLACED past index 100 right above the 📅 chart entry: no NEW_FEATURES[n] pin moves.
+  {
+    id: 'gajjala-watch-runners-two-weeks-2026-11-26',
+    label: "📅 Runners kept on your 👀 Watch for two weeks — you said: “Ok then add them to our watch list and track them please.. I know he tracks them for two weeks sometimes.. before he discards them.. Can you do that please” · “Make it 30% please after A+”. Under the tiles, a 📅 Runners list: every name on Gajjala's scanner that ran. With no 🚩 A+ that session: a high of +40% or more vs the prior close, the peak not premarket. With a 🚩 A+: a high of +30% or more above the A+ trigger after it rang. A name is seated the next session and kept 10 sessions from the run day (a new qualifying day restarts the count); it leaves after day 10 or on the list's own ×, which never touches a tile. Each row shows its day and how far it ran; tap the name for its 📅 chart, ➕ to watch it live. The ⓘ holds the rule, the names that ran but are not seated and why, and the record of every run, filled every night. This list never rings — no alert, gate or rule changed. UNMEASURED. Not advice.",
+    addedAt: '2026-11-26',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-26 ~21:10 ET, verbatim: "Fix the POM chip and the 6-K dilution check. Also find alternative srouces for
   // this share count, I think the short interest theory is actually working may be its a bias for me on the ones its
   // working out but lets track them in our list of SI. and maintain a track record of our stocks". Spec sishares rev 2

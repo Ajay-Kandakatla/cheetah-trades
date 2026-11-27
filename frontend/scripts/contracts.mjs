@@ -19411,11 +19411,22 @@ const CONTRACTS = [
       for (const w of ['ggRunChart', 'GgRunChart', 'sessionsPrimitive', 'ggrc']) if (tile.includes(w)) errs.push(`GajjalaWatchTile.tsx must name none of the runner chart (found ${w}) — no 📅 on the 👀 Watch (HIS CALL #4)`);
 
       // 6. the page — the host once, behind showRunners, after the strip
+      // WIDENED 2026-11-26 (spec watchrun §3.5, the 📅 Runners roster on 👀 Watch): the host may sit behind showRunHost =
+      // showRunners || (tab === 'gajjala_watch' && the loaded primary owner); the strip stays behind showRunners only.
       const page = tsCode(quiet('src/pages/ChartMaps.tsx'));
-      const hostAt = page.indexOf('{showRunners && <GgRunChartHost />}');
+      const hostAt = Math.max(page.indexOf('{showRunners && <GgRunChartHost />}'), page.indexOf('{showRunHost && <GgRunChartHost />}'));
       const stripAt = page.indexOf('{showRunners && <GgRunnersStrip />}');
       if (count(page, /<GgRunChartHost\b/g) !== 1) errs.push(`ChartMaps.tsx must mount <GgRunChartHost /> exactly once (found ${count(page, /<GgRunChartHost\b/g)})`);
-      if (hostAt < 0) errs.push('ChartMaps.tsx must mount the host behind showRunners: {showRunners && <GgRunChartHost />}');
+      if (hostAt < 0) errs.push('ChartMaps.tsx must mount the host behind showRunners (or showRunHost): {showRunners && <GgRunChartHost />}');
+      if (page.includes('{showRunHost && <GgRunChartHost />}')) {
+        const hostDef = /const showRunHost = ([^;]+);/.exec(page);
+        if (!hostDef) errs.push('ChartMaps.tsx: showRunHost must be one const');
+        else {
+          if (!/^showRunners \|\| \(/.test(hostDef[1].trim())) errs.push('ChartMaps.tsx: showRunHost must start with showRunners || (…) — 🚩 keeps the host');
+          if (!hostDef[1].includes("tab === 'gajjala_watch'") || !hostDef[1].includes('!meLoading') || !hostDef[1].includes('is_primary_admin')) errs.push("ChartMaps.tsx: showRunHost's widening must be tab === 'gajjala_watch' && !meLoading && the primary owner only");
+        }
+      }
+      if (/\{showRunHost && <GgRunnersStrip \/>\}/.test(page)) errs.push('ChartMaps.tsx: the 📅 strip stays 🚩 only — never behind showRunHost');
       if (stripAt < 0) errs.push('ChartMaps.tsx lost {showRunners && <GgRunnersStrip />}');
       if (hostAt >= 0 && stripAt >= 0 && hostAt < stripAt) errs.push('ChartMaps.tsx must mount <GgRunChartHost /> after the strip');
 
@@ -19556,6 +19567,119 @@ const CONTRACTS = [
         '../docs/short_interest/share_count_sources_2026_11_26.md', '../docs/short_interest/sixk_issuance_2026_11_26.md',
         '../docs/gajjala/si_follow_2026_11_26.md', '../docs/gajjala/si_follow_frontend_2026_11_26.md'])
         if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
+  {
+    name: '📅 Runners kept two weeks on 👀 Watch (2026-11-26)',
+    file: 'src/lib/ggwRunRoster.ts',
+    // Ajay 2026-11-26 ~21:40 ET, verbatim: "Ok then add them to our watch list and track them please.. I know he tracks them
+    // for two weeks sometimes.. before he discards them.. Can you do that please" · ~21:50 ET "Make it 30% please after A+".
+    // Spec watchrun rev 2 §3, §4 main-session. BE runseat.py (the ONE seating engine) + runtrack.py (the nightly record);
+    // FE ggwRunRoster.ts + GgwRunRoster.tsx. The list never rings. UNMEASURED.
+    checks: (lib) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const count = (s, re) => (s.match(re) || []).length;
+      const tuple = (src, name) => {
+        const m = new RegExp(`^${name}\\s*=\\s*\\(([^)]*)\\)`, 'm').exec(src);
+        return m ? [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : null;
+      };
+      const num = (src, name) => {
+        const m = new RegExp(`^${name}\\s*=\\s*([0-9.]+)\\b`, 'm').exec(src);
+        return m ? Number(m[1]) : null;
+      };
+
+      // 1. the two routes — backend == frontend
+      const K = quiet('../backend/chart_maps/gajjala_watch/constants.py');
+      if (!/^API_RUNNERS_PATH\s*=\s*API_PATH\s*\+\s*"\/runners"/m.test(K) || !/^API_PATH\s*=\s*"\/chart-maps\/gajjala-watch"/m.test(K)) errs.push('constants.py: API_RUNNERS_PATH must stay API_PATH + "/runners" with API_PATH "/chart-maps/gajjala-watch"');
+      if (!/^API_RUNTRACK_PATH\s*=\s*API_RUNNERS_PATH\s*\+\s*"\/track"/m.test(K)) errs.push('constants.py: API_RUNTRACK_PATH must be API_RUNNERS_PATH + "/track" (== FE GGW_RUNTRACK_PATH)');
+      if (!/^API_RUNSEAT_PATH\s*=\s*API_RUNNERS_PATH\s*\+\s*"\/seat\/\{symbol\}"/m.test(K)) errs.push('constants.py: API_RUNSEAT_PATH must be API_RUNNERS_PATH + "/seat/{symbol}" (== FE GGW_RUNSEAT_PATH + "/{symbol}")');
+      if (!/export const GGW_RUNTRACK_PATH = '\/chart-maps\/gajjala-watch\/runners\/track';/.test(lib)) errs.push("lib/ggwRunRoster.ts: GGW_RUNTRACK_PATH must be '/chart-maps/gajjala-watch/runners/track'");
+      if (!/export const GGW_RUNSEAT_PATH = '\/chart-maps\/gajjala-watch\/runners\/seat';/.test(lib)) errs.push("lib/ggwRunRoster.ts: GGW_RUNSEAT_PATH must be '/chart-maps/gajjala-watch/runners/seat'");
+      if (!/\$\{GGW_RUNSEAT_PATH\}\/\$\{encodeURIComponent\(/.test(lib)) errs.push('lib/ggwRunRoster.ts: ggwRunSeatPath must be GGW_RUNSEAT_PATH + "/" + encodeURIComponent(sym)');
+
+      // 2. his numbers and the one reading line
+      if (num(K, 'RUNNERS_SEAT_APLUS_PCT') !== 30) errs.push(`constants.py: RUNNERS_SEAT_APLUS_PCT must be 30 — his "Make it 30% please after A+" (found ${num(K, 'RUNNERS_SEAT_APLUS_PCT')})`);
+      if (num(K, 'RUNNERS_KEEP_SESSIONS') !== 10) errs.push(`constants.py: RUNNERS_KEEP_SESSIONS must be 10 — his "two weeks" = 10 sessions (found ${num(K, 'RUNNERS_KEEP_SESSIONS')})`);
+      if (!/^RUNNERS_SEAT_DAY_PCT\s*=\s*RAN_MIN_PCT\b/m.test(K)) errs.push('constants.py: RUNNERS_SEAT_DAY_PCT must be RAN_MIN_PCT by name (his 11-22 +40%)');
+      const readings = tuple(K, 'RUNNERS_SEAT_READINGS');
+      const first3 = ['after_aplus', 'seat_cut', 'either'];
+      if (!readings || JSON.stringify(readings.slice(0, 3)) !== JSON.stringify(first3)) errs.push(`constants.py: RUNNERS_SEAT_READINGS must start ${first3.join(', ')} — APPEND only (found ${readings ? readings.join(', ') : 'none'})`);
+      const rd = /^RUNNERS_SEAT_READING\s*=\s*(?:RUNNERS_SEAT_READINGS\[(\d+)\]|"([a-z_]+)")\s*(?:#|$)/m.exec(K);
+      const live = rd ? (rd[1] !== undefined ? (readings || [])[Number(rd[1])] : rd[2]) : undefined;
+      if (!rd) errs.push('constants.py: RUNNERS_SEAT_READING must be one line: RUNNERS_SEAT_READINGS[n] or a quoted member');
+      else if (!readings || !readings.includes(live)) errs.push(`constants.py: RUNNERS_SEAT_READING must be a member of RUNNERS_SEAT_READINGS (found ${live})`);
+      if (!/^RUNNERS_PUSH_MODE\s*=\s*AUTO_PUSH_MODES\[0\]/m.test(K)) errs.push('constants.py: RUNNERS_PUSH_MODE must stay AUTO_PUSH_MODES[0] ("off") — the list never rings');
+
+      // 3. the routes — once each, owner gated; the plain × never reaches the seat engine
+      const api = quiet('../backend/chart_maps/gajjala_watch/api.py');
+      if (count(api, /@router\.delete\(C\.API_RUNSEAT_PATH\)/g) !== 1) errs.push('api.py must register @router.delete(C.API_RUNSEAT_PATH) exactly once');
+      if (count(api, /@router\.get\(C\.API_RUNTRACK_PATH\)/g) !== 1) errs.push('api.py must register @router.get(C.API_RUNTRACK_PATH) exactly once');
+      const di = api.indexOf('@router.delete(C.API_RUNSEAT_PATH)');
+      if (di >= 0 && !/require_primary_admin/.test(api.slice(di, di + 900))) errs.push('api.py: the 📅 roster × must be gated by require_primary_admin');
+      const ti = api.indexOf('@router.get(C.API_RUNTRACK_PATH)');
+      if (ti >= 0 && !/_is_owner/.test(api.slice(ti, ti + 1400))) errs.push('api.py: the 📅 record must be owner only (_is_owner)');
+
+      // 4. the FE — the roster × uses its own path, never the tile's
+      const roster = tsCode(quiet('src/components/GgwRunRoster.tsx'));
+      const libCode = tsCode(lib);
+      if (/ggwSymbolPath/.test(libCode) || /ggwSymbolPath/.test(roster)) errs.push('ggwRunRoster.ts / GgwRunRoster.tsx must never call ggwSymbolPath — the roster × has its own path');
+      if (!/method:\s*'DELETE'/.test(libCode) || !/ggwRunSeatPath\(/.test(libCode)) errs.push("ggwRunRoster.ts: the roster × must DELETE ggwRunSeatPath(sym)");
+      const board = tsCode(quiet('src/components/GajjalaWatchBoard.tsx'));
+      if (count(board, /<GgwRunRoster\b/g) !== 1) errs.push(`GajjalaWatchBoard.tsx must mount <GgwRunRoster> exactly once (found ${count(board, /<GgwRunRoster\b/g)})`);
+
+      // 5. the ✨ — his words verbatim, curly quotes, his numbers from the constants, past index 100 right above the 📅 chart entry
+      const ID = 'gajjala-watch-runners-two-weeks-2026-11-26';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        const L = lab[1];
+        if (lab[2] !== '2026-11-26') errs.push(`the 📅 Runners ✨ addedAt must be 2026-11-26 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala_watch') errs.push(`the 📅 Runners ✨ route must be /chart-maps?tab=gajjala_watch (found ${lab[3]})`);
+        for (const q of ['Ok then add them to our watch list and track them please.. I know he tracks them for two weeks sometimes.. before he discards them.. Can you do that please', 'Make it 30% please after A+']) {
+          if (!L.includes(`“${q}”`)) errs.push(`the 📅 Runners ✨ must quote him verbatim inside curly quotes: ${q}`);
+        }
+        const ran = num(K, 'RAN_MIN_PCT');
+        const ap = num(K, 'RUNNERS_SEAT_APLUS_PCT');
+        const keep = num(K, 'RUNNERS_KEEP_SESSIONS');
+        if (ran !== null && !L.includes(`+${ran}% or more vs the prior close`)) errs.push(`the 📅 Runners ✨ must name the day cut = RAN_MIN_PCT (+${ran}%)`);
+        if (ap !== null && !L.includes(`+${ap}% or more above the A+ trigger`)) errs.push(`the 📅 Runners ✨ must name the A+ cut = RUNNERS_SEAT_APLUS_PCT (+${ap}%)`);
+        if (keep !== null && !L.includes(`kept ${keep} sessions`)) errs.push(`the 📅 Runners ✨ must name RUNNERS_KEEP_SESSIONS (kept ${keep} sessions)`);
+        for (const m of L.matchAll(/kept (\d+) sessions/g)) if (Number(m[1]) !== keep) errs.push(`the 📅 Runners ✨ says ${m[0]} — RUNNERS_KEEP_SESSIONS is ${keep}`);
+        if (live === 'after_aplus' && !L.includes('With no 🚩 A+ that session')) errs.push('the 📅 Runners ✨ must state the LIVE reading (after_aplus): with no 🚩 A+ that session → the day rule');
+        for (const w of ['never rings', 'UNMEASURED', 'Not advice.']) if (!L.includes(w)) errs.push(`the 📅 Runners ✨ must say ${w}`);
+        if (/\b(signal|edge)s?\b/i.test(L) || /bounc/i.test(L)) errs.push('the 📅 Runners ✨ must never say signal / edge / bounce');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-si-share-count-6k-follow-2026-11-26') errs.push(`the ✨ '${ID}' must sit right above the 🩳 share-count entry (moved 2026-11-27 on rebase: the 🩳 share-count entry landed first) (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 6. ship together; no b-word, no e-mail address in any new file (CSS at-rules are not addresses)
+      const NEW = ['../backend/chart_maps/gajjala_watch/runseat.py', '../backend/chart_maps/gajjala_watch/runtrack.py',
+        '../backend/scripts/gajjala_watch_runseat_probe.py', '../backend/scripts/gajjala_watch_runtrack_probe.py',
+        'src/lib/ggwRunRoster.ts', 'src/components/GgwRunRoster.tsx', 'src/styles/ggwRunRoster.css',
+        '../docs/gajjala/watch_runners_two_weeks_2026_11_26.md', '../docs/gajjala/watch_runners_track_record_2026_11_26.md',
+        '../docs/gajjala/watch_runners_frontend_2026_11_26.md'];
+      for (const f of [...NEW, '../backend/tests/test_gajjala_watch_runseat_2026_11_26.py', '../backend/tests/test_gajjala_watch_runseat_guards_2026_11_26.py',
+        '../backend/tests/test_gajjala_watch_runseat_x_2026_11_26.py', '../backend/tests/test_gajjala_watch_runseat_rule_pin_2026_11_26.py',
+        '../backend/tests/test_gajjala_watch_runseat_served_2026_11_26.py', '../backend/tests/test_gajjala_watch_runseat_probe_2026_11_26.py',
+        '../backend/tests/test_gajjala_watch_runtrack_2026_11_26.py', '../backend/tests/test_gajjala_watch_runtrack_nightly_2026_11_26.py',
+        'src/lib/ggwRunRoster.test.ts', 'src/lib/gajjalaWatch.runroster.test.ts', 'src/lib/__fixtures__/ggwRunRoster.golden.json',
+        'src/components/GgwRunRoster.test.tsx', 'src/components/GgwRunRoster.phone.test.tsx', 'src/components/GajjalaWatchBoard.runroster.test.tsx',
+        'src/components/GajjalaWatchCompact.runner.test.tsx', 'src/pages/ChartMaps.runChartWatch.test.tsx',
+        'src/lib/newFeatures.watch_runners_two_weeks.test.ts']) if (!exists(f)) errs.push(`${f} must exist`);
+      for (const f of NEW) {
+        if (!exists(f) || !/\.(ts|tsx|css)$/.test(f)) continue;
+        const t = quiet(f);
+        if (/\bbounce/i.test(t)) errs.push(`${f} must never say bounce — reversal`);
+        const isCss = f.endsWith('.css');
+        if (isCss ? /[\w.+-]+@[\w-]+\.[\w.]+/.test(t) : t.includes('@')) errs.push(`${f} must hold no "@" (no e-mail address in a new file)`);
+      }
       return errs;
     },
   },

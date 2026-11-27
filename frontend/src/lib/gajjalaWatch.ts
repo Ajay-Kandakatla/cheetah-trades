@@ -17,6 +17,7 @@ import type { CSSProperties } from 'react';
 import { EMA_BOLD, toneColor, VWAP_LINE_W, type CmAxis, type CmEmaBlink, type CmLineTone, type CmTile } from './chartMaps';
 import { ggRunBasesLine, type GgStages } from './gajjala';
 import { parseGgwBroker, type GgwBroker } from './ggwBroker';   // 🚫 2026-11-19 (spec watchfid)
+import { parseRunnerTag, parseRunRoster, type GgwRunnerTag, type GgwRunRoster } from './ggwRunRoster';   // 📅 2026-11-26 (spec watchrun)
 
 /** The tab id (== backend chart_maps/gajjala_watch/constants.TAB). */
 export const GGW_TAB = 'gajjala_watch';
@@ -505,6 +506,9 @@ export type GgwRow = {
   /** 📐 2026-11-23: the served daily-zones line. The key is set ONLY when served (an older server's rows stay byte-equal);
    *  null = served but junk / none (no line). */
   levels?: GgwLevels | null;
+  /** 📅 2026-11-26 (spec watchrun §3.5): the served two chips of a name seated on 📅 Runners (backend runseat.tag_of). The
+   *  key is set ONLY when served (an older server's rows stay byte-equal); null = served but junk (no chip). */
+  runner?: GgwRunnerTag | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -558,6 +562,9 @@ export type GgwBoard = {
    *  not_seated_n}`. The key is set ONLY when served (absent when the server's RULES_ON is False / an older server); null
    *  = served but junk. `text` is the served fault line (state "unreadable" only) — printed verbatim, never composed. */
   rules?: GgwRulesHead | null;
+  /** 📅 2026-11-26 (spec watchrun §3.5): the served 📅 Runners roster under the tiles (backend runseat.roster). The key is
+   *  set ONLY when served (absent when nothing is seated / an older server — the board is byte-equal); null = junk. */
+  runners?: GgwRunRoster | null;
 };
 /** ✅ The served all-rules head (backend payload `rules`). Every word served; display only, UNMEASURED. */
 export type GgwRulesHead = {
@@ -847,6 +854,7 @@ function parseRow(v: unknown): GgwRow | null {
     float: parseRowFloat(v.float),
     ...('org' in v ? { org: parseRowOrg(v.org) } : {}),
     ...('levels' in v ? { levels: parseRowLevels(v.levels) } : {}),
+    ...('runner' in v ? { runner: parseRunnerTag(v.runner) } : {}),
   };
 }
 
@@ -905,6 +913,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     broker: parseGgwBroker(raw.broker),
     ...('sections' in raw ? { sections: parseSections(raw.sections) } : {}),
     ...('rules' in raw ? { rules: parseRulesHead(raw.rules) } : {}),
+    ...('runners' in raw ? { runners: parseRunRoster(raw.runners) } : {}),
   };
 }
 

@@ -484,10 +484,14 @@ def test_only_three_backend_modules_mention_momentum_burst():
     #   for the 💋 rel-volume order and words (context.py stores avg_vol_50,
     #   run.py stamps ctx["rvol"]) — display only, never in alert_ctx, gates
     #   nothing. tab.py takes VOL_AVG_BARS from sepa.breakout_audit instead.
+    # + 👀 Watch run track 2026-11-26: gajjala_watch/runtrack.py imports
+    #   avg_volume_before for the run card's avg_vol_50 / vol_x — display only,
+    #   gates nothing (no push, no alert_ctx).
     assert hits == {"chart_maps/board.py", "supply_demand/rules_info.py",
                     "chart_maps/resiliency_tab.py", "chart_maps/fallen_tab.py",
                     "chart_maps/drop10_tab.py",
-                    "chart_maps/gajjala/context.py", "chart_maps/gajjala/run.py"}, hits
+                    "chart_maps/gajjala/context.py", "chart_maps/gajjala/run.py",
+                    "chart_maps/gajjala_watch/runtrack.py"}, hits
 
 
 def test_NEGATIVE_no_gajjala_push_or_tab_module_mentions_momentum_burst():
