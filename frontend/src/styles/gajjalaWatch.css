@@ -194,6 +194,14 @@
   .ggw-grid--fit .ggw-tags .gg-stages { flex-wrap: nowrap; overflow: hidden; }
   .ggw-grid--stretch.ggw-grid--fit .ggw-tags, .ggw-grid--stretch.ggw-grid--fit .ggw-tags .gg-stages { flex-wrap: wrap; overflow: visible; }
   .ggw-grid--stretch.ggw-grid--fit .ggw-tags > *, .ggw-grid--stretch.ggw-grid--fit .ggw-tags .gg-stages > * { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* 2026-11-28 — Ajay: "On the cards for show details can you make them available they are getting squished.. Ad the tags
+   * to be scrollable". INSIDE the ⋯ drawer the tags row is ONE line that scrolls sideways — every chip whole, no ellipsis.
+   * Higher specificity than the fitted / ⤢ rules above (the tile-head row OUTSIDE the drawer keeps its 11-16 one-line
+   * ellipsis). The base twin below the drawer rules covers the phone. */
+  .ggw-grid--fit .ggw-tile--compact .ggw-drawer .ggw-tags { flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+  .ggw-grid--fit .ggw-tile--compact .ggw-drawer .ggw-tags > *,
+  .ggw-grid--fit .ggw-tile--compact .ggw-drawer .ggw-tags .gg-stages > * { flex: none; white-space: nowrap; overflow: visible; text-overflow: clip; max-width: none; }
+  .ggw-grid--fit .ggw-tile--compact .ggw-drawer .ggw-tags .gg-stages { flex-wrap: nowrap; overflow: visible; }
 }
 
 /* 🚫 2026-11-19 (spec watchfid): the Watch's one-way broker mark — dim until the served word says the name is on his list */
@@ -230,6 +238,22 @@
 .ggw-drawer[hidden] { display: none; }
 .ggw-drawer-row { display: flex; flex-wrap: wrap; gap: 0.25rem 0.45rem; min-width: 0; max-width: 100%; }
 .ggw-drawer .ggw-tags { margin: 0; }
+/* 2026-11-28 — Ajay: "Ad the tags to be scrollable". The drawer's tags row (phone, ⤢ and board alike): ONE line that
+ * scrolls inside itself (max-width 100%, min-width 0 — nothing overflows the page at 430 px); each chip whole, never cut. */
+.ggw-tile--compact .ggw-drawer .ggw-tags {
+  flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; min-width: 0; max-width: 100%; padding-bottom: 3px;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: thin;
+  scrollbar-color: var(--text-muted, #8595ad) transparent;
+}
+.ggw-tile--compact .ggw-drawer .ggw-tags::-webkit-scrollbar { height: 4px; }
+.ggw-tile--compact .ggw-drawer .ggw-tags::-webkit-scrollbar-thumb { background: var(--text-muted, #8595ad); border-radius: 2px; }
+.ggw-tile--compact .ggw-drawer .ggw-tags > *,
+.ggw-tile--compact .ggw-drawer .ggw-tags .gg-stages > *,
+.ggw-tile--compact .ggw-drawer .ggw-tags .cm-badge,
+.ggw-tile--compact .ggw-drawer .ggw-tags .gg-stage {
+  flex: none; white-space: nowrap; overflow-wrap: normal; overflow: visible; text-overflow: clip; max-width: none;
+}
+.ggw-tile--compact .ggw-drawer .ggw-tags .gg-stages { flex-wrap: nowrap; }
 /* the pager's inline section labels (no times, no 🤖 tag — the dashed outline says 🤖) */
 .ggw-pager-group {
   font-size: 0.72rem; color: var(--text-muted, #8595ad); padding: 0 2px 0 8px; margin-left: 2px;
@@ -243,12 +267,17 @@
   text-align: left; white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
 }
 .ggw-section.ggw-section--folded .ggw-section-btn { color: var(--text-muted, #8595ad); }
-/* desktop: the drawer opens OVER the fitted tile's charts (the charts keep their height); the time line is one line */
+/* desktop: the drawer opens OVER the fitted tile's charts (the charts keep their height); the time line is one line.
+ * 2026-11-28 — Ajay: "On the cards for show details can you make them available they are getting squished". The drawer
+ * takes the tile's whole height below the head (was max-height 70%) and scrolls down inside itself; its lines wrap. */
 @media (min-width: 641px) {
   .ggw-tile--compact .ggw-drawer {
-    position: absolute; left: 8px; right: 8px; top: 34px; z-index: 2; max-height: 70%; overflow: auto;
+    position: absolute; left: 8px; right: 8px; top: 34px; bottom: 8px; z-index: 2; max-height: none;
+    overflow-x: auto; overflow-y: auto; overscroll-behavior: contain;
     background: rgb(13, 17, 23); border-style: solid; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
   }
+  .ggw-tile--compact .ggw-drawer > * { flex: none; }
+  .ggw-grid--fit .ggw-tile--compact .ggw-drawer .ggw-levels { white-space: normal; overflow: visible; text-overflow: clip; }
   .ggw-tile--compact .ggw-drawer[hidden] { display: none; }
   .ggw-grid--fit .ggw-prov { flex: none; flex-wrap: nowrap; overflow: hidden; }
   .ggw-grid--fit .ggw-prov > * { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
